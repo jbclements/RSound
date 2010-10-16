@@ -12,6 +12,9 @@ More specifically, you'll probably want to use
 
 raco planet link clements rsound.plt 1 6 /path/to/repo
 
+BIG CAVEAT: DON'T USE ANY SYMBOLIC LINKS IN /path/to/repo. PLaneT
+development links don't work well with symbolic links.
+
 There are a bunch of other commands that will be helpful; the most
 important are probably
 
