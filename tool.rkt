@@ -1,21 +1,5 @@
 #lang racket/base
 
-
-#;(require scheme/class
-         drscheme/tool
-         mred
-         mzlib/pconvert
-         string-constants
-         (prefix-in frame: framework) 
-         mrlib/switchable-button
-         (file "private/my-macros.ss")
-         (prefix-in x: "private/mred-extensions.ss")
-         "private/shared.ss"
-         lang/stepper-language-interface
-         scheme/pretty
-         "xml-sig.ss"
-         "drracket-button.ss")
-
 (require drscheme/tool
          racket/gui/base
          racket/unit

@@ -25,6 +25,11 @@
   (check-= (rsound-nth-sample/left t 0) 0 1e-4)
   (check-= (rsound-nth-sample/right t 1) (round (* s16max (sin (* twopi 13/44100)))) 1e-4))
 
+;; test rsound-ith/left & right
+(let ([t (fun->mono-rsound 100 44100 (lambda (i) (sin (* twopi 13/44100 i))))])
+  (check-= (rsound-ith/left t 0) 0 1e-4)
+  (check-= (rsound-ith/right t 1) (sin (* twopi 13/44100)) 1e-4))
+
 ;; tests of make-silence
 #;(let ([sample-silence (make-silence )]))
 

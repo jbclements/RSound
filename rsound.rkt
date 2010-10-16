@@ -17,6 +17,8 @@
          rsound-nth-sample
          rsound-nth-sample/left
          rsound-nth-sample/right
+         rsound-ith/left
+         rsound-ith/right
          rsound-clip
          rsound-append
          rsound-append*
@@ -156,27 +158,27 @@
 
 ;; return the nth sample of an rsound's left channel.
 (define (rsound-nth-sample/left sound frame)
-  (unless (rsound? sound)
-    (raise-type-error 'rsound-nth-sample/left "rsound" 0 sound frame))
-  (unless (frame? frame)
-    (raise-type-error 'rsound-nth-sample/left "positive integer" 1 sound frame))
-  (match-let* ([(struct rsound (data frames sample-rate)) sound]
-               [sample (* frame channels)])
-    (when (>= frame frames)
-      (error 'rsound-nth-frame "requested frame # ~s greater than highest frame index ~s." frame (- frames 1)))
-    (s16vector-ref data sample)))
+  (rsound-extractor sound frame #true (lambda (x) x)))
 
 ;; return the nth sample of an rsound's right channel
 (define (rsound-nth-sample/right sound frame)
-  (unless (rsound? sound)
-    (raise-type-error 'rsound-nth-sample/right "rsound" 0 sound frame))
+  (rsound-extractor sound frame #false (lambda (x) x)))
+
+(define (rsound-ith/left sound frame)
+  (rsound-extractor sound frame #true (lambda (x) (/ (exact->inexact x) s16max/i))))
+
+(define (rsound-ith/right sound frame)
+  (rsound-extractor sound frame #false (lambda (x) (/ (exact->inexact x) s16max/i))))
+
+;; the abstraction behind the last four functions...
+(define (rsound-extractor rsound frame left? scale-fun)
+  (unless (rsound? rsound)
+    (raise-type-error 'rsound-extractor "rsound" 0 rsound frame))
   (unless (frame? frame)
-    (raise-type-error 'rsound-nth-sample/right "positive integer" 1 sound frame))
-  (match-let* ([(struct rsound (data frames sample-rate)) sound]
-               [sample (+ 1 (* frame channels))])
-    (when (>= frame frames)
-      (error 'rsound-nth-frame "requested frame # ~s greater than available # of frames ~s." frame frames))
-    (s16vector-ref data sample)))
+    (raise-type-error 'rsound-extractor "nonnegative integer" 1 rsound frame))
+  (unless (< frame (rsound-frames rsound))
+    (raise-type-error 'rsound-extractor (format "frame index less than available # of frames ~s" (rsound-frames rsound))))
+  (scale-fun (s16vector-ref (rsound-data rsound) (+ (* frame channels) (if left? 0 1)))))
 
 ;; return the nth *sample* (not frame) of an rsound.
 (define (rsound-nth-sample sound sample)
@@ -245,6 +247,11 @@
 ;; it to the accumulator one frame at a time), and we'll see how it
 ;; performs.
 (define (rsound-overlay* sound&times)
+  (unless (and (list? sound&times) 
+               (andmap list? sound&times)
+               (andmap rsound? (map first sound&times))
+               (andmap nonnegative-integer? (map second sound&times)))
+    (raise-type-error 'rsound-overlay* "list of lists containing rsounds and times" 0 sound&times))
   (same-sample-rate-check (map car sound&times))
   (let* ([total-frames (inexact->exact (round (sound-list-total-frames sound&times)))]
          [cblock (make-s16vector (* total-frames channels))])
@@ -374,6 +381,9 @@
 
 (define (inexact->s16 x)
   (inexact->exact (round (* s16max/i (max -1.0 (min 1.0 x))))))
+
+(define (nonnegative-integer? i)
+  (and (integer? i) (<= 0 i)))
 
 
 ;; UTILITY FUNCTION (should be defined in a util file?)

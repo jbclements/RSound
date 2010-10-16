@@ -103,13 +103,13 @@ These procedures allow the creation, analysis, and manipulation of rsounds.
 @defproc[(make-silence [frames nonnegative-integer?] [sample-rate nonnegative-number?]) rsound?]{
  Returns an rsound of length @racket[frames] containing silence.  This procedure is relatively fast.}
 
-@defproc[(rsound-nth-sample/left (rsound rsound?) (frame nonnegative-integer?)) nonnegative-integer?]{
- Returns the @racket[n]th sample from the left channel of the rsound, represented as a number in the range @racket[#x-8000]
- to @racket[#x7fff].}
+@defproc[(rsound-ith/left (rsound rsound?) (frame nonnegative-integer?)) nonnegative-integer?]{
+ Returns the @racket[n]th sample from the left channel of the rsound, represented as a number in the range @racket[-1.0]
+ to @racket[1.0].}
 
-@defproc[(rsound-nth-sample/right (rsound rsound?) (frame nonnegative-integer?)) nonnegative-integer?]{
- Returns the @racket[n]th sample from the right channel of the rsound, represented as a number in the range @racket[#x-8000]
- to @racket[#x7fff].}
+@defproc[(rsound-ith/right (rsound rsound?) (frame nonnegative-integer?)) nonnegative-integer?]{
+ Returns the @racket[n]th sample from the right channel of the rsound, represented as a number in the range @racket[-1.0]
+ to @racket[1.0].}
 
 @defproc[(rsound-clip (rsound rsound?) (start nonnegative-integer?) (finish nonnegative-integer?)) rsound?]{
  Returns a new rsound containing the frames in @racket[rsound] from the @racket[start]th to the @racket[finish]th - 1.
@@ -207,16 +207,15 @@ These procedures allow the creation, analysis, and manipulation of rsounds.
 @defproc[(rsound-fft/left [rsound rsound?]) (vectorof complex?)]{
  Produces the complex-valued vector that represents the fourier transform of the rsound's left channel.
  Since the FFT takes time N*log(N) in the size of the input, running this on rsounds with more than a
- few thousand frames is probably going to be slow.}
+ few thousand frames is probably going to be slow, unless the number of frames is a power of 2.}
 
 @defproc[(rsound-fft/right [rsound rsound?]) (vectorof complex?)]{
  Produces the complex-valued vector that represents the fourier transform of the rsound's right channel.
  Since the FFT takes time N*log(N) in the size of the input, running this on rsounds with more than a
- few thousand frames is probably going to be slow.}
+ few thousand frames is probably going to be slow, unless the number of frames is a power of 2}
 
 
 not-yet-documented: @racket[(provide twopi 
-         s16max
          fader
          dc-signal
          signal-*s
