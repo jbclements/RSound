@@ -28,16 +28,15 @@
 
 (define rsound-4samp (rsound (s16vector 0 0 50 50 -50 -50 0 0) 4 44100))
 
-#;(rsound-draw rsound-4samp #:title "4samp")
-
-
+(rsound-draw rsound-4samp #:title "4 samples")
 
 (define rsound-800samp (rsound (apply s16vector (build-list 1600 (lambda (i) (inexact->exact (round (* s16max (sin (* 2 pi 3/800 i)))))))) 800 44100))
-#;(rsound-draw rsound-800samp #:width 800)
 
-#;(rsound-draw rsound-800samp #:width 400)
+(rsound-draw rsound-800samp #:width 800 #:title "800 samples")
 
-#;(rsound-draw rsound-800samp #:width 20)
+(rsound-draw rsound-800samp #:width 400 #:title "800 samples at width 400")
+
+(rsound-draw rsound-800samp #:width 20 #:title "800 samples at width 20")
 
 #;(define rsound-longer (read-rsound/clip "/tmp/gmafh.wav" (* 44100 60) (* 44100 70)))
 
@@ -46,20 +45,22 @@
 #;(rsound-draw rsound-longer #:width 800)
 
 ;; there should be no gap in the waveform:
-#;(rsound-draw (fun->mono-rsound 300 44100 (lambda (i) (* 1.5 (sin (* twopi 147/44100 i)))))
+(rsound-draw (fun->mono-rsound 300 44100 (lambda (i) (* 1.5 (sin (* twopi 147/44100 i)))))
                #:title "no gap in waveform")
 
 
 ;; drawing non-sounds
 
-#;(let ([lvec (vector 3 4123 2 4 3 2 2 2 4 2 3 4 1 2 2 23  4 3 3)]
+(let ([lvec (vector 3 4123 2 4 3 2 2 2 4 2 3 4 1 2 2 23  4 3 3)]
       [rvec (vector 3 23 298 4 2 23 1 2 3 4 9 8 2 24 2 79 1 23 9)])
-  (vectors-draw "zoo"
+  (vectors-draw "non-rsound vectors"
                 (lambda (i) (vector-ref lvec i))
                 (lambda (i) (vector-ref rvec i))
                 19
                 800
-                200))
+                200
+                0
+                19))
 
 ;; phase:
 
@@ -68,9 +69,9 @@
 (check-= (phase -1-i) (* -3/4 pi) 1e-4)
 (check-= (phase 1-i) (* -1/4 pi) 1e-4)
 
-#;(let ([lvec (vector 10 0 5 +5i -5 -5i)]
+(let ([lvec (vector 10 0 5 +5i -5 -5i)]
       [rvec (vector 3+4i 3-4i -3-4i -4+3i 10 0)])
-  (vector-pair-draw/magnitude lvec rvec))
+  (vector-pair-draw/magnitude lvec rvec #:title "vector-pair-draw/magnitude"))
 
 ;; draw-ffts
 

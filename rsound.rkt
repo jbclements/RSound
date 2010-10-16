@@ -301,7 +301,7 @@
   (unless (sample-rate? sample-rate)
     (raise-type-error 'fun->mono-rsound "positive integer" 1 frames sample-rate f))
   (unless (and (procedure? f) (procedure-arity-includes? f 1))
-    (error 'fun->mono-rsound "function of one argument" 2 frames sample-rate f)) 
+    (raise-type-error 'fun->mono-rsound "function of one argument" 2 frames sample-rate f)) 
   (let* ([int-frames (inexact->exact (round frames))]
          [int-sample-rate (inexact->exact (round sample-rate))]
          [cblock (make-s16vector (* channels int-frames))])
@@ -322,9 +322,9 @@
   (unless (sample-rate? sample-rate)
     (raise-type-error 'funs->stereo-rsound "positive integer" 1 frames sample-rate fleft fright))
   (unless (and (procedure? fleft) (procedure-arity-includes? fleft 1))
-    (error 'funs->stereo-rsound "function of one argument" 2 frames sample-rate fleft fright))  
+    (raise-type-error 'funs->stereo-rsound "function of one argument" 2 frames sample-rate fleft fright))  
   (unless (and (procedure? fright) (procedure-arity-includes? fright 1))
-    (error 'funs->stereo-rsound "function of one argument" 3 frames sample-rate fleft fright)) 
+    (raise-type-error 'funs->stereo-rsound "function of one argument" 3 frames sample-rate fleft fright)) 
   (let* ([int-frames (inexact->exact (round frames))]
          [int-sample-rate (inexact->exact (round sample-rate))]
          [cblock (make-s16vector (* channels int-frames))])
@@ -340,7 +340,7 @@
   (unless (sample-rate? sample-rate)
     (raise-type-error 'fun->filtered-mono-rsound "positive integer" 1 frames sample-rate f))
   (unless (and (procedure? f) (procedure-arity-includes? f 1))
-    (error 'fun->filtered-mono-rsound "function of one argument" 2 frames sample-rate f)) 
+    (raise-type-error 'fun->filtered-mono-rsound "function of one argument" 2 frames sample-rate f)) 
   (let* ([int-frames (inexact->exact (round frames))]
          [int-sample-rate (inexact->exact (round sample-rate))]
          [cblock (make-s16vector (* channels int-frames))])

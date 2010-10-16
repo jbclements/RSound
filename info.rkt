@@ -11,8 +11,8 @@
 (define tools '[("tool.rkt")])
 (define tool-names '["RSound Global Control Master Unit Incorporated"])
 (define categories '(media))
-(define version "2010-10-14-06:36")
-(define release-notes '((p "Allowed WAV files containing strange RIFF chunks, bug fixes")))
+(define version "2010-10-15-16:22")
+(define release-notes '((p "clips rather than wrapping, uses radix-2 fft when possible, bug fixes")))
 
 ;; planet-specific:
 (define repositories '("4.x"))
