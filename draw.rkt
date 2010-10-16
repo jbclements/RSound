@@ -232,11 +232,11 @@
   (unless (= (length left-ffts) (length right-ffts))
     (error 'make-fft-drawing-callback "left and right channels must have the same number of fft windows, given ~s and ~s" 
            (length left-ffts) (length right-ffts)))
+  (when (empty? left-ffts)
+    (error 'make-fft-drawing-callback "called with empty lists of ffts"))
   (unless (apply = (map vector-length (append left-ffts right-ffts)))
     (error 'make-fft-drawing-callback "transforms must all have the same number of points, given ~e"
            (map vector-length (append left-ffts right-ffts))))
-  (when (empty? left-ffts)
-    (error 'make-fft-drawing-callback "called with empty lists of ffts"))
   (unless (= (modulo (vector-length (first left-ffts)) 2) 0)
     (error 'make-fft-drawing-callback "ffts must have an even number of points. That's just plain confusing."))
   (lambda (canvas dc)
@@ -310,10 +310,15 @@
     (send f show #t)))
 
 
-(define (rsound-fft-draw rsound #:title [title "Fourier Transforms"] #:width [width 800] #:height [height 200] #:zoom-freq [zoom-freq #f])
+(define (rsound-fft-draw rsound #:title [title "Fourier Transforms"] #:width [width 800] #:height [height 200] #:zoom-freq [zoom-freq #f]
+                         #:window-size [window-size 2048])
   
   (define window-size 2048)
   (define windows (floor (/ (rsound-frames rsound) window-size)))
+  (when (= windows 0)
+    (error 'rsound-fft-draw "this sound has ~s frames, fewer than the ~s needed for one fft window. Use a longer sound or shorten the window."
+           (rsound-frames rsound)
+           window-size))
   (define (ffts-from-getter getter)
     (for/list ([i (in-range windows)])
       (let* ([s (* window-size i)]

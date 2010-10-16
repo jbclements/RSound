@@ -119,3 +119,9 @@
   (rsound-fft-draw s #:zoom-freq 22050))
 
 
+;; try something too short:
+(check-exn 
+ (lambda (exn) (regexp-match #rx"fewer than" (exn-message exn)))
+ (lambda () (rsound-fft-draw (make-silence 500 500))))
+
+
