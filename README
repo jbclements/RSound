@@ -1,0 +1,3 @@
+This repository contains the DrRacket source code for RSound, a cross-platform sound library.
+Currently, it depends upon the 'portaudio' library.  In fact, this repo contains windows and 
+OS X binaries for that library.
