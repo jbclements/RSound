@@ -86,6 +86,8 @@
 
 ;; SYNTHESIS OF SINE WAVES
 
+;; raw-sine-wave : number number -> signal
+;; given a pitch and a sample rate, produce a sine wave signal
 (define (raw-sine-wave pitch sample-rate)
   (let ([scalar (* twopi pitch)])
     (lambda (i)
@@ -160,9 +162,9 @@
     (cond [(< intro-frames i) 1.0]
           [else (* 0.5 (- 1.0 (cos (* pi (/ i intro-frames)))))])))
 
+;; dc-signal : number -> signal
 (define (dc-signal volume)
-  (lambda (i) 
-    volume))
+  (lambda (i) volume))
 
 (define (signal-*s lof)
   (lambda (i) (apply * (map (lambda (x) (x i)) lof))))

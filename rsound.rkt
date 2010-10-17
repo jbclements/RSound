@@ -177,7 +177,7 @@
   (unless (frame? frame)
     (raise-type-error 'rsound-extractor "nonnegative integer" 1 rsound frame))
   (unless (< frame (rsound-frames rsound))
-    (raise-type-error 'rsound-extractor (format "frame index less than available # of frames ~s" (rsound-frames rsound))))
+    (raise-type-error 'rsound-extractor (format "frame index less than available # of frames ~s" (rsound-frames rsound)) 1 rsound frame))
   (scale-fun (s16vector-ref (rsound-data rsound) (+ (* frame channels) (if left? 0 1)))))
 
 ;; return the nth *sample* (not frame) of an rsound.
