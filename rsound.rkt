@@ -49,7 +49,23 @@
 
 ;; a rsound is (rsound s16vector nat)
 (provide (struct-out rsound))
-(define-struct rsound (data frames sample-rate))
+(define-struct rsound (data frames sample-rate) 
+  #:transparent
+  ;#:property prop:equal+hash
+  ;(list rsound=? rsound-hash-1 rsound-hash-2)
+  )
+
+#;(define (rsound=? r1 r2)
+  (and (= (rsound-frames r1)
+          (rsound-frames r2))
+       (= (rsound-sample-rate r1)
+          (rsound-sample-rate r2))
+       (s16vector-equal? r1 r2)))
+
+#;(define (rsound-hash-1 x y) 3)
+#;(define (rsound-hash-2 x y) 3)
+
+
 
 ;; this is a fixed global for rsounds:
 (define channels 2)
