@@ -88,3 +88,31 @@
 
 (check-equal? (binary-logn 4096) 12)
 (check-equal? (binary-logn 4095) #f)
+
+
+(check-equal? ((signal (lambda (t b c) (+ t b c)) 3 4) 1) 8)
+
+;; how much slower is signal?
+;; answer: negligible; only about 2% slower
+(define (n-times-throwaway n x) 
+  (time
+   (for ([i (in-range n)])
+     (x))))
+
+(n-times-throwaway 
+ 40
+ (lambda ()
+   (fun->mono-rsound 44100 44100 (lambda (t) (sin (* twopi t 340 1/44100))))))
+
+(define (testfun t f)
+  (sin (* twopi t f 1/44100)))
+
+(n-times-throwaway 
+ 40
+ (lambda ()
+   (fun->mono-rsound 44100 44100 (lambda (t) (testfun t 340)))))
+
+(n-times-throwaway 
+ 40
+ (lambda ()
+   (fun->mono-rsound 44100 44100 (signal testfun 340))))

@@ -42,6 +42,7 @@
          rsound-fft/left
          rsound-fft/right
          rsound-max-volume
+         signal
          ;; for testing:
          raw-sine-wave
          raw-square-wave
@@ -150,13 +151,13 @@
 
 
 
-
-
+;;fader : frames -> signal
 (define (fader fade-frames)
   (let ([p (expt 0.001 (/ 1 fade-frames))])
   (lambda (i)
     (expt p i))))
 
+;; frisellinator : frames -> signal
 (define (frisellinator intro-frames)
   (lambda (i)
     (cond [(< intro-frames i) 1.0]
@@ -287,6 +288,11 @@
 (define (weighted s a b)
   (+ (* a (- 1 s)) (* b s)))
 
+;; turn a function of multiple arguments into a signal. Basically,
+;; just curry w.r.t. the first argument.
+(define (signal f . args)
+  (lambda (t) (apply f (cons t args))))
+
 ;; FFTs
 
 ;; binary-logn; a safe version of the one that appears in the fft code
@@ -363,3 +369,4 @@
                        (fun->mono-rsound (* 2 44100) 44100 (gug 75))
                        (fun->mono-rsound (* 2 44100) 44100 (gug 79))
                        (fun->mono-rsound (* 2 44100) 44100 (gug 89)))))
+

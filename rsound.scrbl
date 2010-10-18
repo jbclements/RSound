@@ -10,7 +10,7 @@
 write, play, and manipulate sounds. It uses the 'portaudio' library, which appears
 to run on Linux, Mac, and Windows.
 
-The package contains binary versions of the mac & windows portaudio libraries. This is
+The package contains binary versions of the Mac & Windows portaudio libraries. This is
 because Windows and Mac users are less likely to be able to install their own 
 versions of the library; naturally, this is a less-than-perfect solution. In particular,
 it appears that Windows users often get an error message about a missing DLL that can
@@ -18,7 +18,7 @@ be solved by installing a separate bundle... from Microsoft?
 
 Sound playing happens on a separate racket thread and custodian. This means 
 that re-running the program or interrupting with a "Kill" will not halt the 
-sound.
+sound. (Use @racket[(stop-playing)] for that.)
 
 It represents all sounds internally as stereo 16-bit PCM, with all the attendant
 advantages (speed, mostly) and disadvantages (clipping).
@@ -72,7 +72,7 @@ for larger sounds, consider reading in only a part of the file, using @racket[rs
                                                                     
  It currently
 has lots of restrictions (it insists on 16-bit PCM encoding, for instance), but deals 
-with a number of common bizzarre conventions that certain WAV files have (PAD chunks,
+with a number of common bizarre conventions that certain WAV files have (PAD chunks,
 extra blank bytes at the end of the fmt chunk, etc.), and tries to fail
 relatively gracefully on files it can't handle.}
 
@@ -138,11 +138,68 @@ These procedures allow the creation, analysis, and manipulation of rsounds.
  }
 
 @defproc[(fun->mono-rsound (frames nonnegative-integer?) (sample-rate nonnegative-integer?) 
-                           (fun procedure?)) rsound?]{
+                           (fun signal?)) rsound?]{
  Builds a sound of length @racket[frames] and sample-rate @racket[sample-rate] by calling 
  @racket[fun] with integers from 0 up to @racket[frames]-1. The result should be an inexact 
  number in the range @racket[-1.0] to @racket[1.0]. Values outside this range are clipped.
  Both channels are identical. }
+
+@defproc[(fun->stereo-rsound (frames nonnegative-integer?) (sample-rate nonnegative-integer?) 
+                             (left-fun signal?) (right-fun signal?)) rsound?]{
+ Builds a stereo sound of length @racket[frames] and sample-rate @racket[sample-rate] by calling 
+ @racket[left-fun] and @racket[right-fun] 
+ with integers from 0 up to @racket[frames]-1. The result should be an inexact 
+ number in the range @racket[-1.0] to @racket[1.0]. Values outside this range are clipped.}
+
+                                                                             @section{Signals}
+
+A signal is a function mapping a frame number to a real number in the range @racket[-1.0] to @racket[1.0]. There
+are several built-in functions that produce signals.
+
+@defproc[(sine-wave [frequency nonnegative-number?] [sample-rate nonnegative-number?]) signal?]{
+ Produces a signal representing a sine wave of the given
+ frequency, of amplitude 1.0.}
+
+@defproc[(sawtooth-wave [frequency nonnegative-number?] [sample-rate nonnegative-number?]) signal?]{
+ Produces a signal representing a naive sawtooth wave of the given
+ frequency, of amplitude 1.0. Note that since this is a simple -1.0 up to 1.0 sawtooth wave, it's got horrible 
+ aliasing all over the spectrum.}
+
+@defproc[(square-wave [frequency nonnegative-number?] [sample-rate nonnegative-number?]) signal?]{
+ Produces a signal representing a naive square wave of the given
+ frequency, of amplitude 1.0. Note that since this is a simple 1/-1 square wave, it's got horrible 
+ aliasing all over the spectrum.}
+
+@defproc[(dc-signal [amplitude real?]) signal?]{
+ Produces a constant signal at @racket[amplitude]. Inaudible unless used to multiply by
+ another signal.}
+
+@defproc[(fader [fade-samples number?]) signal?]{
+ Produces a signal that decays exponentially. After @racket[fade-samples], its value is @racket[0.001].
+ Inaudible unless used to multiply by another signal.}
+
+
+@defproc[(signal [proc procedure?] [args (listof any/c)] ...) signal?]{
+ Produces a signal whose values are computed by calling @racket[proc] with the current frame and the additional
+ values @racket[args].
+ 
+ So, for instance, if we defined the function @racket[flatline] as
+ 
+ @racketblock[
+ (define (flatline t l) 
+   l)
+ ]
+ 
+ ... then @racket[(signal flatline 0.4)] would produce the same result as @racket[(dc-signal 0.4)].}
+
+
+There are also a number of functions that combine existing signals, called "signal combinators":
+
+@defproc[(signal-+s [signals (listof signal?)]) signal?]{
+ Produces the signal that is the sum of the input signals.}
+
+@defproc[(signal-*s [signals (listof signal?)]) signal?]{
+ Produces the signal that is the product of the input signals.}
 
 @section{Visualizing Rsounds}
 
@@ -179,24 +236,11 @@ These procedures allow the creation, analysis, and manipulation of rsounds.
                                 [#:height height nonnegative-integer? 200]) 
          void?]{
  Displays a new window containing a visual representation of the vector's real and imaginary
- parts
- as a waveform.}
+ parts as a waveform.}
+               
+
 
 @section{RSound Utilities}
-
-@defproc[(sine-wave [frequency nonnegative-number?] [sample-rate nonnegative-number?]) procedure?]{
- Produces a function mapping frames to inexact numbers, representing a sine wave of the given
- frequency, of amplitude 1.0.}
-
-@defproc[(sawtooth-wave [frequency nonnegative-number?] [sample-rate nonnegative-number?]) procedure?]{
- Produces a function mapping frames to inexact numbers, representing a naive sawtooth wave of the given
- frequency, of amplitude 1.0. Note that since this is a simple -1.0 up to 1.0 sawtooth wave, it's got horrible 
- aliasing all over the spectrum.}
-
-@defproc[(square-wave [frequency nonnegative-number?] [sample-rate nonnegative-number?]) procedure?]{
- Produces a function mapping frames to inexact numbers, representing a naive square wave of the given
- frequency, of amplitude 1.0. Note that since this is a simple 1/-1 square wave, it's got horrible 
- aliasing all over the spectrum.}
 
 @defproc[(make-harm3tone [frequency nonnegative-number?] [volume? nonnegative-number?] [frames nonnegative-integer?]
                          [sample-rate nonnegative-number?]) rsound?]{
@@ -216,10 +260,6 @@ These procedures allow the creation, analysis, and manipulation of rsounds.
 
 
 not-yet-documented: @racket[(provide twopi 
-         fader
-         dc-signal
-         signal-*s
-         signal-+s
          make-tone
          make-squaretone
          ding
