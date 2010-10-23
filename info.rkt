@@ -14,6 +14,9 @@
 (define version "2010-10-18-21:21")
 (define release-notes '((p "took out use of #true and #false")))
 
+;; don't compile the stuff in the contrib subdirectory.
+(define compile-omit-paths '("contrib"))
+
 ;; planet-specific:
 (define repositories '("4.x"))
 (define primary-file "main.rkt")
