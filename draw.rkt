@@ -4,7 +4,6 @@
 (require "rsound.rkt"
          racket/gui
          racket/class
-         framework
          "fft.rkt")
 
 (provide rsound-draw

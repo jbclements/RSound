@@ -17,8 +17,6 @@
 (define (crush-helper t rsound ratio)
   (rsound-ith/left rsound (* ratio (quotient t ratio))))
 
-eosthuasotehusatoeh
-
 (define (crunch rsound ratio)
   (fun->mono-rsound (rsound-frames rsound) 44100 (signal crush-helper rsound ratio)))
 
