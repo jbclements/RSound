@@ -174,17 +174,17 @@
 
 ;; return the nth sample of an rsound's left channel.
 (define (rsound-nth-sample/left sound frame)
-  (rsound-extractor sound frame #true (lambda (x) x)))
+  (rsound-extractor sound frame #t (lambda (x) x)))
 
 ;; return the nth sample of an rsound's right channel
 (define (rsound-nth-sample/right sound frame)
-  (rsound-extractor sound frame #false (lambda (x) x)))
+  (rsound-extractor sound frame #f (lambda (x) x)))
 
 (define (rsound-ith/left sound frame)
-  (rsound-extractor sound frame #true (lambda (x) (/ (exact->inexact x) s16max/i))))
+  (rsound-extractor sound frame #t (lambda (x) (/ (exact->inexact x) s16max/i))))
 
 (define (rsound-ith/right sound frame)
-  (rsound-extractor sound frame #false (lambda (x) (/ (exact->inexact x) s16max/i))))
+  (rsound-extractor sound frame #f (lambda (x) (/ (exact->inexact x) s16max/i))))
 
 ;; the abstraction behind the last four functions...
 (define (rsound-extractor rsound frame left? scale-fun)

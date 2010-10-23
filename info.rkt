@@ -11,8 +11,8 @@
 (define tools '[("tool.rkt")])
 (define tool-names '["RSound Global Control Master Unit Incorporated"])
 (define categories '(media))
-(define version "2010-10-18-19:21")
-(define release-notes '((p "added signal and rsound-ith, synced with rsound-primer")))
+(define version "2010-10-18-21:21")
+(define release-notes '((p "took out use of #true and #false")))
 
 ;; planet-specific:
 (define repositories '("4.x"))

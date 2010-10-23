@@ -4,6 +4,7 @@
 (require "rsound.rkt"
          racket/gui
          racket/class
+         framework
          "fft.rkt")
 
 (provide rsound-draw
@@ -22,15 +23,21 @@
 (define channels 2)
 (define s16max #x7fff)
 
-;; make-sound-drawing-callback : (nat -> real) (nat->real) nat nat nat -> canvas dc -> void
-(define (make-sound-drawing-callback left-getter right-getter vec-len data-left data-right)
+;; make-sound-drawing-callback 
+;;  : (nat -> real) (nat->real) nat nat nat -> canvas dc -> void
+(define (make-sound-drawing-callback left-getter right-getter vec-len data-left
+                                     data-right)
   (let ([sound-max (max (abs-max-from left-getter vec-len)
                         (abs-max-from right-getter vec-len))])
     (unless (<= 0 data-left data-right vec-len)
-      (error 'make-sound-drawing-callback "must have 0 <= data-left <= data-right <= frames, given 0 <= ~s <= ~s <= ~s"
+      (error 
+       'make-sound-drawing-callback 
+       "must have 0 <= data-left <= data-right <= frames, given 0 <= ~s <= ~s <= ~s"
              data-left data-right vec-len))
     (when (= sound-max 0.0)
-      (error 'make-sound-drawing-callback "max value is 0.0, vectors are uniformly 0."))
+      (error
+       'make-sound-drawing-callback
+       "max value is 0.0, vectors are uniformly 0."))
     (lambda (canvas dc)
       (let* ([h (- (send canvas get-height) 1)]
              [half-h (floor (/ h 2))]
@@ -48,14 +55,21 @@
         (for ([i (in-range 1 (- w 1))])
           (let ([raster-left (* h-scale (- i 1/2))]
                 [raster-right (* h-scale (+ i 1/2))])
-            (let*-values ([(left-min left-max) (rasterize-column offset-left-getter raster-left raster-right)]
-                          [(right-min right-max) (rasterize-column offset-right-getter raster-left raster-right)])
-            (send dc draw-line
-                  i (inexact->exact (floor (- upper-centerline (* v-scale left-max))))
-                  i (inexact->exact (floor (- upper-centerline (* v-scale left-min)))))
-            (send dc draw-line
-                  i (inexact->exact (floor (- lower-centerline (* v-scale right-max))))
-                  i (inexact->exact (floor (- lower-centerline (* v-scale right-min))))))))))))
+            (let*-values ([(left-min left-max) 
+                           (rasterize-column offset-left-getter
+                                             raster-left raster-right)]
+                          [(right-min right-max) 
+                           (rasterize-column offset-right-getter
+                                             raster-left
+                                             raster-right)])
+              (define (num->pixel centerline n)
+                (inexact->exact (floor (- centerline (* v-scale n)))))
+              (send dc draw-line
+                    i (num->pixel upper-centerline left-max)
+                    i (num->pixel upper-centerline left-min))
+              (send dc draw-line
+                    i (num->pixel lower-centerline right-max)
+                    i (num->pixel lower-centerline right-min)))))))))
 
 
 
@@ -66,17 +80,20 @@
     ([i (in-range limit)])
     (max (abs (getter i)) abs-max)))
 
-;; rasterize-column: return the min and max points that the sampled line reaches in 
-;; the interval defined by the left and right edge.
+;; rasterize-column: return the min and max points that the sampled line 
+;; reaches in the interval defined by the left and right edge.
 ;; (nat -> number) number number -> (values number number)
 (define (rasterize-column getter left-edge right-edge)
   (let* ([left-edge-left-value (interpolate getter left-edge)]
          [left-edge-right-value (interpolate getter right-edge)]
          
-         [in-between-left-values (for/list ([i (in-range (ceiling left-edge) (+ 1 (floor right-edge)))])
+         [in-between-left-values (for/list ([i (in-range 
+                                                (ceiling left-edge)
+                                                (+ 1 (floor right-edge)))])
                                    (getter i))]
          
-         [all-vals (cons left-edge-left-value (cons left-edge-right-value in-between-left-values))]
+         [all-vals (cons left-edge-left-value
+                         (cons left-edge-right-value in-between-left-values))]
          
          [left-min (apply min all-vals)]
          [left-max (apply max all-vals)])
@@ -142,13 +159,16 @@
     (super-new)))
 
 
-(define (vectors-draw title left-getter right-getter len width height data-left data-right)
+(define (vectors-draw title left-getter right-getter len width height data-left
+                      data-right)
   (let* ([f (new frame% [label title] [width width] [height height])]
          [tx (new text%)]
          [ty (new text%)]
          [c (new sound-canvas%
                  [parent f]
-                 [paint-callback (make-sound-drawing-callback left-getter right-getter len data-left data-right)]
+                 [paint-callback 
+                  (make-sound-drawing-callback left-getter right-getter
+                                               len data-left data-right)]
                  [len len]
                  [frame-num-text tx]
                  [y-value-text   ty]
@@ -178,10 +198,13 @@
                    [min-height 20])])
     (send f show #t)))
 
-(define (vector-pair-draw/magnitude left-vec right-vec #:title [title "magnitude of vector"] #:width [width 800] #:height [height 200])
+(define (vector-pair-draw/magnitude left-vec right-vec 
+                                    #:title [title "magnitude of vector"]
+                                    #:width [width 800] #:height [height 200])
   (unless (= (vector-length left-vec)
              (vector-length right-vec))
-    (error 'vector-pair-draw/magnitude "expected two vectors of the same length, got ~s and ~s" 
+    (error 'vector-pair-draw/magnitude
+           "expected two vectors of the same length, got ~s and ~s" 
            (vector-length left-vec)
            (vector-length right-vec)))
   (vectors-draw title 
@@ -193,7 +216,8 @@
                 0
                 (vector-length left-vec)))
 
-(define (vector-draw/real/imag vec #:title [title "real and imaginary parts"] #:width [width 800] #:height [height 200])
+(define (vector-draw/real/imag vec #:title [title "real and imaginary parts"]
+                               #:width [width 800] #:height [height 200])
   (vectors-draw title
                 (lambda (i) (real-part (vector-ref vec i)))
                 (lambda (i) (imag-part (vector-ref vec i)))
@@ -203,7 +227,8 @@
                 0
                 (vector-length vec)))
 
-(define (rsound-draw sound #:title [title "picture of sound"] #:width [width 800] #:height [height 200])
+(define (rsound-draw sound #:title [title "picture of sound"] 
+                     #:width [width 800] #:height [height 200])
   (vectors-draw title
                 (lambda (i) (rsound-nth-sample/left sound i))
                 (lambda (i) (rsound-nth-sample/right sound i))
@@ -230,15 +255,18 @@
 ;; (listof (vectorof complex?)) (listof (vectorof complex?)) -> canvas dc -> void
 (define (make-fft-drawing-callback left-ffts right-ffts fft-show-points)
   (unless (= (length left-ffts) (length right-ffts))
-    (error 'make-fft-drawing-callback "left and right channels must have the same number of fft windows, given ~s and ~s" 
+    (error 'make-fft-drawing-callback 
+           unequal-lengths-msg 
            (length left-ffts) (length right-ffts)))
   (when (empty? left-ffts)
     (error 'make-fft-drawing-callback "called with empty lists of ffts"))
   (unless (apply = (map vector-length (append left-ffts right-ffts)))
-    (error 'make-fft-drawing-callback "transforms must all have the same number of points, given ~e"
+    (error 'make-fft-drawing-callback 
+           "transforms must all have the same number of points, given ~e"
            (map vector-length (append left-ffts right-ffts))))
   (unless (= (modulo (vector-length (first left-ffts)) 2) 0)
-    (error 'make-fft-drawing-callback "ffts must have an even number of points. That's just plain confusing."))
+    (error 'make-fft-drawing-callback 
+           uneven-vec-lengths-msg))
   (lambda (canvas dc)
     (let* ([h (send canvas get-height)]
            [half-h (/ h 2)]
@@ -262,13 +290,25 @@
                    [win-top (round (/ (+ j 1) v-scale))])
               (define (draw-fft-rect top bottom magnitude)
                 ;; 0.1 is assumed to be very very quiet.
-                (let* ([decibels (* 10 (/ (log (/ (max 0.1 magnitude) fft-max)) (log 10)))]
+                (let* ([decibels (* 10 (/ (log (/ (max 0.1 magnitude) fft-max))
+                                          (log 10)))]
                        ;; let's set -30db as the limit of gray...
-                       [gray-level (min 255 (- (inexact->exact (round (* 255/30 decibels)))))])
-                  (send dc set-brush (make-object color% gray-level gray-level gray-level) 'solid)
-                  (send dc draw-rectangle win-left top (- win-right win-left) (- bottom top))))
-              (draw-fft-rect (- half-h win-top) (- half-h win-bottom) (magnitude (vector-ref left-fft j)))
-              (draw-fft-rect (- h win-top) (- h win-bottom) (magnitude (vector-ref right-fft j))))))))))
+                       [gray-level (min 255 (- (inexact->exact 
+                                                (round (* 255/30 decibels)))))])
+                  (send dc set-brush (make-object color% gray-level gray-level
+                                       gray-level)
+                        'solid)
+                  (send dc draw-rectangle win-left top (- win-right win-left)
+                        (- bottom top))))
+              (draw-fft-rect (- half-h win-top) (- half-h win-bottom)
+                             (magnitude (vector-ref left-fft j)))
+              (draw-fft-rect (- h win-top) (- h win-bottom)
+                             (magnitude (vector-ref right-fft j))))))))))
+
+(define unequal-lengths-msg
+  "left and right channels must have the same number of fft windows, given ~s and ~s")
+(define uneven-vec-lengths-msg
+  "ffts must have an even number of points. That's just plain confusing.")
 
 (define fft-canvas%
   (class canvas%
@@ -288,7 +328,8 @@
              [scaled-x (pixel->frame x)])
         (send frame-num-text begin-edit-sequence #f)
         (send frame-num-text erase)
-        (send frame-num-text insert (format "frame #: ~a" (number->string scaled-x)))
+        (send frame-num-text insert 
+              (format "frame #: ~a" (number->string scaled-x)))
         (send frame-num-text end-edit-sequence)))
     
     ;; given an x coordinate, return the corresponding frame
@@ -297,26 +338,36 @@
     
     (super-new)))
 
-(define (ffts-draw left-ffts right-ffts len fft-show-points #:title [title "Fourier Transforms"] #:width [width 800] #:height [height 200])
+(define (ffts-draw left-ffts right-ffts len fft-show-points 
+                   #:title [title "Fourier Transforms"]
+                   #:width [width 800]
+                   #:height [height 200])
   (let* ([f (new frame% [label title] [width width] [height height])]
          [tx (new text%)]
          [ty (new text%)]
          [c (new fft-canvas%
                  [parent f]
-                 [paint-callback (make-fft-drawing-callback left-ffts right-ffts fft-show-points)]
+                 [paint-callback 
+                  (make-fft-drawing-callback left-ffts
+                                             right-ffts
+                                             fft-show-points)]
                  [len len]
                  [frame-num-text tx]
                  [data-len len])])
     (send f show #t)))
 
 
-(define (rsound-fft-draw rsound #:title [title "Fourier Transforms"] #:width [width 800] #:height [height 200] #:zoom-freq [zoom-freq #f]
+(define (rsound-fft-draw rsound
+                         #:title [title "Fourier Transforms"]
+                         #:width [width 800]
+                         #:height [height 200]
+                         #:zoom-freq [zoom-freq #f]
                          #:window-size [window-size 2048])
   
   (define window-size 2048)
   (define windows (floor (/ (rsound-frames rsound) window-size)))
   (when (= windows 0)
-    (error 'rsound-fft-draw "this sound has ~s frames, fewer than the ~s needed for one fft window. Use a longer sound or shorten the window."
+    (error 'rsound-fft-draw not-enough-frames-msg
            (rsound-frames rsound)
            window-size))
   (define (ffts-from-getter getter)
@@ -331,11 +382,16 @@
              (ffts-from-getter rsound-nth-sample/right) 
              (* windows window-size)
              (if zoom-freq
-                 (round (* window-size (/ zoom-freq (rsound-sample-rate rsound))))
+                 (round (* window-size 
+                           (/ zoom-freq (rsound-sample-rate rsound))))
                  (add1 (round (* window-size 1/2))))
              #:width width
              #:height height
              #:title title))
+
+(define not-enough-frames-msg 
+  (string-append "this sound has ~s frames, fewer than the ~s needed for "
+                 "one fft window. Use a longer sound or shorten the window."))
 
 
 ;; return the phase of a complex number.  For 0+0i, return 0.
@@ -344,5 +400,8 @@
     0.0
     (let ([phase (/ (log (/ cplx (magnitude cplx))) +i)])
       (unless (< (abs (imag-part phase)) 1e-4)
-        (error 'phase "oh dear; phase should be a real number, got ~s for complex number ~s" phase cplx))
+        (error 'phase imaginary-phase!?-msg phase cplx))
       (real-part phase))))
+
+(define imaginary-phase!?-msg
+  "oh dear; phase should be a real number, got ~s for complex number ~s")

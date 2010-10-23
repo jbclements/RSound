@@ -25,8 +25,8 @@ advantages (speed, mostly) and disadvantages (clipping).
 
 Does it work on your machine? Try this example:
 @racketblock[
- (require (planet ("main.rkt" ("clements" "rsound.plt"))))
-                       
+ (require (planet "main.rkt" ("clements" "rsound.plt" 1 7)))
+  
  (rsound-play ding)
  ]
 }
