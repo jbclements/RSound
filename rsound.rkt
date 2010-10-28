@@ -129,8 +129,10 @@
      (when (custodian? (unbox link:link))
        (error 'rsound-play "rsound play thread is uninitialized. Perhaps you just installed the planet package and need to restart?"))
      (if loop?
-         (send (unbox link:link) loop-sound data frames sample-rate)
-         (send (unbox link:link) play-sound data frames sample-rate))]
+         (send (unbox link:link) loop-sound (s16vector->cpointer data)
+               frames sample-rate)
+         (send (unbox link:link) play-sound (s16vector->cpointer data)
+               frames sample-rate))]
     [other
      (error 'rsound-play/helper "expected an rsound, got: ~e" sound)]))
 

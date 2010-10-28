@@ -25,7 +25,8 @@
 #;(define (check-below-threshold buffer frames threshold)
   (for ([i (in-range (* channels frames))])
     (when (> (ptr-ref buffer _float i) threshold)
-      (error 'check-below-threshold "sound contains samples above threshold ~s." threshold))))
+      (error 'check-below-threshold "sound contains samples above threshold ~s."
+             threshold))))
 
 ;; the channel used to communicate to the player thread.
 (define player-evt-channel (make-channel))
@@ -33,10 +34,12 @@
 ;; put a msg on a channel, signal an error if not a legal msg
 (define (player-channel-put msg)
   (cond [(player-msg? msg) (channel-put player-evt-channel msg)]
-        [else (error 'player-channel-put "expected a player message, got ~e\n" msg)]))
+        [else (error 'player-channel-put "expected a player message, got ~e\n"
+                     msg)]))
 
 
-;; somehow we've got to make sure pa-terminate gets called.... or not?
+;; somehow we've got to make sure pa-terminate gets called.... or not? Looks
+;; like things work even without calling pa-terminate.
 
 
 (define (start-player-thread)
@@ -91,9 +94,12 @@
         (lambda ()
           ;; use the outer loop if the user calls with loop? = #t
           (let outer-loop ()
-            ;; lexical bindings so that mutations don't take effect immediately:
-            (let ([this-buffer (s16vector->cpointer buffer)]
+            (cond [(cpointer? buffer) (fprintf (current-error-port) "yep, it's a cpointer.\n")]
+                  [else (fprintf (current-error-port) "nope, not a cpointer.\n")])
+            ;; capture lexical bindings so that mutations don't take effect immediately:
+            (let ([this-buffer buffer]
                   [this-frames frames])
+              (fprintf (current-error-port) "whew! made it.")
               (let loop ([buf-offset 0] 
                          [sleep-time 0.005])
                 ;; if we have a message to handle, handle it:

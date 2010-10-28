@@ -1,11 +1,10 @@
 #lang racket/base
 
 (require drscheme/tool
-         racket/gui/base
          racket/unit
          racket/class
          (prefix-in drlink: "private/drracket-link.rkt")
-         #;(prefix-in drlink: (planet "drracket-link.rkt" ("clements" "rsound.plt") "private"))
+         ffi/unsafe/cvector-def
          )
 
 ;; most of this comes from Ryan Culpepper's tool.ss file for rackunit.
@@ -16,23 +15,6 @@
   '(planet "drracket-link.rkt" ("clements" "rsound.plt") "private"))
 
 (define-namespace-anchor drracket-ns-anchor)
-
-;; close/eventspace : (a* -> b) -> (a* -> b)
-;; Returns a procedure that executes the procedure in the 
-;; eventspace current when close/eventspace was executed.
-;; Effectively, "close" the procedure in the current eventspace.
-(define (close-eventspace f)
-  (let ([es (current-eventspace)])
-    (lambda args
-      (parameterize [(current-eventspace es)]
-        (apply f args)))))
-
-(define (close-eventspace/async f)
-  (let ([es (current-eventspace)])
-    (lambda args
-      (parameterize ((current-eventspace es))
-        (queue-callback (lambda () (apply f args)))))))
-
 
 (define tool@
   (unit
@@ -55,7 +37,11 @@
         (define/private (setup-helper-module)
           (namespace-attach-module drracket-ns
                                    LINK-MODULE-SPEC
+                                   (get-user-namespace))
+          (namespace-attach-module drracket-ns
+                                   'ffi/unsafe/cvector-def
                                    (get-user-namespace)))
+          
 
         (define/override (reset-console)
           (super reset-console)
