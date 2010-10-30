@@ -4,7 +4,7 @@
          racket/unit
          racket/class
          (prefix-in drlink: "private/drracket-link.rkt")
-         ffi/unsafe/cvector-def
+         #;ffi/unsafe/cvector-def
          )
 
 ;; most of this comes from Ryan Culpepper's tool.ss file for rackunit.
@@ -22,7 +22,7 @@
     (export drscheme:tool-exports^)
 
 
-    
+
     ;; Send them off to the drscheme-ui module.
     ;; We'll still have to attach our instantiation of drscheme-link
     ;; to the user namespace.
@@ -38,7 +38,7 @@
           (namespace-attach-module drracket-ns
                                    LINK-MODULE-SPEC
                                    (get-user-namespace))
-          (namespace-attach-module drracket-ns
+          #;(namespace-attach-module drracket-ns
                                    'ffi/unsafe/cvector-def
                                    (get-user-namespace)))
           
