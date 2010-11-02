@@ -43,6 +43,8 @@
          rsound-fft/right
          rsound-max-volume
          signal
+         midi-note-num->pitch
+         signal?
          ;; for testing:
          raw-sine-wave
          raw-square-wave
@@ -174,6 +176,10 @@
 
 (define (signal-+s lof)
   (lambda (i) (apply + (map (lambda (x) (x i)) lof))))
+
+;; can this procedure be used as a signal? 
+(define (signal? f)
+  (and (procedure? f) (procedure-arity-includes? f 1)))
 
 ;; convert a wavefun into a tone-maker; basically just keep a hash table
 ;; of previously generated sounds.
@@ -332,6 +338,12 @@
                          (rsound-sample-rate rsound)
                          (lambda (i) (fl* scalar (exact->inexact (rsound-nth-sample/left rsound i))))
                          (lambda (i) (fl* scalar (exact->inexact (rsound-nth-sample/right rsound i)))))))
+
+
+;; midi-note-num->pitch : number -> number
+;; produces the pitch that corresponds to a midi note number
+(define (midi-note-num->pitch note-num)
+  (* 440 (expt 2 (/ (- note-num 69) 12))))
 
 
 ;; FIR filters

@@ -89,8 +89,19 @@
 (check-equal? (binary-logn 4096) 12)
 (check-equal? (binary-logn 4095) #f)
 
-
+;; SIGNAL
 (check-equal? ((signal (lambda (t b c) (+ t b c)) 3 4) 1) 8)
+
+;; SIGNAL?
+(check-equal? (signal? (lambda (t) 14)) #t)
+(check-equal? (signal? (lambda (x y) 14)) #f)
+(check-equal? (signal? (lambda args 14)) #t)
+
+;; MIDI-NOTE-NUM->PITCH
+
+(check-= (midi-note-num->pitch 69) 440.0 1e-4)
+(check-= (midi-note-num->pitch 57) 220.0 1e-4)
+(check-= (midi-note-num->pitch 56) (/ 220 (expt 2 1/12)) 1e-4)
 
 ;; how much slower is signal?
 ;; answer: negligible; only about 2% slower

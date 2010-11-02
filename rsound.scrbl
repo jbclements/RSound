@@ -6,6 +6,8 @@
 
 @author[(author+email "John Clements" "clements@racket-lang.org")]
 
+@(require (for-label racket))
+
 @defmodule[(planet clements/rsound)]{This collection provides a means to represent, read,
 write, play, and manipulate sounds. It uses the 'portaudio' library, which appears
 to run on Linux, Mac, and Windows.
@@ -23,9 +25,10 @@ sound. (Use @racket[(stop-playing)] for that.)
 It represents all sounds internally as stereo 16-bit PCM, with all the attendant
 advantages (speed, mostly) and disadvantages (clipping).
 
-Does it work on your machine? Try this example:
+Does it work on your machine? Try this example (and accept my 
+apologies if I forget to update the version number):
 @racketblock[
- (require (planet "main.rkt" ("clements" "rsound.plt" 1 7)))
+ (require (planet "main.rkt" ("clements" "rsound.plt" 1 8)))
   
  (rsound-play ding)
  ]
@@ -201,6 +204,13 @@ There are also a number of functions that combine existing signals, called "sign
 @defproc[(signal-*s [signals (listof signal?)]) signal?]{
  Produces the signal that is the product of the input signals.}
 
+Finally, here's a predicate.  This could be a full-on contract, but I'm afraid of the 
+overhead.
+
+@defproc[(signal? [maybe-signal any/c]) boolean?]{
+ Is the given value a signal? More precisely, is the given value a procedure whose
+ arity includes 1?}
+
 @section{Visualizing Rsounds}
 
 @defmodule[(planet clements/rsound/draw)]
@@ -258,6 +268,9 @@ There are also a number of functions that combine existing signals, called "sign
  Since the FFT takes time N*log(N) in the size of the input, running this on rsounds with more than a
  few thousand frames is probably going to be slow, unless the number of frames is a power of 2}
 
+@defproc[(midi-note-num->pitch [note-num nonnegative-integer?]) number?]{
+ Returns the frequency (in Hz) that corresponds to a given midi note number. Here's the top-secret formula: 
+ 440*2^((n-69)/12).}
 
 not-yet-documented: @racket[(provide twopi 
          make-tone
