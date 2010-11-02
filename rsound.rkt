@@ -141,8 +141,10 @@
   (rsound-play/helper #f))
 
 ;; loop an rsound endlessly
-(define rsound-loop 
-  (rsound-play/helper #t))
+(define (rsound-loop sound) 
+  (when (= (rsound-frames sound) 0)
+    (error 'rsound-loop "It's a bad idea to loop an empty sound."))
+  ((rsound-play/helper #t) sound))
  
 ;; backup solution: play from a file:
 #;(define (rsound-play sound)
@@ -196,7 +198,7 @@
     (raise-type-error 'rsound-extractor "nonnegative integer" 1 rsound frame))
   (unless (< frame (rsound-frames rsound))
     (raise-type-error 'rsound-extractor (format "frame index less than available # of frames ~s" (rsound-frames rsound)) 1 rsound frame))
-  (scale-fun (s16vector-ref (rsound-data rsound) (+ (* frame channels) (if left? 0 1)))))
+  (scale-fun (s16vector-ref (rsound-data rsound) (+ (* (inexact->exact frame) channels) (if left? 0 1)))))
 
 ;; return the nth *sample* (not frame) of an rsound.
 (define (rsound-nth-sample sound sample)
@@ -206,7 +208,7 @@
     (raise-type-error 'rsound-nth-sample/right "positive integer" 1 sound sample))
   (match-let* ([(struct rsound (data frames sample-rate)) sound])
     (when (>= sample (* channels frames))
-      (error 'rsound-nth-sample "requested sample # ~s greater than available # of samples ~s." sample (* channels frames)))
+      (error 'rsound-nth-sample "requested sample # ~s greater than available # of samples ~s." sample (* channels (inexact->exact frames))))
     (s16vector-ref data sample)))
 
 ;; rsound->list : rsound -> (listof (list/c sample sample))
@@ -231,13 +233,20 @@
   (unless (frame? finish)
     (raise-type-error 'rsound-clip "non-negative integer" 2 sound start finish))
   (unless (and (<= 0 start finish (rsound-frames sound)))
-    (error 'rsound-clip "must have 0 < start < end < frames.  You provided start ~s and end ~s for a sound with ~s frames."
+    (error 'rsound-clip 
+           frames-out-of-range-msg
            start finish (rsound-frames sound)))
-  (let* ([cblock (make-s16vector (* channels (- finish start)))])
+  (let* ([start/e (inexact->exact start)]
+         [finish/e (inexact->exact finish)]
+         [cblock (make-s16vector (* channels (- finish/e start)))])
     (memcpy (s16vector->cpointer cblock) 0
-            (s16vector->cpointer (rsound-data sound)) (* start channels)
-            (* channels (- finish start)) _sint16)
-    (rsound cblock (- finish start) (rsound-sample-rate sound))))
+            (s16vector->cpointer (rsound-data sound)) (* start/e channels)
+            (* channels (- finish/e start/e)) _sint16)
+    (rsound cblock (- finish/e start/e) (rsound-sample-rate sound))))
+
+(define frames-out-of-range-msg
+  (string-append "must have 0 < start < end < frames.  "
+                 "You provided start ~s and end ~s for a sound with ~s frames."))
 
 ;; rsound-append : rsound rsound -> rsound
 (define (rsound-append sound-a sound-b)
@@ -395,7 +404,7 @@
   (and (exact-integer? s) (< 0 s)))
 
 (define (frame? f)
-  (and (exact-integer? f) (<= 0 f)))
+  (and (integer? f) (<= 0 f)))
 
 (define (inexact->s16 x)
   (inexact->exact (round (* s16max/i (max -1.0 (min 1.0 x))))))

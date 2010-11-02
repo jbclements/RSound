@@ -129,6 +129,10 @@
 (check-equal? (rsound-nth-sample/right short-with-pad 6) #x478)
 
 
+;; check that you can't loop with an rsound of length 0
+(check-exn exn:fail?
+           (lambda () (rsound-loop (make-silence 0 44100))))
+
 ;; clipping isn't happening right.
 
 (check-= (/ (rsound-nth-sample/left (fun->mono-rsound 300 44100
