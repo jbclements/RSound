@@ -27,6 +27,10 @@
          ;; signal combiners
          signal-*s
          signal-+s
+         signal?
+         rsound->signal/left
+         rsound->signal/right
+         ;; rsound makers
          make-tone
          make-squaretone
          make-sawtooth-tone
@@ -38,13 +42,13 @@
          split-in-4
          times
          vectors->rsound
+         fir-filter
          echo1
          rsound-fft/left
          rsound-fft/right
          rsound-max-volume
          signal
          midi-note-num->pitch
-         signal?
          ;; for testing:
          raw-sine-wave
          raw-square-wave
@@ -346,7 +350,61 @@
   (* 440 (expt 2 (/ (- note-num 69) 12))))
 
 
+;; rsound->signal/either : (rsound number -> number) -> rsound -> signal
+;; an abstraction over left/right channels for the following two functions.
+;; it has to appear before them, unfortunately.
+(define ((rsound->signal/either ith-fun) rsound)
+  (unless (rsound? rsound)
+    (raise-type-error 'rsound->signal "rsound" 0 rsound))
+  (let ([len (rsound-frames rsound)])
+    (lambda (t)
+      (cond [(< t len) (ith-fun rsound t)]
+            [else 0.0]))))
+
+;; rsound->signal/left : rsound -> signal
+;; produce the signal that corresponds to the rsound's left channel, followed by silence.
+(define rsound->signal/left (rsound->signal/either rsound-ith/left))
+
+;; rsound->signal/right : rsound -> signal
+;; produce the signal that corresponds to the rsound's right channel, followed by silence.
+(define rsound->signal/right (rsound->signal/either rsound-ith/right))
+
+
 ;; FIR filters
+
+;; fir-filter : (listof (list/c delay amplitude)) -> signal -> signal
+;; filter the input signal using the delay values and amplitudes given for an FIR filter
+(define (fir-filter params)
+  (match params
+    [`((,delays ,amplitudes) ...)
+     (unless (andmap (lambda (d) (and (exact-integer? d) (< 0 d))) delays)
+       (raise-type-error 'fir-filter "exact integer delays greater than zero" 0 params))
+     (unless (andmap real? amplitudes)
+       (raise-type-error 'fir-filter "real number amplitudes" 0 params))
+     (lambda (signal)
+       ;; use a minimum vector length of 1:
+       (let* ([max-delay (apply max (cons 1 delays))]
+              ;; set up buffer to delay the signal
+              [delay-buf (make-vector max-delay 0.0)]
+              [next-idx 0]
+              ;; ugh... we must be called sequentially:
+              [last-t -1])
+         (lambda (t)
+           (unless (= t (add1 last-t))
+             (error 'fir-filter "called with t=~s, expecting t=~s. Sorry about that limitation." 
+                    t
+                    (add1 last-t)))
+           (let ([this-val (signal t)])
+             (begin0
+               (for/fold ([sum this-val])
+                         ([d (in-list delays)]
+                          [a (in-list amplitudes)])
+                         (+ sum (* a (vector-ref delay-buf (modulo (- next-idx d) max-delay)))))
+               (vector-set! delay-buf next-idx this-val)
+               (set! last-t (add1 last-t))
+               (set! next-idx (modulo (add1 next-idx) max-delay)))))))]
+    [other (raise-type-error 'fir-filter "(listof (list number number))" 0 params)]))
+
 ;; apply a filter to a sound
 (define delay 8820)
 (define echo1

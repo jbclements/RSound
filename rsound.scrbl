@@ -204,6 +204,16 @@ There are also a number of functions that combine existing signals, called "sign
 @defproc[(signal-*s [signals (listof signal?)]) signal?]{
  Produces the signal that is the product of the input signals.}
 
+We can turn an rsound back into a signal, using rsound->signal:
+
+@defproc[(rsound->signal/left [rsound rsound?]) signal?]{
+ Produces the signal that corresponds to the rsound's left channel, followed by endless silence. Ah, endless silence.}
+
+
+@defproc[(rsound->signal/right [rsound rsound?]) signal?]{
+ Produces the signal that corresponds to the rsound's right channel, followed by endless silence. (The silence joke
+ wouldn't be funny if I made it again.)}
+
 Finally, here's a predicate.  This could be a full-on contract, but I'm afraid of the 
 overhead.
 

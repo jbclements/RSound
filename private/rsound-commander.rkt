@@ -94,12 +94,9 @@
         (lambda ()
           ;; use the outer loop if the user calls with loop? = #t
           (let outer-loop ()
-            (cond [(cpointer? buffer) (fprintf (current-error-port) "yep, it's a cpointer.\n")]
-                  [else (fprintf (current-error-port) "nope, not a cpointer.\n")])
             ;; capture lexical bindings so that mutations don't take effect immediately:
             (let ([this-buffer buffer]
                   [this-frames frames])
-              (fprintf (current-error-port) "whew! made it.")
               (let loop ([buf-offset 0] 
                          [sleep-time 0.005])
                 ;; if we have a message to handle, handle it:
