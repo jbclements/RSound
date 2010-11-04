@@ -6,7 +6,8 @@
 
 @author[(author+email "John Clements" "clements@racket-lang.org")]
 
-@(require (for-label racket))
+@(require (for-label racket)
+          (for-label (planet clements/rsound)))
 
 @defmodule[(planet clements/rsound)]{This collection provides a means to represent, read,
 write, play, and manipulate sounds. It uses the 'portaudio' library, which appears
@@ -147,7 +148,7 @@ These procedures allow the creation, analysis, and manipulation of rsounds.
  number in the range @racket[-1.0] to @racket[1.0]. Values outside this range are clipped.
  Both channels are identical. }
 
-@defproc[(fun->stereo-rsound (frames nonnegative-integer?) (sample-rate nonnegative-integer?) 
+@defproc[(funs->stereo-rsound (frames nonnegative-integer?) (sample-rate nonnegative-integer?) 
                              (left-fun signal?) (right-fun signal?)) rsound?]{
  Builds a stereo sound of length @racket[frames] and sample-rate @racket[sample-rate] by calling 
  @racket[left-fun] and @racket[right-fun] 
@@ -281,6 +282,7 @@ overhead.
 @defproc[(midi-note-num->pitch [note-num nonnegative-integer?]) number?]{
  Returns the frequency (in Hz) that corresponds to a given midi note number. Here's the top-secret formula: 
  440*2^((n-69)/12).}
+
 
 not-yet-documented: @racket[(provide twopi 
          make-tone
