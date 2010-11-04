@@ -19,6 +19,8 @@
          approx-sawtooth-wave
          square-wave
          harm3-wave
+         ;; functions on numbers
+         thresh
          ;; envelope-funs
          fader
          frisellinator
@@ -28,6 +30,9 @@
          signal-*s
          signal-+s
          signal?
+         thresh/signal
+         scale
+         clip&volume
          rsound->signal/left
          rsound->signal/right
          ;; rsound makers
@@ -369,6 +374,30 @@
 ;; produce the signal that corresponds to the rsound's right channel, followed by silence.
 (define rsound->signal/right (rsound->signal/either rsound-ith/right))
 
+;; thresh : number number -> number
+;; clip to a threshold
+(define (thresh threshold n)
+  (let ([abs-thresh (abs threshold)])
+    (max (- abs-thresh) (min abs-thresh n))))
+
+;; thresh/signal : number signal -> signal
+;; clip to a threshold (lifted to signals)
+(define (thresh/signal threshold signal)
+  (let* ([abs-thresh (abs threshold)]
+         [neg-abs-thresh (- abs-thresh)])
+    (lambda (t)
+      (max neg-abs-thresh (min abs-thresh (signal t))))))
+
+;; scale : number signal -> signal
+;; scale the signal by the given number
+(define (scale volume signal)
+  (lambda (t)
+    (* volume (signal t))))
+
+;; clip&volume : number signal -> signal
+;; clip the given signal to 1.0, then multiply by the volume.
+(define (clip&volume volume signal)
+  (scale volume (thresh/signal 1.0 signal)))
 
 ;; FIR filters
 

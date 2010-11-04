@@ -139,6 +139,24 @@
   (check-= (rsound-ith/right test-sound 12) (mush (+ 12/500 7/5000)) 1e-7)
   (check-= (rsound-ith/left test-sound 78) (mush (+ 78/500 73/5000 65/2500)) 1e-7))
 
+;; CLIP&SCALE
+
+;; reduce-volume 
+
+(check-= (thresh 1.0 7.0) 1.0 1e-4)
+(check-= (thresh 2.0 -1.2) -1.2 1e-4)
+(check-= (thresh 2.0 -6.0) -2.0 1e-4)
+(check-= (thresh -2.5 3.4) 2.5 1e-4)
+
+(let* ([f (lambda (t) (* 2 (sin (* t twopi 1 1/12))))]
+       [vf (clip&volume 0.5 f)]
+       [sf (scale 4.0 f)])
+  (check-= (f 0) 0 1e-4)
+  (check-= (f 6) 0 1e-4)
+  (check-= (f 3) 2.0 1e-4)
+  (check-= (vf 0) 0 1e-4)
+  (check-= (vf 3) 0.5 1e-4)
+  (check-= (sf 3) 8.0 1e-4))
 
 
 ;; how much slower is signal?

@@ -35,6 +35,12 @@ apologies if I forget to update the version number):
  ]
 }
 
+A note about volume: be careful not to damage your hearing, please. To take a simple example,
+the @racket[sine-wave] function generates a sine wave with amplitude 1.0.  That translates into
+the @emph{loudest possible sine wave} that can be represented. So please set your volume low, 
+and be careful with the headphones. Maybe there should be a parameter that controls the clipping 
+volume. Hmm.
+
 @section{Sound Control}
 
 These procedures start and stop playing sounds and loops.
@@ -141,21 +147,7 @@ These procedures allow the creation, analysis, and manipulation of rsounds.
  
  }
 
-@defproc[(fun->mono-rsound (frames nonnegative-integer?) (sample-rate nonnegative-integer?) 
-                           (fun signal?)) rsound?]{
- Builds a sound of length @racket[frames] and sample-rate @racket[sample-rate] by calling 
- @racket[fun] with integers from 0 up to @racket[frames]-1. The result should be an inexact 
- number in the range @racket[-1.0] to @racket[1.0]. Values outside this range are clipped.
- Both channels are identical. }
-
-@defproc[(funs->stereo-rsound (frames nonnegative-integer?) (sample-rate nonnegative-integer?) 
-                             (left-fun signal?) (right-fun signal?)) rsound?]{
- Builds a stereo sound of length @racket[frames] and sample-rate @racket[sample-rate] by calling 
- @racket[left-fun] and @racket[right-fun] 
- with integers from 0 up to @racket[frames]-1. The result should be an inexact 
- number in the range @racket[-1.0] to @racket[1.0]. Values outside this range are clipped.}
-
-                                                                             @section{Signals}
+@section{Signals}
 
 A signal is a function mapping a frame number to a real number in the range @racket[-1.0] to @racket[1.0]. There
 are several built-in functions that produce signals.
@@ -177,6 +169,47 @@ are several built-in functions that produce signals.
 @defproc[(dc-signal [amplitude real?]) signal?]{
  Produces a constant signal at @racket[amplitude]. Inaudible unless used to multiply by
  another signal.}
+
+In order to listen to them, you'll need to transform them into rsounds:
+
+@defproc[(fun->mono-rsound (frames nonnegative-integer?) (sample-rate nonnegative-integer?) 
+                           (fun signal?)) rsound?]{
+ Builds a sound of length @racket[frames] and sample-rate @racket[sample-rate] by calling 
+ @racket[fun] with integers from 0 up to @racket[frames]-1. The result should be an inexact 
+ number in the range @racket[-1.0] to @racket[1.0]. Values outside this range are clipped.
+ Both channels are identical. 
+ 
+ Here's an example of using it:
+ 
+ @racketblock[
+(define samplerate 44100)
+(define sr/inv (/ 1 samplerate))
+
+(define (sig1 t)
+  (* 0.1 (sin (* t 560 twopi sr/inv))))
+
+(define r (fun->mono-rsound (* samplerate 4) samplerate sig1))
+
+(rsound-play r)]
+ 
+ Alternatively, we could use @racket[sine-wave] to achieve the same result:
+ 
+ @racketblock[
+(define samplerate 44100)
+
+(define r (fun->mono-rsound (* samplerate 4) samplerate (scale 0.1 (sine-wave 560 samplerate))))
+
+(rsound-play r)]}
+                                                  
+                                                  
+
+@defproc[(funs->stereo-rsound (frames nonnegative-integer?) (sample-rate nonnegative-integer?) 
+                             (left-fun signal?) (right-fun signal?)) rsound?]{
+ Builds a stereo sound of length @racket[frames] and sample-rate @racket[sample-rate] by calling 
+ @racket[left-fun] and @racket[right-fun] 
+ with integers from 0 up to @racket[frames]-1. The result should be an inexact 
+ number in the range @racket[-1.0] to @racket[1.0]. Values outside this range are clipped.}
+
 
 @defproc[(fader [fade-samples number?]) signal?]{
  Produces a signal that decays exponentially. After @racket[fade-samples], its value is @racket[0.001].
@@ -214,6 +247,18 @@ We can turn an rsound back into a signal, using rsound->signal:
 @defproc[(rsound->signal/right [rsound rsound?]) signal?]{
  Produces the signal that corresponds to the rsound's right channel, followed by endless silence. (The silence joke
  wouldn't be funny if I made it again.)}
+
+@defproc[(thresh/signal [threshold real-number?] [signal signal?]) signal?]{
+ Applies a threshold (see @racket[thresh], below) to a signal.}
+
+@defproc[(clip&volume [volume real-number?] [signal signal?]) signal?]{
+ Clips the @racket[signal] to a threshold of 1, then multiplies by the given @racket[volume].}
+
+Where should these go?
+
+@defproc[(thresh [threshold real-number?] [input real-number?]) real-number?]{
+ Produces the number in the range @racket[(- threshold)] to @racket[threshold] that is 
+ closest to @racket[input]. Put differently, it ``clips'' the input at the threshold.}
 
 Finally, here's a predicate.  This could be a full-on contract, but I'm afraid of the 
 overhead.
