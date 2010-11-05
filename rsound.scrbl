@@ -328,6 +328,30 @@ overhead.
  Returns the frequency (in Hz) that corresponds to a given midi note number. Here's the top-secret formula: 
  440*2^((n-69)/12).}
 
+@defproc[(fir-filter [delay-lines (listof (list/c nonnegative-exact-integer? real-number?))]) procedure?]{
+ Given a list of delay times (in frames) and amplitudes for each, produces a function that maps signals
+ to new signals where each frame is the sum of the current signal frame and the multiplied versions of 
+ the delayed @emph{input} signals (that's what makes it FIR).
+ 
+ So, for instance,
+ 
+ @racketblock[(fir-filter (list (list 13 0.4) (list 4 0.1)))]
+ 
+ ...would produce a filter that added the current frame to 4/10 of the input frame 13 frames ago and 1/10 of
+ the input frame 4 frames ago.}
+
+@defproc[(iir-filter [delay-lines (listof (list/c nonnegative-exact-integer? real-number?))]) procedure?]{
+ Given a list of delay times (in frames) and amplitudes for each, produces a function that maps signals
+ to new signals where each frame is the sum of the current signal frame and the multiplied versions of 
+ the delayed @emph{output} signals (that's what makes it IIR).
+ 
+ So, for instance,
+ 
+ @racketblock[(iir-filter (list (list 13 0.4) (list 4 0.1)))]
+ 
+ ...would produce a filter that added the current frame to 4/10 of the output frame 13 frames ago and 1/10 of
+ the output frame 4 frames ago.}
+
 
 not-yet-documented: @racket[(provide twopi 
          make-tone

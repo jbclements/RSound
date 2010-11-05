@@ -48,7 +48,7 @@
          times
          vectors->rsound
          fir-filter
-         echo1
+         iir-filter
          rsound-fft/left
          rsound-fft/right
          rsound-max-volume
@@ -434,19 +434,45 @@
                (set! next-idx (modulo (add1 next-idx) max-delay)))))))]
     [other (raise-type-error 'fir-filter "(listof (list number number))" 0 params)]))
 
-;; apply a filter to a sound
-(define delay 8820)
-(define echo1
-  (let* ([vec-len (* 3 delay)]
-         [echovec (make-flvector vec-len 0.0)]
-         [vec-ptr 0])
-    (define (nth-echo n)
-      (flvector-ref echovec (modulo (- vec-ptr (* n delay)) vec-len)))
-    (lambda (in)
-      (let ([out (+ in (* 0.5 (nth-echo 1)) (* 0.25 (nth-echo 2)) (* 0.125 (nth-echo 3)))])
-        (flvector-set! echovec vec-ptr (exact->inexact in))
-        (set! vec-ptr (modulo (+ vec-ptr 1) vec-len))
-        out))))
+;; IIR filters
+
+;; iir-filter : (listof (list/c delay amplitude)) -> signal -> signal
+;; filter the input signal using the delay values and amplitudes given for an IIR filter
+;; the only difference here is that we put the final result in the delay line, rather than
+;; the input signal.
+(define (iir-filter params)
+  (match params
+    [`((,delays ,amplitudes) ...)
+     (unless (andmap (lambda (d) (and (exact-integer? d) (< 0 d))) delays)
+       (raise-type-error 'iir-filter "exact integer delays greater than zero" 0 params))
+     (unless (andmap real? amplitudes)
+       (raise-type-error 'iir-filter "real number amplitudes" 0 params))
+     (lambda (signal)
+       ;; use a minimum vector length of 1:
+       (let* ([max-delay (apply max (cons 1 delays))]
+              ;; set up buffer to delay the signal
+              [delay-buf (make-vector max-delay 0.0)]
+              [next-idx 0]
+              ;; ugh... we must be called sequentially:
+              [last-t -1])
+         (lambda (t)
+           (unless (= t (add1 last-t))
+             (error 'fir-filter "called with t=~s, expecting t=~s. Sorry about that limitation." 
+                    t
+                    (add1 last-t)))
+           (let* ([this-val (signal t)]
+                  [new-val (for/fold ([sum this-val])
+                                     ([d (in-list delays)]
+                                      [a (in-list amplitudes)])
+                                     (+ sum (* a (vector-ref delay-buf (modulo (- next-idx d) max-delay)))))])
+             (begin0
+               new-val
+               (vector-set! delay-buf next-idx new-val)
+               (set! last-t (add1 last-t))
+               (set! next-idx (modulo (add1 next-idx) max-delay)))))))]
+    [other (raise-type-error 'iir-filter "(listof (list number number))" 0 params)]))
+
+
 
 #;(define (try-wave-fun fun)
   (fun->mono-rsound (* 4 44100) 44100 (signal-*s (list (dc-signal 0.35)

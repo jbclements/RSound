@@ -139,6 +139,20 @@
   (check-= (rsound-ith/right test-sound 12) (mush (+ 12/500 7/5000)) 1e-7)
   (check-= (rsound-ith/left test-sound 78) (mush (+ 78/500 73/5000 65/2500)) 1e-7))
 
+;; IIR-FILTER
+
+(let* ([my-filter (iir-filter '((13 0.2) (5 0.1)))]
+       [test-sound (fun->mono-rsound 100 44100 (my-filter (lambda (x) (/ x 500))))])
+  (check-= (rsound-ith/right test-sound 0) 0 1e-7)
+  (check-= (rsound-ith/right test-sound 1) (mush 1/500) 1e-7)
+  (check-= (rsound-ith/right test-sound 4) (mush 4/500) 1e-7)
+  (check-= (rsound-ith/right test-sound 5) (mush (+ 5/500 0/5000)) 1e-7)
+  (check-= (rsound-ith/right test-sound 6) (mush (+ 6/500 1/5000)) 1e-7)
+  (check-= (rsound-ith/right test-sound 10) (mush (+ 10/500 5/5000)) 1e-7)
+  ;; now the IIR starts to behave differently:
+    (check-= (rsound-ith/right test-sound 11) (mush (+ 11/500 (* 1/10 (+ 6/500 1/5000)))) 1e-7)
+  (check-= (rsound-ith/right test-sound 12) (mush (+ 12/500 (* 1/10 (+ 7/500 2/5000)))) 1e-7))
+
 ;; CLIP&SCALE
 
 ;; reduce-volume 
