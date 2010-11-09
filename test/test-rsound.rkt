@@ -25,6 +25,7 @@
   (check-= (rsound-nth-sample/left t 0) 0 1e-4)
   (check-= (rsound-nth-sample/right t 1) (round (* s16max (sin (* twopi 13/44100)))) 1e-4))
 
+
 ;; FUNS->STEREO-RSOUND
 (let ([s (funs->stereo-rsound 100 44100 (lambda (i) (/ i 100)) (lambda (i) (- 1 (/ i 100))))])
   (check-= (rsound-ith/left s 13) 13/100 1e-4)
@@ -112,6 +113,8 @@
 
 (define test-sub-rsound (rsound-read/clip short-test-wav 30 40))
 
+(check-not-exn (lambda () (rsound-read/clip short-test-wav 30 40.0)))
+
 (check-equal? (rsound-frames test-sub-rsound) 10)
 (check-= (rsound-nth-sample/left test-sub-rsound 0) (desired-nth-sample 30) 1e-4)
 (check-= (rsound-nth-sample/right test-sub-rsound 1) (desired-nth-sample 31) 1e-4)
@@ -146,6 +149,7 @@
             #x7fff)
          1.0
          1e-4)
+
 
 ;; set-rsound-ith/left! and right!
 (let ([s (make-silence 100 44100)])

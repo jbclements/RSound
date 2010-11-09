@@ -85,11 +85,11 @@
 (define (rsound-read/clip path start-frame end-frame)
   (unless (path-string? path)
     (raise-type-error 'rsound-read "path-string" 0 path start-frame end-frame))
-  (unless (and (integer? start-frame) (>= start-frame 0))
+  (unless (frame? start-frame)
     (raise-type-error 'rsound-read "non-negative integer" 1 path start-frame end-frame))
-    (unless (and (integer? end-frame) (>= end-frame 0))
+  (unless (frame? end-frame)
     (raise-type-error 'rsound-read "non-negative integer" 2 path start-frame end-frame))
-  (match (read-sound/s16vector path start-frame end-frame)
+  (match (read-sound/s16vector path (inexact->exact start-frame) (inexact->exact end-frame))
     [(list data frames sample-rate) (make-rsound data frames sample-rate)]))
 
 ;; what is the sample-rate of a file?
