@@ -1,7 +1,6 @@
 #lang racket
 
-; By Mustafa Khafateh
-
+; By Mustafa Khafateh & John Clements 
 
 (require (planet "main.rkt" ("clements" "rsound.plt" 1 7)))
 
@@ -74,7 +73,7 @@
 ; load the samples
 (define-runtime-path drum-samples "./drum-samples")
 
-(define kick   (rsound-read (build-path drum-samples "bassdrum.wav")))
+(define kick   (rsound-read (build-path drum-samples "bassdrum-synth.wav")))
 (define ohihat (rsound-read (build-path drum-samples "ohihat.wav")))
 (define chihat (rsound-read (build-path drum-samples "chihat.wav")))
 (define clap   (rsound-read (build-path drum-samples "clap.wav")))
