@@ -19,6 +19,8 @@
          rsound-nth-sample/right
          rsound-ith/left
          rsound-ith/right
+         set-rsound-ith/left!
+         set-rsound-ith/right!
          rsound-clip
          rsound-append
          rsound-append*
@@ -199,6 +201,32 @@
   (unless (< frame (rsound-frames rsound))
     (raise-type-error 'rsound-extractor (format "frame index less than available # of frames ~s" (rsound-frames rsound)) 1 rsound frame))
   (scale-fun (s16vector-ref (rsound-data rsound) (+ (* (inexact->exact frame) channels) (if left? 0 1)))))
+
+;; set the ith frame of the left channel to be new-val
+(define (set-rsound-ith/left! sound frame new-val)
+  (rsound-mutator sound frame #t new-val))
+
+;; set the ith frame of the right channel to be new-val
+(define (set-rsound-ith/right! sound frame new-val)
+  (rsound-mutator sound frame #f new-val))
+
+;; a mutation abstraction:
+(define (rsound-mutator rsound frame left? new-val)
+  (unless (rsound? rsound)
+    (raise-type-error 'rsound-mutator "rsound" 0 rsound frame new-val))
+  (unless (frame? frame)
+    (raise-type-error 'rsound-mutator "nonnegative integer" 1 rsound frame new-val))
+  (unless (< frame (rsound-frames rsound))
+    (raise-type-error 'rsound-mutator (format "frame index less than available # of frames ~s" (rsound-frames rsound)) 1 rsound frame new-val))
+  (unless (real? new-val)
+    (raise-type-error 'rsound-mutator "real number" 2 rsound frame new-val))
+  (s16vector-set! (rsound-data rsound)
+                  (frame->sample frame left?)
+                  (inexact->exact (round (* s16max (min 1.0 (max -1.0 new-val)))))))
+
+;; translate a frame number and a channel into a sample number
+(define (frame->sample f left?)
+  (+ (* (inexact->exact f) channels) (if left? 0 1)))
 
 ;; return the nth *sample* (not frame) of an rsound.
 (define (rsound-nth-sample sound sample)

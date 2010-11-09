@@ -147,6 +147,14 @@
          1.0
          1e-4)
 
+;; set-rsound-ith/left! and right!
+(let ([s (make-silence 100 44100)])
+  (set-rsound-ith/left! s 34 0.7)
+  (set-rsound-ith/right! s 87 0.3)
+  (check-= (rsound-ith/left s 34) 0.7 1e-5)
+  (check-= (rsound-ith/right s 34) 0.0 1e-5)
+  (check-= (rsound-ith/left s 87) 0.0 1e-5)
+  (check-= (rsound-ith/right s 87) 0.3 1e-5))
 
 #|(time (rsound-draw (make-tone 400 0.15 10 44100) 400 100))
 (time (rsound-draw (make-tone 400 0.15 100 44100) 400 100))
