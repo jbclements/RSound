@@ -830,27 +830,29 @@ signed long Pa_GetStreamWriteAvailable( PaStream* stream );
 
 ;; wrap a function to signal an error when an error code is returned.
 ;; (any ... -> pa-error) -> (any ... -> )
-(define (pa-checked pa-fun)
+(define (pa-checked pa-fun name)
   (lambda args
     (match (apply pa-fun args)
       ['paNoError (void)]
       [(? symbol? s) (error (pa-get-error-text s))]
-      [other (error 'pa-checked "internal error: expected a symbol, got: ~s")])))
+      [other (error name
+                    "internal error: expected a symbol, got: ~s"
+                    other)])))
 
 
 ;; defined checked forms of functions
 
-(define pa-initialize (pa-checked pa-initialize/unchecked))
-(define pa-terminate (pa-checked pa-terminate/unchecked))
+(define pa-initialize (pa-checked pa-initialize/unchecked 'pa-initialize))
+(define pa-terminate (pa-checked pa-terminate/unchecked 'pa-terminate))
 
 ;; pa-open-default-stream already checked...
-(define pa-close-stream (pa-checked pa-close-stream/unchecked))
+(define pa-close-stream (pa-checked pa-close-stream/unchecked 'pa-close-stream))
 
-(define pa-start-stream (pa-checked pa-start-stream/unchecked))
-(define pa-stop-stream (pa-checked pa-stop-stream/unchecked))
-(define pa-abort-stream (pa-checked pa-abort-stream/unchecked))
+(define pa-start-stream (pa-checked pa-start-stream/unchecked 'pa-start-stream))
+(define pa-stop-stream (pa-checked pa-stop-stream/unchecked 'pa-stop-stream))
+(define pa-abort-stream (pa-checked pa-abort-stream/unchecked 'pa-abort-stream))
 
-(define pa-read-stream (pa-checked pa-read-stream/unchecked))
-(define pa-write-stream (pa-checked pa-write-stream/unchecked))
+(define pa-read-stream (pa-checked pa-read-stream/unchecked 'pa-read-stream))
+(define pa-write-stream (pa-checked pa-write-stream/unchecked 'pa-write-stream))
 
 
