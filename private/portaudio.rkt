@@ -834,7 +834,8 @@ signed long Pa_GetStreamWriteAvailable( PaStream* stream );
   (lambda args
     (match (apply pa-fun args)
       ['paNoError (void)]
-      [other (error (pa-get-error-text other))])))
+      [(? symbol? s) (error (pa-get-error-text s))]
+      [other (error 'pa-checked "internal error: expected a symbol, got: ~s")])))
 
 
 ;; defined checked forms of functions
