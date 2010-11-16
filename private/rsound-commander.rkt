@@ -3,7 +3,8 @@
 (require racket/class
          "portaudio.rkt"
          ffi/unsafe
-         ffi/vector)
+         ffi/vector
+         racket/async-channel)
 
 (provide rsound-commander%)
 
@@ -69,84 +70,27 @@
 ;; returns #f on end-of-sound termination, returns a new event message
 ;; if one occurs and is the cause of termination.
 (define (play-buffer buffer frames sample-rate loop?)
-  ;; size of the portaudio buffer in seconds; this determines how responsive
-  ;; the engine is. Making it too small (< 0.01 seconds ?) will result in ... should be just pauses, now.
-  ;; under linux, every gc seems to blow this away.  Let's try using half a second, instead.
-  ;; whoa! on mac, half a second leads to instand underflow. Oh dear.
-  #;(define buffer-time 0.5)
-  #;(define frames-per-buffer (inexact->exact (floor (* sample-rate buffer-time))))
-  ;; okay, we're just going to let the library make up it's own mind
+  (define response-channel (make-async-channel))
+  (define-values (abort-flag callback) (make-copying-callback frames buffer response-channel))
   (define seconds (/ frames sample-rate))
   (let* ([stream (pa-open-default-stream 0             ;; input channels
                                          channels      ;; output channels
                                          'paInt16      ;; sample format
                                          (exact->inexact sample-rate)  ;; sample rate
                                          0 ;;frames-per-buffer  ;; frames per buffer
-                                         #f            ;; callback (NULL means just wait for data)
-                                         #f)]         ;; user data
-         #;[wait-time (/ buffer-time 2)])
+                                         callback     ;; callback (NULL means just wait for data)
+                                         #f)])         ;; user data (unnecessary in a world with closures))
     (dynamic-wind
      void
      (lambda ()
        (pa-start-stream stream)
-       (dynamic-wind
-        void
-        (lambda ()
-          ;; use the outer loop if the user calls with loop? = #t
-          (let outer-loop ()
-            ;; capture lexical bindings so that mutations don't take effect immediately:
-            (let ([this-buffer buffer]
-                  [this-frames frames])
-              (let loop ([buf-offset 0] 
-                         [sleep-time 0.005])
-                ;; if we have a message to handle, handle it:
-                (match (channel-try-get player-evt-channel)
-                  ;; stop playing:
-                  [(struct stop-playing-msg ()) #f]
-                  ;; play a different sound
-                  [(struct play-sound-msg (buffer frames sample-rate))
-                   (play-sound-msg buffer frames sample-rate)]
-                  ;; play a different loop:
-                  [(struct loop-sound-msg (buffer frames sample-rate))
-                   (set! loop? #t)
-                   (loop-sound-msg buffer frames sample-rate)]
-                  [other ;; including keep-playing & change-loop
-                   (match other 
-                     ;; change the loop (for next time through)
-                     [(struct change-loop-msg (new-buffer new-frames))
-                      (set! buffer new-buffer)
-                      (set! frames new-frames)]
-                     ;; just keep playing:
-                     [#f (void)])
-                   (if (< buf-offset this-frames) ;; do we have anything left to send?
-                       ;; how much space is there to write?
-                       (let ([available-space (pa-get-stream-write-available stream)])
-                         (if (= available-space 0)
-                             ;; no space, sleep & try again later
-                             (begin 
-                               (sleep sleep-time)
-                               (loop buf-offset sleep-time))
-                             ;; enough space, write buffer now.
-                             (let ([frames-to-write (min available-space (- this-frames buf-offset))])
-                               ;; hide OutputUnderflowed errors:
-                               (with-handlers ([(lambda (exn) (and (exn:fail? exn)
-                                                                   (string=? (exn-message exn) 
-                                                                             "Output underflowed")))
-                                                (lambda (exn) (log-error "ignoring output-underflowed error"))])
-                                 (pa-write-stream stream
-                                                  (ptr-add this-buffer (* channels buf-offset) _sint16)
-                                                  frames-to-write))
-                               (loop (+ buf-offset frames-to-write)
-                                     (/ (/ frames-to-write sample-rate) 2)))))
-                       ;; should we loop the sound?
-                       (if loop? 
-                           (outer-loop)
-                           #f))])))))
-        (lambda () (pa-stop-stream stream))))
-     (lambda () (pa-close-stream stream)))))
-
-
-
+       ;; this blocks until a response comes through:
+       (let ([response (async-channel-get response-channel)])
+         (pa-stop-stream stream)
+         (when (exn? response)
+           (raise response))))
+     (lambda () (pa-close-stream stream)))
+    #f))
 
 (define rsound-commander%
   (class object%

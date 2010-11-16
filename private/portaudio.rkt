@@ -1,7 +1,8 @@
 #lang racket
 
 (require ffi/unsafe
-         racket/runtime-path)
+         racket/runtime-path
+         racket/async-channel)
 
 
 ;; use local copies of the libraries for Windows & Mac...
@@ -456,10 +457,7 @@ typedef enum PaStreamCallbackResult
 
 |#
 
-
-;; *** UNTESTED ***:
-
-(define pa-stream-callback-result
+(define _pa-stream-callback-result
   (_enum
    '(pa-continue = 0
      pa-complete = 1
@@ -529,7 +527,7 @@ typedef int PaStreamCallback(
         _pa-stream-callback-time-info-pointer
         _pa-stream-callback-flags
         _pointer
-        -> _int))
+        -> _pa-stream-callback-result))
 #|
 /** Opens a stream for either input, output or both.
      
@@ -855,4 +853,43 @@ signed long Pa_GetStreamWriteAvailable( PaStream* stream );
 (define pa-read-stream (pa-checked pa-read-stream/unchecked 'pa-read-stream))
 (define pa-write-stream (pa-checked pa-write-stream/unchecked 'pa-write-stream))
 
+
+
+;; resurrected code from an ancient revision:
+
+(define (make-copying-callback total-frames master-buffer response-channel)
+  (let* ([channels 2]
+         [sample-offset 0] ;; mutable, to track through the buffer
+         [total-samples (* total-frames channels)]
+         [abort-flag (box #f)])
+    (values
+     abort-flag
+     (lambda (input output frame-count time-info status-flags user-data)
+       ;; MUST NOT ALLOW AN EXCEPTION TO ESCAPE.
+       (with-handlers ([(lambda (exn) #t)
+                        (lambda (exn)
+                          (async-channel-put response-channel exn)
+                          'pa-abort)])
+         (cond 
+           [(unbox abort-flag) 
+            (async-channel-put response-channel 'abort-flag)
+            'pa-abort]
+           [else 
+            (let ([buffer-samples (* frame-count channels)])
+              (cond
+                [(> (+ sample-offset buffer-samples) total-samples)
+                 (async-channel-put response-channel 'finished)
+                 ;; for now, just truncate if it doesn't come out even:
+                 ;; NB: all zero bits is the sint16 representation of 0
+                 (begin (memset output 0 buffer-samples _sint16)
+                        'pa-complete)]
+                [else
+                 (begin (memcpy output
+                                0
+                                master-buffer
+                                sample-offset
+                                buffer-samples
+                                _sint16)
+                        (set! sample-offset (+ sample-offset buffer-samples))
+                        'pa-continue)]))]))))))
 
