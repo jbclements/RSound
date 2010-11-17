@@ -1,8 +1,7 @@
 #lang racket
 
 (require ffi/unsafe
-         racket/runtime-path
-         racket/async-channel)
+         racket/runtime-path)
 
 
 ;; use local copies of the libraries for Windows & Mac...
@@ -854,6 +853,10 @@ signed long Pa_GetStreamWriteAvailable( PaStream* stream );
 (define pa-write-stream (pa-checked pa-write-stream/unchecked 'pa-write-stream))
 
 
+;; spawn a new thread to put a value on a synchronous channel
+(define (channel-put/async channel val)
+  (thread (lambda () 
+            (channel-put channel val))))
 
 ;; resurrected code from an ancient revision:
 
@@ -868,17 +871,17 @@ signed long Pa_GetStreamWriteAvailable( PaStream* stream );
        ;; MUST NOT ALLOW AN EXCEPTION TO ESCAPE.
        (with-handlers ([(lambda (exn) #t)
                         (lambda (exn)
-                          (async-channel-put response-channel exn)
+                          (channel-put/async response-channel exn)
                           'pa-abort)])
          (cond 
            [(unbox abort-flag) 
-            (async-channel-put response-channel 'abort-flag)
+            (channel-put/async response-channel 'abort-flag)
             'pa-abort]
            [else 
             (let ([buffer-samples (* frame-count channels)])
               (cond
                 [(> (+ sample-offset buffer-samples) total-samples)
-                 (async-channel-put response-channel 'finished)
+                 (channel-put/async response-channel 'finished)
                  ;; for now, just truncate if it doesn't come out even:
                  ;; NB: all zero bits is the sint16 representation of 0
                  (begin (memset output 0 buffer-samples _sint16)
@@ -893,7 +896,6 @@ signed long Pa_GetStreamWriteAvailable( PaStream* stream );
                         (set! sample-offset (+ sample-offset buffer-samples))
                         'pa-continue)]))]))))))
 
-
 (define (make-generating-callback signal response-channel)
   (let* ([channels 2]
          [s16max 32767]
@@ -905,11 +907,11 @@ signed long Pa_GetStreamWriteAvailable( PaStream* stream );
        ;; MUST NOT ALLOW AN EXCEPTION TO ESCAPE.
        (with-handlers ([(lambda (exn) #t)
                         (lambda (exn)
-                          (async-channel-put response-channel exn)
+                          (channel-put/async response-channel exn)
                           'pa-abort)])
          (cond 
            [(unbox abort-flag) 
-            (async-channel-put response-channel 'abort-flag)
+            (channel-put/async response-channel 'abort-flag)
             'pa-abort]
            [else 
             (for ([t (in-range sample-offset (+ sample-offset frame-count))]

@@ -71,14 +71,14 @@
 
 ;; play the sound. 
 (define (play-buffer buffer frames sample-rate loop?)
-  (define response-channel (make-async-channel))
+  (define response-channel (make-channel))
   (define-values (abort-flag callback) (make-copying-callback frames buffer response-channel))
   (play-using-callback response-channel callback abort-flag sample-rate))
 
 
 ;; play the signal.
 (define (play-signal signal sample-rate)
-  (define response-channel (make-async-channel))
+  (define response-channel (make-channel))
   (define-values (abort-flag callback) (make-generating-callback signal response-channel))
   (play-using-callback response-channel callback abort-flag sample-rate))
 
@@ -90,20 +90,32 @@
                                          channels      ;; output channels
                                          'paInt16      ;; sample format
                                          (exact->inexact sample-rate)  ;; sample rate
-                                         0 ;;frames-per-buffer  ;; frames per buffer
+                                         1000 ;;frames-per-buffer  ;; frames per buffer
                                          callback     ;; callback (NULL means just wait for data)
                                          #f)])         ;; user data (unnecessary in a world with closures))
     (dynamic-wind
      void
      (lambda ()
        (pa-start-stream stream)
-       ;; this blocks until a response comes through:
-       (let ([response (async-channel-get response-channel)])
-         (pa-stop-stream stream)
-         (when (exn? response)
-           (raise response))))
-     (lambda () (pa-close-stream stream)))
-    #f))
+       ;; block until getting a message on *either* the response
+       ;; channel or the command channel:
+       (let loop ()
+         (let ([response (sync player-evt-channel response-channel)])
+           (match response 
+             [(? play-sound-msg? p) (begin (pa-stop-stream stream)
+                                           p)]
+             [(? loop-sound-msg? p) (begin (pa-stop-stream stream)
+                                           p)]
+             [(? stop-playing-msg? p) (begin (pa-stop-stream stream)
+                                             #f)]
+             [(? change-loop-msg? p) ;; to get loops working, send a message to the callback.
+              (loop)]
+             [(? exn? e) (begin (pa-stop-stream stream)
+                                (raise e))]
+             ['finished (begin (pa-stop-stream stream) #f)]
+             ;; can we get rid of this mechanism?
+             ['abort-flag (begin (pa-stop-stream stream) #f)]))))
+     (lambda () (pa-close-stream stream)))))
 
 ;; set this box high to send a signal to the currently playing sound to stop.
 (define current-stop-playing-box (box #f))

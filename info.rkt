@@ -11,8 +11,8 @@
 (define tools '[("tool.rkt")])
 (define tool-names '["RSound Global Control Master Unit Incorporated"])
 (define categories '(media))
-(define version "2010-11-05-06:16")
-(define release-notes '((p "added clipping functions, iir filtering")))
+(define version "2010-11-17-18:13")
+(define release-notes '((p "signals can be played directly, switched to a 'pull' architecture")))
 
 ;; don't compile the stuff in the contrib subdirectory.
 (define compile-omit-paths '("contrib"))
