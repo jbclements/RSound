@@ -11,6 +11,7 @@
 
 (provide (struct-out rsound)
          rsound-play
+         signal-play
          rsound-loop
          stop-playing
          change-loop
@@ -120,6 +121,16 @@
      (write-sound/s16vector data sample-rate path)]))
 
 ;; ** SP3AKeR I/O **
+
+
+;; play a signal using portaudio:
+(define (signal-play signal sample-rate)
+  (unless (and (procedure? signal)
+               (procedure-arity-includes? signal 1))
+    (raise-type-error 'signal-play "signal" 0 signal sample-rate))
+  (unless (sample-rate? sample-rate)
+    (raise-type-error 'signal-play "sample rate (nonnegative exact integer)" 1 signal sample-rate))
+  (send (unbox link:link) play-signal signal sample-rate))
 
 ;; play a sound using portaudio:
 (define ((rsound-play/helper loop?) sound)

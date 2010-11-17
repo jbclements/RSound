@@ -16,6 +16,7 @@
 (struct loop-sound-msg (buffer frames sample-rate) #:super struct:player-msg)
 (struct stop-playing-msg () #:super struct:player-msg)
 (struct change-loop-msg (buffer frames) #:super struct:player-msg)
+(struct play-signal-msg (signal sample-rate) #:super struct:player-msg)
 
 ;; assuming 2 channels for the remainder of the file:
 (define channels 2)
@@ -60,19 +61,31 @@
           (loop (or (play-buffer buffer frames sample-rate #f) (channel-get player-evt-channel)))]
          [(struct loop-sound-msg (buffer frames sample-rate))
           (loop (or (play-buffer buffer frames sample-rate #t) (channel-get player-evt-channel)))]
+         [(struct play-signal-msg (signal sample-rate))
+          (loop (or (play-signal signal sample-rate) (channel-get player-evt-channel)))]
          ;; ignore change-loop message if we're not playing:
          [(struct change-loop-msg (buffer frames)) 
           (loop (channel-get player-evt-channel))]
          [other
           (error 'start-player-thread "not a player message: ~e" other)]))))))
 
-;; play the sound. Assumes 2 channels, floats only
-;; returns #f on end-of-sound termination, returns a new event message
-;; if one occurs and is the cause of termination.
+;; play the sound. 
 (define (play-buffer buffer frames sample-rate loop?)
   (define response-channel (make-async-channel))
   (define-values (abort-flag callback) (make-copying-callback frames buffer response-channel))
-  (define seconds (/ frames sample-rate))
+  (play-using-callback response-channel callback abort-flag sample-rate))
+
+
+;; play the signal.
+(define (play-signal signal sample-rate)
+  (define response-channel (make-async-channel))
+  (define-values (abort-flag callback) (make-generating-callback signal response-channel))
+  (play-using-callback response-channel callback abort-flag sample-rate))
+
+;; create a stream connected to the given callback, and start it up. Wait for a response,
+;; then shut it down.
+(define (play-using-callback response-channel callback abort-flag sample-rate)
+  (set! current-stop-playing-box abort-flag)
   (let* ([stream (pa-open-default-stream 0             ;; input channels
                                          channels      ;; output channels
                                          'paInt16      ;; sample format
@@ -92,6 +105,9 @@
      (lambda () (pa-close-stream stream)))
     #f))
 
+;; set this box high to send a signal to the currently playing sound to stop.
+(define current-stop-playing-box (box #f))
+
 (define rsound-commander%
   (class object%
     
@@ -103,12 +119,17 @@
     (define/public (play-sound buffer frames sample-rate)
       (player-channel-put (play-sound-msg buffer frames sample-rate)))
     
+    ;; won't loop, right now.
     (define/public (loop-sound buffer frames sample-rate)
       (player-channel-put (loop-sound-msg buffer frames sample-rate)))
     
-    (define/public (stop-playing)
-      (player-channel-put (stop-playing-msg)))
+    (define/public (play-signal signal sample-rate)
+      (player-channel-put (play-signal-msg signal sample-rate)))
     
+    (define/public (stop-playing)
+      (set-box! current-stop-playing-box #t))
+    
+    ;; this won't work, right now.
     (define/public (change-loop buffer frames)
       (player-channel-put (change-loop-msg buffer frames)))
     

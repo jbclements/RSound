@@ -893,3 +893,30 @@ signed long Pa_GetStreamWriteAvailable( PaStream* stream );
                         (set! sample-offset (+ sample-offset buffer-samples))
                         'pa-continue)]))]))))))
 
+
+(define (make-generating-callback signal response-channel)
+  (let* ([channels 2]
+         [s16max 32767]
+         [sample-offset 0] ;; mutable, to track time
+         [abort-flag (box #f)])
+    (values
+     abort-flag
+     (lambda (input output frame-count time-info status-flags user-data)
+       ;; MUST NOT ALLOW AN EXCEPTION TO ESCAPE.
+       (with-handlers ([(lambda (exn) #t)
+                        (lambda (exn)
+                          (async-channel-put response-channel exn)
+                          'pa-abort)])
+         (cond 
+           [(unbox abort-flag) 
+            (async-channel-put response-channel 'abort-flag)
+            'pa-abort]
+           [else 
+            (for ([t (in-range sample-offset (+ sample-offset frame-count))]
+                  [i (in-range 0 (* 2 frame-count) 2)])
+              (let ([sample (inexact->exact (round (* s16max (min 1.0 (max -1.0 (signal t))))))])
+                (ptr-set! output _sint16 i sample)
+                (ptr-set! output _sint16 (+ i 1) sample)))
+            (set! sample-offset (+ sample-offset frame-count))
+            'pa-continue]))))))
+
