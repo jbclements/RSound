@@ -293,6 +293,8 @@
 
 ;; rsound-append* : (listof rsound) -> rsound
 (define (rsound-append* los)
+  (unless (and (list? los) (andmap rsound? los))
+    (raise-type-error 'rsound-append* "list of rsounds" 0 los))
   (same-sample-rate-check los)
   (let* ([total-frames (apply + (map rsound-frames los))]
          [cblock (make-s16vector (* channels total-frames))])

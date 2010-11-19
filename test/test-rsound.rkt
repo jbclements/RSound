@@ -49,6 +49,10 @@
   (check-not-exn (lambda () (check-below-threshold (rsound-data sample-sound) (rsound-frames sample-sound) 0.15)))
   (check-exn exn:fail? (lambda () (check-below-threshold (rsound-data sample-sound) (rsound-frames sample-sound) 0.1))))
 
+(check-exn (lambda (exn)
+             (regexp-match #px"^rsound-append\\*: " (exn-message exn)))
+           (lambda () (rsound-append* 34)))
+
 ;; how long does it take to scan a minute of sound for loud things?
 #;(let ([sample-sound (make-tone 400 0.15 (* 60 44100) 44100)])
   (time (check-below-threshold sample-sound 0.2)))

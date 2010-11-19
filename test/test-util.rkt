@@ -103,6 +103,10 @@
 (check-= (midi-note-num->pitch 69) 440.0 1e-4)
 (check-= (midi-note-num->pitch 57) 220.0 1e-4)
 (check-= (midi-note-num->pitch 56) (/ 220 (expt 2 1/12)) 1e-4)
+(check-exn (lambda (exn)
+             (regexp-match #px"^midi-note-num->pitch: " (exn-message exn)))
+           (lambda ()
+             (midi-note-num->pitch (list 34 24))))
 
 ;; RSOUND->SIGNAL
 (check-= ((rsound->signal/left 
