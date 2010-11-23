@@ -110,6 +110,8 @@
                                              #f)]
              [(? change-loop-msg? p) ;; to get loops working, send a message to the callback.
               (loop)]
+             [(? play-signal-msg? p) (begin (pa-stop-stream stream)
+                                            p)]
              [(? exn? e) (begin (pa-stop-stream stream)
                                 (raise e))]
              ['finished (begin (pa-stop-stream stream) #f)]

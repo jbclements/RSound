@@ -604,7 +604,8 @@ PaError Pa_OpenStream( PaStream** stream,
                      _double ;; sampleRate
                      _ulong ;; framesPerBuffer
                      _pa-stream-flags ;; streamFlags
-                     _pa-stream-callback ;; streamCallback
+                     ;; note: give this a name to prevent it from getting collected:
+                     (callback : _pa-stream-callback) ;; streamCallback
                      _pointer ;; userData?
                      -> (err : _pa-error)
                      -> (match err
@@ -660,12 +661,14 @@ PaError Pa_OpenDefaultStream( PaStream** stream,
                      _pa-sample-format ;; sampleFormat
                      _double ;; sampleRate
                      _ulong ;; framesPerBuffer
-                     _pa-stream-callback ;; streamCallback
+                     ;; give this a name to prevent it from being collected:
+                     (callback : _pa-stream-callback) ;; streamCallback
                      _pointer ;; userData?
                      -> (err : _pa-error)
                      -> (match err
                           ['paNoError result]
-                          [other (error 'pa-open-default-stream "~a" (pa-get-error-text err))]))))
+                          [other (error 'pa-open-default-stream "~a ~a" (pa-get-error-text err)
+                                        callback)]))))
 #|
 /** Closes an audio stream. If the audio stream is active it
  discards any pending buffers as if Pa_AbortStream() had been called.
