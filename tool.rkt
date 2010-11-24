@@ -37,9 +37,6 @@
         (define/private (setup-helper-module)
           (namespace-attach-module drracket-ns
                                    LINK-MODULE-SPEC
-                                   (get-user-namespace))
-          #;(namespace-attach-module drracket-ns
-                                   'ffi/unsafe/cvector-def
                                    (get-user-namespace)))
           
 

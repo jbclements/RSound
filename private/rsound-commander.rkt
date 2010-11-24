@@ -125,11 +125,6 @@
 (define rsound-commander%
   (class object%
     
-    (init master-custodian)
-    
-    (parameterize ([current-custodian master-custodian])
-      (start-player-thread))
-    
     (define/public (play-sound buffer frames sample-rate)
       (player-channel-put (play-sound-msg buffer frames sample-rate)))
     
