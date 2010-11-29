@@ -2,7 +2,7 @@
 ;; dependencies. Initialized by the DrRacket integration tool.
 
 (module drracket-link '#%kernel
-  (#%provide link init-semaphore)
+  (#%provide init-semaphore)
            
   ;; this is a once-per-process init. Once the semaphore goes
   ;; down, it never goes up again.

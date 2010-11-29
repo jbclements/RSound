@@ -2,11 +2,28 @@
 
 (require racket/class
          "portaudio.rkt"
-         ffi/unsafe
-         ffi/vector
+         (only-in ffi/unsafe cpointer?)
          racket/async-channel)
 
-(provide rsound-commander%)
+(define (frames? n) 
+  (and (exact-integer? n)
+       (<= 0 n)))
+(define (sample-rate? n)
+  (and (exact-integer? n)
+       (< 0 n)))
+
+(provide/contract (buffer-play (-> cpointer?
+                                   frames?
+                                   sample-rate?
+                                   void?))
+                  (buffer-loop (-> cpointer?
+                                   frames?
+                                   sample-rate?
+                                   void?))
+                  (signal-play (-> any/c ;; don't want to slow down calls to the signal
+                                   sample-rate?
+                                   void?))
+                  (stop-playing (-> void?)))
 
 ;; messages: play-sound, loop-sound, change-loop, stop
 ;; states: not playing, playing single, playing loop.
@@ -43,31 +60,30 @@
 ;; somehow we've got to make sure pa-terminate gets called.... or not? Looks
 ;; like things work even without calling pa-terminate.
 
-
-(define (start-player-thread)
+(define event-handler-thread
   (thread
    (lambda ()
-     (pa-initialize)
+     (log-debug "player event handler started")
      (let loop ([message (channel-get player-evt-channel)])
        (with-handlers ([exn:fail?
                         (lambda (exn)
                           ;; recover gracefully by logging the message and continuing
                           (log-error (format "play-thread exception: ~a" (exn-message exn)))
                           (loop (channel-get player-evt-channel)))])
-       (match message
-         ;; ignore stop-playing message if we're already stopped:
-         [(struct stop-playing-msg ()) (loop (channel-get player-evt-channel))]
-         [(struct play-sound-msg (buffer frames sample-rate))
-          (loop (or (play-buffer buffer frames sample-rate #f) (channel-get player-evt-channel)))]
-         [(struct loop-sound-msg (buffer frames sample-rate))
-          (loop (or (play-buffer buffer frames sample-rate #t) (channel-get player-evt-channel)))]
-         [(struct play-signal-msg (signal sample-rate))
-          (loop (or (play-signal signal sample-rate) (channel-get player-evt-channel)))]
-         ;; ignore change-loop message if we're not playing:
-         [(struct change-loop-msg (buffer frames)) 
-          (loop (channel-get player-evt-channel))]
-         [other
-          (error 'start-player-thread "not a player message: ~e" other)]))))))
+         (match message
+           ;; ignore stop-playing message if we're already stopped:
+           [(struct stop-playing-msg ()) (loop (channel-get player-evt-channel))]
+           [(struct play-sound-msg (buffer frames sample-rate))
+            (loop (or (play-buffer buffer frames sample-rate #f) (channel-get player-evt-channel)))]
+           [(struct loop-sound-msg (buffer frames sample-rate))
+            (loop (or (play-buffer buffer frames sample-rate #t) (channel-get player-evt-channel)))]
+           [(struct play-signal-msg (signal sample-rate))
+            (loop (or (play-signal signal sample-rate) (channel-get player-evt-channel)))]
+           ;; ignore change-loop message if we're not playing:
+           [(struct change-loop-msg (buffer frames)) 
+            (loop (channel-get player-evt-channel))]
+           [other
+            (error 'start-player-thread "not a player message: ~e" other)]))))))
 
 ;; play the sound. 
 (define (play-buffer buffer frames sample-rate loop?)
@@ -122,25 +138,21 @@
 ;; set this box high to send a signal to the currently playing sound to stop.
 (define current-stop-playing-box (box #f))
 
-(define rsound-commander%
-  (class object%
-    
-    (define/public (play-sound buffer frames sample-rate)
-      (player-channel-put (play-sound-msg buffer frames sample-rate)))
-    
-    ;; won't loop, right now.
-    (define/public (loop-sound buffer frames sample-rate)
-      (player-channel-put (loop-sound-msg buffer frames sample-rate)))
-    
-    (define/public (play-signal signal sample-rate)
-      (player-channel-put (play-signal-msg signal sample-rate)))
-    
-    (define/public (stop-playing)
-      (set-box! current-stop-playing-box #t))
-    
-    ;; this won't work, right now.
-    (define/public (change-loop buffer frames)
-      (player-channel-put (change-loop-msg buffer frames)))
-    
-    (super-new)))
+
+(define (buffer-play buffer frames sample-rate)
+  (player-channel-put (play-sound-msg buffer frames sample-rate)))
+
+;; won't loop, right now.
+(define (buffer-loop buffer frames sample-rate)
+  (player-channel-put (loop-sound-msg buffer frames sample-rate)))
+
+(define (signal-play signal sample-rate)
+  (player-channel-put (play-signal-msg signal sample-rate)))
+
+(define (stop-playing)
+  (set-box! current-stop-playing-box #t))
+
+;; this won't work, right now.
+#;(define (change-loop buffer frames)
+  (player-channel-put (change-loop-msg buffer frames)))
 

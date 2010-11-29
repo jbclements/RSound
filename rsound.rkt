@@ -6,7 +6,8 @@
          "write-wav.rkt"
          ;; sndfile not available on windows...
          #;ffi/examples/sndfile
-         (prefix-in link: "private/drracket-link.rkt"))
+         #;(prefix-in link: "private/drracket-link.rkt")
+         (prefix-in rc: "private/rsound-commander.rkt"))
 
 
 (provide (struct-out rsound)
@@ -106,7 +107,6 @@
   (first (read-sound/formatting path)))
 
 ;; just a wrapper around write-sound/floatblock
-;; commenting out until we have write-wav written...
 (define (rsound-write sound path)
   (unless (rsound? sound)
     (raise-type-error 'rsound-write "rsound" 0 sound path))
@@ -130,7 +130,7 @@
     (raise-type-error 'signal-play "signal" 0 signal sample-rate))
   (unless (sample-rate? sample-rate)
     (raise-type-error 'signal-play "sample rate (nonnegative exact integer)" 1 signal sample-rate))
-  (send (unbox link:link) play-signal signal sample-rate))
+  (rc:signal-play signal sample-rate))
 
 ;; play a sound using portaudio:
 (define ((rsound-play/helper loop?) sound)
@@ -139,13 +139,9 @@
      ;; don't destroy anyone's eardrums:
      ;; IRRELEVANT IN THE S16 WORLD
      #;(check-below-threshold data frames 4.0)
-     (when (custodian? (unbox link:link))
-       (error 'rsound-play "rsound play thread is uninitialized. Perhaps you just installed the planet package and need to restart?"))
      (if loop?
-         (send (unbox link:link) loop-sound (s16vector->cpointer data)
-               frames sample-rate)
-         (send (unbox link:link) play-sound (s16vector->cpointer data)
-               frames sample-rate))]
+         (rc:buffer-loop (s16vector->cpointer data) frames sample-rate)
+         (rc:buffer-play (s16vector->cpointer data) frames sample-rate))]
     [other
      (error 'rsound-play/helper "expected an rsound, got: ~e" sound)]))
 
@@ -173,9 +169,7 @@
 
 ;; stop the currently-playing sound
 (define (stop-playing)
-  (when (custodian? (unbox link:link))
-    (error 'rsound-play "rsound play thread is uninitialized. Perhaps you just installed the planet package and need to restart?"))
-  (send (unbox link:link) stop-playing))
+  (rc:stop-playing))
 
 ;; change the loop that's currently playing. Has no effect if a 
 ;; loop isn't currently playing.
@@ -185,7 +179,7 @@
     (raise-type-error 'change-loop "rsound" 0 sound))
   (match sound 
     [(struct rsound (data frames sample-rate))
-     (send (unbox link:link) change-loop data frames)]
+     (error 'change-loop "not currently implemented")]
     [other 
      (error 'change-loop "expected an rsound, got: ~e" sound)]))
 
