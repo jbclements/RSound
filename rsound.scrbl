@@ -6,8 +6,11 @@
 
 @author[(author+email "John Clements" "clements@racket-lang.org")]
 
-@(require (for-label racket)
-          (for-label (planet clements/rsound)))
+@(require (planet cce/scheme:7:2/require-provide))
+
+@(require (for-label racket
+                     (this-package-in main)
+                     (this-package-in frequency-response)))
 
 @defmodule[(planet clements/rsound)]{This collection provides a means to represent, read,
 write, play, and manipulate sounds. It uses the 'portaudio' library, which appears
@@ -351,6 +354,41 @@ overhead.
  
  ...would produce a filter that added the current frame to 4/10 of the output frame 13 frames ago and 1/10 of
  the output frame 4 frames ago.}
+
+@section{Frequency Response}
+
+@defmodule[(planet clements/rsound/frequency-response)]{
+ This module provides functions to allow the analysis of frequency response on filters specified
+ either as transfer functions or as lists of poles and zeros. It assumes a sample rate of 44.1 Khz.
+
+@defproc[(response-plot [poly procedure?] [dbrel real?] [min-freq real?] [max-freq real]) void?]{
+ Plot the frequency response of a filter, given its transfer function (a function mapping reals to reals). 
+ The @racket[dbrel] number
+ indicates how many decibels up the "zero" line should be shifted. The graph starts at @racket[min-freq]
+ Hz and goes up to @racket[max-freq] Hz.  Note that aliasing effects may affect the apparent height or
+ depth of narrow spikes.
+ 
+ Here's an example of calling this function on a 100-pole comb filter, showing the response from 10KHz
+ to 11KHz:
+ 
+ @racketblock[
+ (response-plot (lambda (z)
+                  (/ 1 (- 1 (* 0.95 (expt z -100)))))
+                30 10000 11000)]}
+
+@defproc[(poles&zeros->fun [poles (listof real?)] [zeros (listof real?)]) procedure?]{
+ given a list of poles and zeros in the complex plane, generate the corresponding transfer
+ function.
+ 
+ Here's an example of calling this function as part of a call to response-plot, for a filter
+ with three poles and two zeros, from 0 Hz up to the nyquist frequency, 22.05 KHz:
+ 
+ @racketblock[
+ (response-plot (poles&zeros->fun '(0.5 0.5+0.5i 0.5-0.5i) '(0+i 0-i))
+                40 
+                0
+                22050)]
+ }}
 
 
 not-yet-documented: @racket[(provide twopi 
