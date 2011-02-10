@@ -1,6 +1,6 @@
 #lang racket/base
 
-(require drscheme/tool
+(require drracket/tool
          racket/unit
          racket/class
          (prefix-in drlink: "private/drracket-link.rkt")
@@ -18,19 +18,19 @@
 
 (define tool@
   (unit
-    (import drscheme:tool^)
-    (export drscheme:tool-exports^)
+    (import drracket:tool^)
+    (export drracket:tool-exports^)
 
 
 
-    ;; Send them off to the drscheme-ui module.
-    ;; We'll still have to attach our instantiation of drscheme-link
+    ;; Send them off to the drracket-ui module.
+    ;; We'll still have to attach our instantiation of drracket-link
     ;; to the user namespace.
 
     (define drracket-ns (namespace-anchor->namespace drracket-ns-anchor))
 
     (define interactions-text-mixin
-      (mixin ((class->interface drscheme:rep:text%)) ()
+      (mixin ((class->interface drracket:rep:text%)) ()
         (inherit get-user-namespace)
         (super-new)
 
@@ -44,7 +44,7 @@
           (super reset-console)
           (setup-helper-module))))
 
-    (drscheme:get/extend:extend-interactions-text interactions-text-mixin)
+    (drracket:get/extend:extend-interactions-text interactions-text-mixin)
     
     (define (phase1) (void))
     (define (phase2) (void))
