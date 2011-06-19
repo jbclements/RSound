@@ -7,7 +7,7 @@
   ding
   ding))
 
-(define sample-path "/tmp/Renoise2 Sample Library/Samples")
+(define sample-path "/Users/clements/Renoise2 Sample Library/Samples")
 
 ;; read the wav file, scale it down by 10 to avoid clipping
 (define (sample-load path)
@@ -19,7 +19,7 @@
 (define hi-hat04 (sample-load (build-path sample-path "Hi Hats/HiHat 04.wav")))
 
 
-(define tempo 60)
+(define tempo 240)
 (define measures 10)
 (define beats-per-measure 4)
 (define frames-per-second 44100)
@@ -59,4 +59,11 @@
     (on-2-4 clap06)
     ((on-beats hi-hat-pattern) hi-hat04)
     #;(on-1-3 kick)
+    #;(on-2-4 clap06))
+
+#;(pl #;(on-offbeats misc08)
+    #;((on-beats '(1 1.5 2.5 3.5)) kick)
+    #;(on-2-4 clap06)
+    #;((on-beats hi-hat-pattern) hi-hat04)
+    (on-1-3 kick)
     #;(on-2-4 clap06))
