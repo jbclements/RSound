@@ -1,0 +1,49 @@
+start, set language level to beginner wla, add teachpack.
+
+- try (rsound-play ding)
+
+- try ding; it's a kind of value. A kind of value you can put into rsound-play.
+
+- intro to numbers
+
+- intro to operations; they all have parentheses!
+
+- (list 60 64 67) ; it's another kind of value; a list of numbers.
+
+- Can you put it into rsound-play? Try it! Oh dear.
+
+- Here's a new operator: note-num-8ths. It takes a list of numbers, and
+produces an rsound.
+
+- (rsound-play (note-num-4ths (list 60 64 67 64)))
+
+Can you figure out how the numbers are related to the music?
+
+- make a melody!
+
+- numbers are hard to remember. Can we give them names? yes! using "define".
+
+- give the name "c4" to 60
+- give the name "e4" to 64
+- give the name "g4" to 67
+
+- use the names rather than the numbers.
+
+Here are some more:
+
+g3 : 55
+a3 : 57
+b4 : 59
+
+-- now, try to write the first line of "happy birthday."
+
+- here's another operator: "reverse". It takes a list, and produces a new list in the opposite order.
+
+-- use "reverse" to play the first line of "happy birthday" backward. Does it
+sound familiar?
+
+-- other operators: append, rsound-append, 8ths/16ths/32nds/etc.
+
+-- other instruments: (instrument square3)
+
+-- for rhythm: pl, on-str.
