@@ -1,3 +1,6 @@
+;; The first three lines of this file were inserted by DrRacket. They record metadata
+;; about the language level of this file in a form that our tools can easily process.
+#reader(lib "htdp-beginner-reader.ss" "lang")((modname README) (read-case-sensitive #t) (teachpacks ()) (htdp-settings #(#t constructor repeating-decimal #f #t none #f ())))
 This repository contains the DrRacket source code for RSound, a
 cross-platform sound library.  Currently, it depends upon the
 'portaudio' library.  In fact, this repo contains windows and OS X
@@ -10,7 +13,7 @@ package) is to use "raco planet" to set up a development link.
 
 More specifically, you'll probably want to use
 
-raco planet link clements rsound.plt 1 6 /path/to/repo
+raco planet link clements rsound.plt 1 11 /path/to/repo
 
 BIG CAVEAT: DON'T USE ANY SYMBOLIC LINKS IN /path/to/repo. PLaneT
 development links don't work well with symbolic links.
