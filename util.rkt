@@ -324,11 +324,11 @@
 
 ;; return the (complex) fft of the left channel
 (define (rsound-fft/left rsound)
-  (channel-fft (lambda (i) (rsound-nth-sample/left rsound i)) (rsound-frames rsound)))
+  (channel-fft (lambda (i) (rsound-ith/left/s16 rsound i)) (rsound-frames rsound)))
 
 ;; return the (complex) fft of the right channel
 (define (rsound-fft/right rsound)
-  (channel-fft (lambda (i) (rsound-nth-sample/right rsound i)) (rsound-frames rsound)))
+  (channel-fft (lambda (i) (rsound-ith/right/s16 rsound i)) (rsound-frames rsound)))
 
 ;; the common left-right abstraction
 (define (channel-fft accessor len)
@@ -345,8 +345,8 @@
   (let* ([scalar (fl/ 1.0 (exact->inexact (rsound-largest-sample rsound)))])
     (funs->stereo-rsound (rsound-frames rsound)
                          (rsound-sample-rate rsound)
-                         (lambda (i) (fl* scalar (exact->inexact (rsound-nth-sample/left rsound i))))
-                         (lambda (i) (fl* scalar (exact->inexact (rsound-nth-sample/right rsound i)))))))
+                         (lambda (i) (fl* scalar (exact->inexact (rsound-ith/left/s16 rsound i))))
+                         (lambda (i) (fl* scalar (exact->inexact (rsound-ith/right/s16 rsound i)))))))
 
 
 ;; midi-note-num->pitch : number -> number

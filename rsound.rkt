@@ -6,7 +6,6 @@
          "write-wav.rkt"
          ;; sndfile not available on windows...
          #;ffi/examples/sndfile
-         #;(prefix-in link: "private/drracket-link.rkt")
          (prefix-in rc: "private/rsound-commander.rkt"))
 
 
@@ -17,12 +16,14 @@
          stop-playing
          change-loop
          rsound-nth-sample
-         rsound-nth-sample/left
-         rsound-nth-sample/right
+         rsound-ith/left/s16
+         rsound-ith/right/s16
          rsound-ith/left
          rsound-ith/right
          set-rsound-ith/left!
          set-rsound-ith/right!
+         #;rsound-scale
+         rsound-equal?
          rsound-clip
          rsound-append
          rsound-append*
@@ -59,12 +60,18 @@
   ;(list rsound=? rsound-hash-1 rsound-hash-2)
   )
 
-#;(define (rsound=? r1 r2)
+(define (rsound-equal? r1 r2)
   (and (= (rsound-frames r1)
           (rsound-frames r2))
        (= (rsound-sample-rate r1)
           (rsound-sample-rate r2))
-       (s16vector-equal? r1 r2)))
+       (s16vector-equal? (rsound-data r1) (rsound-data r2))))
+
+(define (s16vector-equal? v1 v2)
+  (and (= (s16vector-length v1)
+          (s16vector-length v2))
+       (for/and ([i (in-range (s16vector-length v1))])
+         (= (s16vector-ref v1 i) (s16vector-ref v2 i)))))
 
 #;(define (rsound-hash-1 x y) 3)
 #;(define (rsound-hash-2 x y) 3)
@@ -110,7 +117,7 @@
 (define (rsound-write sound path)
   (unless (rsound? sound)
     (raise-type-error 'rsound-write "rsound" 0 sound path))
-  (unless (string? path)
+  (unless (path-string? path)
     (raise-type-error 'rsound-write "path" 1 sound path))
   (match sound
     [(struct rsound (data frames sample-rate))
@@ -184,11 +191,11 @@
      (error 'change-loop "expected an rsound, got: ~e" sound)]))
 
 ;; return the nth sample of an rsound's left channel.
-(define (rsound-nth-sample/left sound frame)
+(define (rsound-ith/left/s16 sound frame)
   (rsound-extractor sound frame #t (lambda (x) x)))
 
 ;; return the nth sample of an rsound's right channel
-(define (rsound-nth-sample/right sound frame)
+(define (rsound-ith/right/s16 sound frame)
   (rsound-extractor sound frame #f (lambda (x) x)))
 
 (define (rsound-ith/left sound frame)
@@ -253,6 +260,16 @@
 ;; RSOUND OPERATIONS: subsound, append, overlay, etc...
 
 
+#;(define (rsound-scale scale sound)
+  (unless (rsound? sound)
+    (raise-type-error 'rsound-clip "rsound" 0 sound start finish))
+  (unless )
+  (define (left i) (* scale (rsound-ith/left sound i)))
+  (define (right i) (* scale (rsound-ith/right sound i)))
+  (funs->stereo-rsound (rsound-frames sound)
+                       (rsound-sample-rate sound)
+                       left
+                       right))
 
 ;; rsound-clip : rsound nat nat -> rsound
 ;; extract a chunk of an rsound, beginning at frame 'start'

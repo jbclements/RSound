@@ -10,9 +10,9 @@
 (define test-samplerate 30022)
 (define r (make-tone 882 0.20 sound-len test-samplerate))
 
-(check-equal? (rsound-nth-sample/left r 0) 0)
-(check-= (rsound-nth-sample/left r 27) (round (* 0.2 s16max (sin (* twopi 882 (/ 27 test-samplerate))))) 0.0)
-(check-= (rsound-nth-sample/right r 27) (round (* 0.2 s16max (sin (* twopi 882 (/ 27 test-samplerate))))) 0.0)
+(check-equal? (rsound-ith/left/s16 r 0) 0)
+(check-= (rsound-ith/left/s16 r 27) (round (* 0.2 s16max (sin (* twopi 882 (/ 27 test-samplerate))))) 0.0)
+(check-= (rsound-ith/right/s16 r 27) (round (* 0.2 s16max (sin (* twopi 882 (/ 27 test-samplerate))))) 0.0)
 
 (define temp-filename (make-temporary-file))
 (write-sound/s16vector (rsound-data r) (rsound-sample-rate r) (path->string temp-filename))
@@ -24,7 +24,7 @@
 
 (check-true
  (for/and ([i (in-range sound-len)])
-   (and (= (rsound-nth-sample/left r i) (rsound-nth-sample/left s i))
-        (= (rsound-nth-sample/right r i) (rsound-nth-sample/right s i)))))
+   (and (= (rsound-ith/left/s16 r i) (rsound-ith/left/s16 s i))
+        (= (rsound-ith/right/s16 r i) (rsound-ith/right/s16 s i)))))
 
 

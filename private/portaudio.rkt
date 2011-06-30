@@ -12,7 +12,7 @@
   (case (system-type)
     [(windows) (ffi-lib win-dll-path)]
     [(macosx)  (with-handlers ()
-                 (ffi-lib mac-dll-path '("2.0.0" "")))]
+                 (ffi-lib mac-dll-path '("2" "")))]
     [(unix)    (with-handlers ([exn:fail? 
                                 (lambda (exn)
                                   (error 'rsound "Note: on Linux, you need to install the libportaudio library yourself. Underlying error message: ~a" 
@@ -84,7 +84,8 @@ const char* Pa_GetVersionText( void );
      paCanNotReadFromAnOutputOnlyStream  ;; /**< @todo review error code name */
      paCanNotWriteToAnInputOnlyStream    ;; /**< @todo review error code name */
      paIncompatibleStreamHostApi
-     paBadBufferPtr)))
+     paBadBufferPtr)
+   _int))
 
 #|
 /** Translate the supplied PortAudio error code into a human readable

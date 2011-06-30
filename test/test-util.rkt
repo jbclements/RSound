@@ -7,9 +7,9 @@
 
 (define r (make-tone 882 0.2 44100 44100))
 
-(check-equal? (rsound-nth-sample/left r 0) 0)
-(check-equal? (rsound-nth-sample/right r 50) 0)
-(check-= (rsound-nth-sample/left r 27) 
+(check-equal? (rsound-ith/left/s16 r 0) 0)
+(check-equal? (rsound-ith/right/s16 r 50) 0)
+(check-= (rsound-ith/left/s16 r 27) 
          (round (* s16max (* 0.2 (sin (* twopi 882 27/44100))))) 0.0)
 
 ;; table-based-sine-wave
@@ -31,8 +31,8 @@
 
 (let ([r (vectors->rsound (vector 3 4 5) (vector 2 -15 0) 200)]
       [s (/ s16max 15)])
-  (check-equal? (rsound-nth-sample/left r 0)  (round (* s 3)))
-  (check-equal? (rsound-nth-sample/right r 1)  (round (* s -15))))
+  (check-equal? (rsound-ith/left/s16 r 0)  (round (* s 3)))
+  (check-equal? (rsound-ith/right/s16 r 1)  (round (* s -15))))
 
 (check-not-exn (lambda () (make-harm3tone 430 0.1 400 44100)))
 
@@ -60,11 +60,11 @@
 (let ([s1 (fun->mono-rsound 200 44100 (signal-*s (list (dc-signal 0.5) (sine-wave 100 44100))))]
       [s2 (time (make-tone 100 0.5 441000 44100))]
       [s3 (time (make-tone 100 0.5 441000 44100))])
-  (check-= (rsound-nth-sample/right s1 73)
-           (rsound-nth-sample/right s2 73)
+  (check-= (rsound-ith/right/s16 s1 73)
+           (rsound-ith/right/s16 s2 73)
            1e-2)
-  (check-= (rsound-nth-sample/right s2 73)
-           (rsound-nth-sample/right s3 73)
+  (check-= (rsound-ith/right/s16 s2 73)
+           (rsound-ith/right/s16 s3 73)
            1e-2))
 
 ;; bug in memoization:

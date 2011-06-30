@@ -113,6 +113,11 @@ These procedures allow the creation, analysis, and manipulation of rsounds.
 @defstruct[rsound ([data s16vector?] [frames nonnegative-integer?] [sample-rate nonnegative-number?])]{
  Represents a sound.}
 
+@defproc[(rsound-equal? [sound1 rsound?] [sound2 rsound?]) boolean?]{
+ Returns @racket[#true] when the two sounds are (extensionally) equal.
+         
+ This procedure is necessary because s16vectors don't natively support @racket[equal?].}
+
 @defproc[(make-silence [frames nonnegative-integer?] [sample-rate nonnegative-number?]) rsound?]{
  Returns an rsound of length @racket[frames] containing silence.  This procedure is relatively fast.}
 

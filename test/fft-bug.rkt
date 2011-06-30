@@ -13,7 +13,7 @@
 
 (define voice (rsound-read/clip "/Users/clements/class/examples/spoken-voice.wav" sound-start (+ sound-start (* windows window-len))))
 
-(define v1 (build-vector (rsound-frames voice) (lambda (i) (rsound-nth-sample/left voice i))))
+(define v1 (build-vector (rsound-frames voice) (lambda (i) (rsound-ith/left/s16 voice i))))
 
 (define vx (build-vector 1024 (lambda (i) 0)))
 
