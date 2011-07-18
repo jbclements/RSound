@@ -45,7 +45,7 @@
 #;(rsound-draw rsound-longer #:width 800)
 
 ;; there should be no gap in the waveform:
-(rsound-draw (fun->mono-rsound 300 44100 (lambda (i) (* 1.5 (sin (* twopi 147/44100 i)))))
+(rsound-draw (signal->rsound 300 44100 (lambda (i) (* 1.5 (sin (* twopi 147/44100 i)))))
                #:title "no gap in waveform")
 
 
@@ -107,7 +107,7 @@
               (list 0.5 1.0))
 
 
-#;(let ([s (fun->mono-rsound 4096 44100
+#;(let ([s (signal->rsound 4096 44100
                            (lambda (i)
                              (* 0.5 (+ (sin (* i 4/128 twopi))
                                        (sin (* i (/ 35.99 128) twopi))))))])

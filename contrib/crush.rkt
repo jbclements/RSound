@@ -8,7 +8,7 @@
 
 
 (define (vector->rsound v)
-  (fun->mono-rsound (vector-length v) 44100
+  (signal->rsound (vector-length v) 44100
                     (lambda (t) (vector-ref v t))))
 
 ;(rsound-draw (vector->rsound chip1))
@@ -18,7 +18,7 @@
   (rsound-ith/left rsound (* ratio (quotient t ratio))))
 
 (define (crunch rsound ratio)
-  (fun->mono-rsound (rsound-frames rsound) 44100 (signal crush-helper rsound ratio)))
+  (signal->rsound (rsound-frames rsound) 44100 (signal crush-helper rsound ratio)))
 
 
 #;(rsound-play (time (crunch (rsound-read "/tmp/horizon2.wav") 50)))
@@ -28,7 +28,7 @@
 
 ; slide from rs/r1 to rs/r2 in nseconds
 (define (crush-slide rsound r1 r2 nseconds)
-  (fun->mono-rsound (rsound-frames rsound) 44100
+  (signal->rsound (rsound-frames rsound) 44100
                     (let ([factor (/ (- r2 r1) (* nseconds (rsound-sample-rate rsound)))])
                       (lambda (t)
                         (let ([ratio (+ (* t factor) r1)])
@@ -40,7 +40,7 @@
 
 
 (define (quantize rsound q1)
-  (fun->mono-rsound (rsound-frames rsound) 44100
+  (signal->rsound (rsound-frames rsound) 44100
                     (lambda (t)
                       (* (/ 1 q1) (floor (* q1 (rsound-ith/left rsound t)))))))
 

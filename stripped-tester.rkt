@@ -10,15 +10,15 @@
          "util.rkt")
 
 (define short-tone
-  (make-tone 440 0.2 1000 44100))
+  (make-tone 440 0.5 8000 44100))
 
 ;; try initializing a whole bunch...
-(for ([i (in-range 128)])
-  (pa-initialize)
+(for ([i (in-range 1)])
   (rsound-play short-tone)
-  (sleep 1/20))
+  (sleep 1 ))
 (printf "well, we're still here...\n")
-#;(sleep 5)
+(sleep 5)
+
 
 
 

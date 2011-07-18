@@ -124,7 +124,7 @@
                    (exp (+ (* t2 m) b)))))))))
 
 
-(define bd (fun->mono-rsound 15727 44100 bassdrum))
+(define bd (signal->rsound 15727 44100 bassdrum))
 (rsound-draw bd)
 (define bd2 (rsound-read "/Users/clements/RSound/contrib/drum-samples/bassdrum.wav"))
 (rsound-write bd "/tmp/bassdrum-synth.wav")

@@ -41,9 +41,9 @@
               (fft-complex-radix2-inverse tempv))))))
 
 
-#;(fun->mono-rsound (vector-length v1) 44100 (lambda (i) (/ (real-part (vector-ref v1 i)) s16max)))
+#;(signal->rsound (vector-length v1) 44100 (lambda (i) (/ (real-part (vector-ref v1 i)) s16max)))
 
-#;(rsound-play (fun->mono-rsound (vector-length v1) 44100 (lambda (i) (/ (real-part (vector-ref v1 i)) s16max))))
+#;(rsound-play (signal->rsound (vector-length v1) 44100 (lambda (i) (/ (real-part (vector-ref v1 i)) s16max))))
 
 
 

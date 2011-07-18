@@ -11,7 +11,7 @@
 (define (rsound-scale scale sound)
   (define (left i) (* scale (rsound-ith/left sound i)))
   (define (right i) (* scale (rsound-ith/right sound i)))
-  (funs->stereo-rsound (rsound-frames sound)
+  (signal->rsound/stereo (rsound-frames sound)
                        (rsound-sample-rate sound)
                        left
                        right))
@@ -44,7 +44,7 @@
 (define (resample factor sound)
   (define (left i) (rsound-ith/left sound (round (* factor i))))
   (define (right i) (rsound-ith/right sound (round (* factor i))))
-  (funs->stereo-rsound (round (/ (rsound-frames sound) factor))
+  (signal->rsound/stereo (round (/ (rsound-frames sound) factor))
                        (rsound-sample-rate sound)
                        left
                        right))

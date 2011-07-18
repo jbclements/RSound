@@ -40,15 +40,15 @@
 ;; answer: not yet a problem.
 #;(time 
  (for ([i (in-range 100)])
-   (fun->mono-rsound 44100 44100 (fader 44100))))
+   (signal->rsound 44100 44100 (fader 44100))))
 
 #;(time 
  (for ([i (in-range 100)])
-   (fun->mono-rsound 44100 44100 (sine-wave 440 44100))))
+   (signal->rsound 44100 44100 (sine-wave 440 44100))))
 
 #;(time
  (for ([i (in-range 100)])
-   (fun->mono-rsound 44100 44100 (sawtooth-wave 440 44100))))
+   (signal->rsound 44100 44100 (sawtooth-wave 440 44100))))
 
 (let ([tr (sawtooth-wave 100 1000)])
   (check-= (tr 0) 0.0 1e-5)
@@ -57,7 +57,7 @@
 
 ;; memoizing
 
-(let ([s1 (fun->mono-rsound 200 44100 (signal-*s (list (dc-signal 0.5) (sine-wave 100 44100))))]
+(let ([s1 (signal->rsound 200 44100 (signal-*s (list (dc-signal 0.5) (sine-wave 100 44100))))]
       [s2 (time (make-tone 100 0.5 441000 44100))]
       [s3 (time (make-tone 100 0.5 441000 44100))])
   (check-= (rsound-ith/right/s16 s1 73)
@@ -110,20 +110,20 @@
 
 ;; RSOUND->SIGNAL
 (check-= ((rsound->signal/left 
-           (fun->mono-rsound 100 44100 (lambda (x) (/ x 1000)))) 23)
+           (signal->rsound 100 44100 (lambda (x) (/ x 1000)))) 23)
          0.023
          1e-4)
 
 ;; off the edge:
 (check-= ((rsound->signal/left 
-           (fun->mono-rsound 100 44100 (lambda (x) (/ x 1000)))) 150)
+           (signal->rsound 100 44100 (lambda (x) (/ x 1000)))) 150)
          0.0
          1e-4)
 
 (check-exn exn:fail? (lambda () (rsound->signal/left 14)))
 
 (check-= ((rsound->signal/right
-           (fun->mono-rsound 100 44100 (lambda (x) (/ x 1000)))) 23)
+           (signal->rsound 100 44100 (lambda (x) (/ x 1000)))) 23)
          0.023
          1e-4)
 
@@ -134,7 +134,7 @@
 (define (mush x) (/ (round (* x s16max)) s16max))
 
 (let* ([my-filter (fir-filter '((13 0.2) (5 0.1)))]
-       [test-sound (fun->mono-rsound 100 44100 (my-filter (lambda (x) (/ x 500))))])
+       [test-sound (signal->rsound 100 44100 (my-filter (lambda (x) (/ x 500))))])
   (check-= (rsound-ith/right test-sound 0) 0 1e-7)
   (check-= (rsound-ith/right test-sound 1) (mush 1/500) 1e-7)
   (check-= (rsound-ith/right test-sound 4) (mush 4/500) 1e-7)
@@ -146,7 +146,7 @@
 ;; IIR-FILTER
 
 (let* ([my-filter (iir-filter '((13 0.2) (5 0.1)))]
-       [test-sound (fun->mono-rsound 100 44100 (my-filter (lambda (x) (/ x 500))))])
+       [test-sound (signal->rsound 100 44100 (my-filter (lambda (x) (/ x 500))))])
   (check-= (rsound-ith/right test-sound 0) 0 1e-7)
   (check-= (rsound-ith/right test-sound 1) (mush 1/500) 1e-7)
   (check-= (rsound-ith/right test-sound 4) (mush 4/500) 1e-7)
@@ -187,7 +187,7 @@
 (n-times-throwaway 
  40
  (lambda ()
-   (fun->mono-rsound 44100 44100 (lambda (t) (sin (* twopi t 340 1/44100))))))
+   (signal->rsound 44100 44100 (lambda (t) (sin (* twopi t 340 1/44100))))))
 
 (define (testfun t f)
   (sin (* twopi t f 1/44100)))
@@ -195,9 +195,9 @@
 (n-times-throwaway 
  40
  (lambda ()
-   (fun->mono-rsound 44100 44100 (lambda (t) (testfun t 340)))))
+   (signal->rsound 44100 44100 (lambda (t) (testfun t 340)))))
 
 (n-times-throwaway 
  40
  (lambda ()
-   (fun->mono-rsound 44100 44100 (signal testfun 340))))
+   (signal->rsound 44100 44100 (signal testfun 340))))

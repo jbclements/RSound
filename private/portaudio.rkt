@@ -862,67 +862,52 @@ signed long Pa_GetStreamWriteAvailable( PaStream* stream );
   (thread (lambda () 
             (channel-put channel val))))
 
-;; resurrected code from an ancient revision:
-
+;; create a callback that supplies frames from a buffer, using memcpy.
 (define (make-copying-callback total-frames master-buffer response-channel)
   (let* ([channels 2]
          [sample-offset 0] ;; mutable, to track through the buffer
-         [total-samples (* total-frames channels)]
-         [abort-flag (box #f)])
-    (values
-     abort-flag
-     (lambda (input output frame-count time-info status-flags user-data)
-       ;; MUST NOT ALLOW AN EXCEPTION TO ESCAPE.
-       (with-handlers ([(lambda (exn) #t)
-                        (lambda (exn)
-                          (channel-put/async response-channel exn)
-                          'pa-abort)])
-         (cond 
-           [(unbox abort-flag) 
-            (channel-put/async response-channel 'abort-flag)
-            'pa-abort]
-           [else 
-            (let ([buffer-samples (* frame-count channels)])
-              (cond
-                [(> (+ sample-offset buffer-samples) total-samples)
-                 (channel-put/async response-channel 'finished)
-                 ;; for now, just truncate if it doesn't come out even:
-                 ;; NB: all zero bits is the sint16 representation of 0
-                 (begin (memset output 0 buffer-samples _sint16)
-                        'pa-complete)]
-                [else
-                 (begin (memcpy output
-                                0
-                                master-buffer
-                                sample-offset
-                                buffer-samples
-                                _sint16)
-                        (set! sample-offset (+ sample-offset buffer-samples))
-                        'pa-continue)]))]))))))
+         [total-samples (* total-frames channels)])
+    (lambda (input output frame-count time-info status-flags user-data)
+      ;; MUST NOT ALLOW AN EXCEPTION TO ESCAPE.
+      (with-handlers ([(lambda (exn) #t)
+                       (lambda (exn)
+                         (channel-put/async response-channel exn)
+                         'pa-abort)])
+        (let ([buffer-samples (* frame-count channels)])
+          (cond
+            [(> (+ sample-offset buffer-samples) total-samples)
+             (channel-put/async response-channel 'finished)
+             ;; for now, just truncate if it doesn't come out even:
+             ;; NB: all zero bits is the sint16 representation of 0
+             (begin (memset output 0 buffer-samples _sint16)
+                    'pa-complete)]
+            [else
+             (begin (memcpy output
+                            0
+                            master-buffer
+                            sample-offset
+                            buffer-samples
+                            _sint16)
+                    (set! sample-offset (+ sample-offset buffer-samples))
+                    'pa-continue)]))))))
 
+;; create a callback that creates frames by calling a signal repeatedly
 (define (make-generating-callback signal response-channel)
   (let* ([channels 2]
          [s16max 32767]
          [sample-offset 0] ;; mutable, to track time
-         [abort-flag (box #f)])
-    (values
-     abort-flag
-     (lambda (input output frame-count time-info status-flags user-data)
-       ;; MUST NOT ALLOW AN EXCEPTION TO ESCAPE.
-       (with-handlers ([(lambda (exn) #t)
-                        (lambda (exn)
-                          (channel-put/async response-channel exn)
-                          'pa-abort)])
-         (cond 
-           [(unbox abort-flag) 
-            (channel-put/async response-channel 'abort-flag)
-            'pa-abort]
-           [else 
-            (for ([t (in-range sample-offset (+ sample-offset frame-count))]
-                  [i (in-range 0 (* 2 frame-count) 2)])
-              (let ([sample (inexact->exact (round (* s16max (min 1.0 (max -1.0 (signal t))))))])
-                (ptr-set! output _sint16 i sample)
-                (ptr-set! output _sint16 (+ i 1) sample)))
-            (set! sample-offset (+ sample-offset frame-count))
-            'pa-continue]))))))
+         )
+    (lambda (input output frame-count time-info status-flags user-data)
+      ;; MUST NOT ALLOW AN EXCEPTION TO ESCAPE.
+      (with-handlers ([(lambda (exn) #t)
+                       (lambda (exn)
+                         (channel-put/async response-channel exn)
+                         'pa-abort)])
+        (for ([t (in-range sample-offset (+ sample-offset frame-count))]
+              [i (in-range 0 (* 2 frame-count) 2)])
+          (let ([sample (inexact->exact (round (* s16max (min 1.0 (max -1.0 (signal t))))))])
+            (ptr-set! output _sint16 i sample)
+            (ptr-set! output _sint16 (+ i 1) sample)))
+         (set! sample-offset (+ sample-offset frame-count))
+        'pa-continue))))
 

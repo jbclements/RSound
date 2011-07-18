@@ -13,7 +13,7 @@
 (define (rsound-scale scale sound)
   (define (left i) (* scale (rsound-ith/left sound i)))
   (define (right i) (* scale (rsound-ith/right sound i)))
-  (funs->stereo-rsound (rsound-frames sound)
+  (signals->rsound/stereo (rsound-frames sound)
                        (rsound-sample-rate sound)
                        left
                        right))
@@ -40,7 +40,7 @@
 (define (resample factor sound)
   (define (left i) (rsound-ith/left sound (round (* factor i))))
   (define (right i) (rsound-ith/right sound (round (* factor i))))
-  (funs->stereo-rsound (round (/ (rsound-frames sound) factor))
+  (signals->rsound/stereo (round (/ (rsound-frames sound) factor))
                        (rsound-sample-rate sound)
                        left
                        right))
@@ -59,7 +59,7 @@
                        rsound)
                      (list (rsound-clip rsound 0 leftover-frames))))))
 
-(let* ([saw3 (fun->mono-rsound 4 44100 (lambda (x) (/ x 4)))]
+(let* ([saw3 (signal->rsound 4 44100 (lambda (x) (/ x 4)))]
        [extended-saw (single-cycle->tone saw3 0.01)])
   (check-equal? (rsound-frames extended-saw) 441)
   (check-= (rsound-ith/left extended-saw 402) 0.5 0.001))
@@ -77,8 +77,8 @@
 (define anasquareemu03/1sec
   (single-cycle->tone anasquareemu03 1.0))
 
-#;(require (planet clements/rsound/draw))
-#;(rsound-draw anasquareemu03)
+(require (planet clements/rsound/draw))
+(rsound-draw anasquareemu03)
 #;(vector-draw/real/imag (rsound-fft/left anasquareemu03))
 (rsound-frames anasquareemu03/1sec)
 #;(rsound-play anasquareemu03/1sec)

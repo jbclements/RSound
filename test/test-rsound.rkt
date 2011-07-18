@@ -19,28 +19,28 @@
 
 ;; make a monaural pitch with the given number of frames
 (define (make-tone pitch volume frames sample-rate)
-  (fun->mono-rsound frames sample-rate (sine-wave pitch sample-rate volume)))
+  (signal->rsound frames sample-rate (sine-wave pitch sample-rate volume)))
 ;;; TEST CASES
 
-(let ([t (fun->mono-rsound 100 44100 (lambda (i) (sin (* twopi 13/44100 i))))])
+(let ([t (signal->rsound 100 44100 (lambda (i) (sin (* twopi 13/44100 i))))])
   (check-equal? (rsound-ith/left/s16 t 0) 0)
   (check-equal? (rsound-ith/right/s16 t 1) (inexact->exact
                                             (round (* s16max (sin (* twopi 13/44100)))))))
 
 
-;; FUNS->STEREO-RSOUND
-(let ([s (funs->stereo-rsound 100 44100 (lambda (i) (/ i 100)) (lambda (i) (- 1 (/ i 100))))])
+;; signal->rsound/stereo
+(let ([s (signal->rsound/stereo 100 44100 (lambda (i) (/ i 100)) (lambda (i) (- 1 (/ i 100))))])
   (check-= (rsound-ith/left s 13) 13/100 1e-4)
   (check-= (rsound-ith/right s 89) 11/100 1e-4))
 
 ;; test rsound-ith/left & right
-(let ([t (fun->mono-rsound 100 44100 (lambda (i) (sin (* twopi 13/44100 i))))])
+(let ([t (signal->rsound 100 44100 (lambda (i) (sin (* twopi 13/44100 i))))])
   (check-= (rsound-ith/left t 0) 0 1e-4)
   (check-= (rsound-ith/right t 1) (sin (* twopi 13/44100)) 1e-4))
 
 ;; test of rsound-equal?
-(let ([v1 (fun->mono-rsound 100 44100 (lambda (i) (/ i 100)))]
-      [v2 (fun->mono-rsound 100 44100 (lambda (i) (/ i 100)))])
+(let ([v1 (signal->rsound 100 44100 (lambda (i) (/ i 100)))]
+      [v2 (signal->rsound 100 44100 (lambda (i) (/ i 100)))])
   (check rsound-equal? v1 v2)
   (s16vector-set! (rsound-data v2) 50 -30)
   (check-equal? (rsound-equal? v1 v2) false))
@@ -189,9 +189,9 @@
 
 ;; clipping isn't happening right.
 
-(check-= (/ (rsound-ith/left/s16 (fun->mono-rsound 300 44100
-                                                      (lambda (i) (* 1.5 (sin (* twopi 147/44100 i)))))
-                                    73)
+(check-= (/ (rsound-ith/left/s16 (signal->rsound 300 44100
+                                                 (lambda (i) (* 1.5 (sin (* twopi 147/44100 i)))))
+                                 73)
             #x7fff)
          1.0
          1e-4)

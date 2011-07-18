@@ -180,10 +180,10 @@ are several built-in functions that produce signals.
 
 In order to listen to them, you'll need to transform them into rsounds:
 
-@defproc[(fun->mono-rsound (frames nonnegative-integer?) (sample-rate nonnegative-integer?) 
-                           (fun signal?)) rsound?]{
+@defproc[(signal->rsound (frames nonnegative-integer?) (sample-rate nonnegative-integer?) 
+                           (signal signal?)) rsound?]{
  Builds a sound of length @racket[frames] and sample-rate @racket[sample-rate] by calling 
- @racket[fun] with integers from 0 up to @racket[frames]-1. The result should be an inexact 
+ @racket[signal] with integers from 0 up to @racket[frames]-1. The result should be an inexact 
  number in the range @racket[-1.0] to @racket[1.0]. Values outside this range are clipped.
  Both channels are identical. 
  
@@ -196,7 +196,7 @@ In order to listen to them, you'll need to transform them into rsounds:
 (define (sig1 t)
   (* 0.1 (sin (* t 560 twopi sr/inv))))
 
-(define r (fun->mono-rsound (* samplerate 4) samplerate sig1))
+(define r (signal->rsound (* samplerate 4) samplerate sig1))
 
 (rsound-play r)]
  
@@ -205,13 +205,13 @@ In order to listen to them, you'll need to transform them into rsounds:
  @racketblock[
 (define samplerate 44100)
 
-(define r (fun->mono-rsound (* samplerate 4) samplerate (scale 0.1 (sine-wave 560 samplerate))))
+(define r (signal->rsound (* samplerate 4) samplerate (scale 0.1 (sine-wave 560 samplerate))))
 
 (rsound-play r)]}
                                                   
                                                   
 
-@defproc[(funs->stereo-rsound (frames nonnegative-integer?) (sample-rate nonnegative-integer?) 
+@defproc[(signals->rsound/stereo (frames nonnegative-integer?) (sample-rate nonnegative-integer?) 
                              (left-fun signal?) (right-fun signal?)) rsound?]{
  Builds a stereo sound of length @racket[frames] and sample-rate @racket[sample-rate] by calling 
  @racket[left-fun] and @racket[right-fun] 

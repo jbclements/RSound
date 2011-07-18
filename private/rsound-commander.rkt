@@ -2,8 +2,7 @@
 
 (require racket/class
          "portaudio.rkt"
-         (only-in ffi/unsafe cpointer?)
-         racket/async-channel)
+         (only-in ffi/unsafe cpointer?))
 
 (define (frames? n) 
   (and (exact-integer? n)
@@ -57,9 +56,6 @@
                      msg)]))
 
 
-;; somehow we've got to make sure pa-terminate gets called.... or not? Looks
-;; like things work even without calling pa-terminate.
-
 (define event-handler-thread
   (thread
    (lambda ()
@@ -69,6 +65,7 @@
                         (lambda (exn)
                           ;; recover gracefully by logging the message and continuing
                           (log-error (format "play-thread exception: ~a" (exn-message exn)))
+                          (fprintf (current-error-port) "~a\n" (exn-message exn))
                           (loop (channel-get player-evt-channel)))])
          (match message
            ;; ignore stop-playing message if we're already stopped:
@@ -88,20 +85,20 @@
 ;; play the sound. 
 (define (play-buffer buffer frames sample-rate loop?)
   (define response-channel (make-channel))
-  (define-values (abort-flag callback) (make-copying-callback frames buffer response-channel))
-  (play-using-callback response-channel callback abort-flag sample-rate))
+  (define callback (make-copying-callback frames buffer response-channel))
+  (play-using-callback response-channel callback sample-rate))
 
 
 ;; play the signal.
 (define (play-signal signal sample-rate)
   (define response-channel (make-channel))
-  (define-values (abort-flag callback) (make-generating-callback signal response-channel))
-  (play-using-callback response-channel callback abort-flag sample-rate))
+  (define callback (make-generating-callback signal response-channel))
+  (play-using-callback response-channel callback sample-rate))
 
 ;; create a stream connected to the given callback, and start it up. Wait for a response,
 ;; then shut it down.
-(define (play-using-callback response-channel callback abort-flag sample-rate)
-  (set! current-stop-playing-box abort-flag)
+(define (play-using-callback response-channel callback sample-rate)
+ (pa-initialize)
   (let* ([stream (pa-open-default-stream 0             ;; input channels
                                          channels      ;; output channels
                                          'paInt16      ;; sample format
@@ -130,14 +127,10 @@
                                             p)]
              [(? exn? e) (begin (pa-stop-stream stream)
                                 (raise e))]
-             ['finished (begin (pa-stop-stream stream) #f)]
-             ;; can we get rid of this mechanism?
-             ['abort-flag (begin (pa-stop-stream stream) #f)]))))
-     (lambda () (pa-close-stream stream)))))
-
-;; set this box high to send a signal to the currently playing sound to stop.
-(define current-stop-playing-box (box #f))
-
+             ['finished (begin (pa-stop-stream stream) #f)]))))
+     (lambda () 
+       (pa-close-stream stream)
+       (pa-terminate)))))
 
 (define (buffer-play buffer frames sample-rate)
   (player-channel-put (play-sound-msg buffer frames sample-rate)))
@@ -150,7 +143,7 @@
   (player-channel-put (play-signal-msg signal sample-rate)))
 
 (define (stop-playing)
-  (set-box! current-stop-playing-box #t))
+  (player-channel-put (stop-playing-msg)))
 
 ;; this won't work, right now.
 #;(define (change-loop buffer frames)

@@ -197,7 +197,7 @@
     (lambda (pitch volume frames sample-rate)
       (let ([key (list pitch volume sample-rate)])
         (define (compute-and-store)
-          (let ([s (fun->mono-rsound frames sample-rate (wavefun pitch volume sample-rate))])
+          (let ([s (signal->rsound frames sample-rate (wavefun pitch volume sample-rate))])
             (hash-set! tone-table key s)
             s))
         (match (hash-ref tone-table key #f)
@@ -246,12 +246,12 @@
 
 
 ;; sounds like a ding...
-(define ding (fun->mono-rsound 44100 44100 (signal-*s (list (sine-wave 600 44100)
+(define ding (signal->rsound 44100 44100 (signal-*s (list (sine-wave 600 44100)
                                                             (dc-signal 0.35)
                                                             (fader 44100)))))
 
 (define (make-ding pitch)
-  (fun->mono-rsound 44100 44100 (signal-*s (list (sine-wave pitch 44100)
+  (signal->rsound 44100 44100 (signal-*s (list (sine-wave pitch 44100)
                                                  (dc-signal 0.35)
                                                  (fader 44100)))))
 
@@ -343,10 +343,10 @@
 ;; make the sound as lound as possible without distortion
 (define (rsound-max-volume rsound)
   (let* ([scalar (fl/ 1.0 (exact->inexact (rsound-largest-sample rsound)))])
-    (funs->stereo-rsound (rsound-frames rsound)
-                         (rsound-sample-rate rsound)
-                         (lambda (i) (fl* scalar (exact->inexact (rsound-ith/left/s16 rsound i))))
-                         (lambda (i) (fl* scalar (exact->inexact (rsound-ith/right/s16 rsound i)))))))
+    (signals->rsound/stereo (rsound-frames rsound)
+                            (rsound-sample-rate rsound)
+                            (lambda (i) (fl* scalar (exact->inexact (rsound-ith/left/s16 rsound i))))
+                            (lambda (i) (fl* scalar (exact->inexact (rsound-ith/right/s16 rsound i)))))))
 
 
 ;; midi-note-num->pitch : number -> number
@@ -477,7 +477,7 @@
 
 
 #;(define (try-wave-fun fun)
-  (fun->mono-rsound (* 4 44100) 44100 (signal-*s (list (dc-signal 0.35)
+  (signal->rsound (* 4 44100) 44100 (signal-*s (list (dc-signal 0.35)
                                                  (fun 100 44100)))))
 
 
@@ -492,8 +492,8 @@
                                (square-wave (* 2 pitch) 44100))))))
 
 #;(change-loop
- (rsound-append* (list (fun->mono-rsound (* 2 44100) 44100 (gug 100))
-                       (fun->mono-rsound (* 2 44100) 44100 (gug 75))
-                       (fun->mono-rsound (* 2 44100) 44100 (gug 79))
-                       (fun->mono-rsound (* 2 44100) 44100 (gug 89)))))
+ (rsound-append* (list (signal->rsound (* 2 44100) 44100 (gug 100))
+                       (signal->rsound (* 2 44100) 44100 (gug 75))
+                       (signal->rsound (* 2 44100) 44100 (gug 79))
+                       (signal->rsound (* 2 44100) 44100 (gug 89)))))
 

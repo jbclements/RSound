@@ -28,9 +28,9 @@
          rsound-append
          rsound-append*
          rsound-overlay*
-         fun->mono-rsound
-         funs->stereo-rsound
-         fun->filtered-mono-rsound
+         signal->rsound
+         signals->rsound/stereo
+         signal->rsound/filtered
          make-silence
          rsound-read
          rsound-read/clip
@@ -266,7 +266,7 @@
   (unless )
   (define (left i) (* scale (rsound-ith/left sound i)))
   (define (right i) (* scale (rsound-ith/right sound i)))
-  (funs->stereo-rsound (rsound-frames sound)
+  (signal->rsound/stereo (rsound-frames sound)
                        (rsound-sample-rate sound)
                        left
                        right))
@@ -381,13 +381,13 @@
 ;; make a monaural sound of the given number of frames at the specified sample-rate
 ;; using the function 'f' applied to the frame number to generate each sample. It 
 ;; assumes that the result is a floating-point number between -1 and 1.
-(define (fun->mono-rsound frames sample-rate f)
+(define (signal->rsound frames sample-rate f)
   (unless (frame? frames)
-    (raise-type-error 'fun->mono-rsound "non-negative integer" 0 frames sample-rate f))
+    (raise-type-error 'signal->rsound "non-negative integer" 0 frames sample-rate f))
   (unless (sample-rate? sample-rate)
-    (raise-type-error 'fun->mono-rsound "positive integer" 1 frames sample-rate f))
+    (raise-type-error 'signal->rsound "positive integer" 1 frames sample-rate f))
   (unless (and (procedure? f) (procedure-arity-includes? f 1))
-    (raise-type-error 'fun->mono-rsound "function of one argument" 2 frames sample-rate f)) 
+    (raise-type-error 'signal->rsound "function of one argument" 2 frames sample-rate f)) 
   (let* ([int-frames (inexact->exact (round frames))]
          [int-sample-rate (inexact->exact (round sample-rate))]
          [cblock (make-s16vector (* channels int-frames))])
@@ -402,15 +402,15 @@
 ;; make a monaural sound of the given number of frames at the specified sample-rate
 ;; using the function 'f' applied to the frame number to generate each sample. It 
 ;; assumes that the result is a floating-point number between -1 and 1.
-(define (funs->stereo-rsound frames sample-rate fleft fright)
+(define (signals->rsound/stereo frames sample-rate fleft fright)
   (unless (frame? frames)
-    (raise-type-error 'funs->stereo-rsound "non-negative integer" 0 frames sample-rate fleft fright))
+    (raise-type-error 'signal->rsound/stereo "non-negative integer" 0 frames sample-rate fleft fright))
   (unless (sample-rate? sample-rate)
-    (raise-type-error 'funs->stereo-rsound "positive integer" 1 frames sample-rate fleft fright))
+    (raise-type-error 'signal->rsound/stereo "positive integer" 1 frames sample-rate fleft fright))
   (unless (and (procedure? fleft) (procedure-arity-includes? fleft 1))
-    (raise-type-error 'funs->stereo-rsound "function of one argument" 2 frames sample-rate fleft fright))  
+    (raise-type-error 'signal->rsound/stereo "function of one argument" 2 frames sample-rate fleft fright))  
   (unless (and (procedure? fright) (procedure-arity-includes? fright 1))
-    (raise-type-error 'funs->stereo-rsound "function of one argument" 3 frames sample-rate fleft fright)) 
+    (raise-type-error 'signal->rsound/stereo "function of one argument" 3 frames sample-rate fleft fright)) 
   (let* ([int-frames (inexact->exact (round frames))]
          [int-sample-rate (inexact->exact (round sample-rate))]
          [cblock (make-s16vector (* channels int-frames))])
@@ -420,7 +420,7 @@
         (s16vector-set! cblock (+ offset 1) (inexact->s16 (fright i)))))
     (rsound cblock int-frames int-sample-rate)))
 
-(define (fun->filtered-mono-rsound frames sample-rate filter f)
+(define (signal->rsound/filtered frames sample-rate filter f)
   (unless (frame? frames)
     (raise-type-error 'fun->filtered-mono-rsound "non-negative integer" 0 frames sample-rate f))
   (unless (sample-rate? sample-rate)
