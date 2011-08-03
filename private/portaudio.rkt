@@ -863,7 +863,7 @@ signed long Pa_GetStreamWriteAvailable( PaStream* stream );
             (channel-put channel val))))
 
 ;; create a callback that supplies frames from a buffer, using memcpy.
-(define (make-copying-callback total-frames master-buffer response-channel)
+(define ((make-copying-callback total-frames master-buffer) response-channel)
   (let* ([channels 2]
          [sample-offset 0] ;; mutable, to track through the buffer
          [total-samples (* total-frames channels)])
@@ -892,10 +892,10 @@ signed long Pa_GetStreamWriteAvailable( PaStream* stream );
                     'pa-continue)]))))))
 
 ;; create a callback that creates frames by calling a signal repeatedly
-(define (make-generating-callback signal response-channel)
-  (let* ([channels 2]
+(define ((make-generating-callback signal) response-channel)
+  (let* (#;[channels 2] ;; only works for 2 channels
          [s16max 32767]
-         [sample-offset 0] ;; mutable, to track time
+         [frame-offset 0] ;; mutable, to track time
          )
     (lambda (input output frame-count time-info status-flags user-data)
       ;; MUST NOT ALLOW AN EXCEPTION TO ESCAPE.
@@ -903,11 +903,27 @@ signed long Pa_GetStreamWriteAvailable( PaStream* stream );
                        (lambda (exn)
                          (channel-put/async response-channel exn)
                          'pa-abort)])
-        (for ([t (in-range sample-offset (+ sample-offset frame-count))]
+        (for ([t (in-range frame-offset (+ frame-offset frame-count))]
               [i (in-range 0 (* 2 frame-count) 2)])
           (let ([sample (inexact->exact (round (* s16max (min 1.0 (max -1.0 (signal t))))))])
             (ptr-set! output _sint16 i sample)
             (ptr-set! output _sint16 (+ i 1) sample)))
-         (set! sample-offset (+ sample-offset frame-count))
+         (set! frame-offset (+ frame-offset frame-count))
+        'pa-continue))))
+
+;; create a callback that creates frames by passing a cblock to a function
+(define ((make-block-generating-callback signal/block/s16) response-channel)
+  (let* (#;[channels 2]
+         [s16max 32767]
+         [frame-offset 0] ;; mutable, to track time
+         )
+    (lambda (input output frame-count time-info status-flags user-data)
+      ;; MUST NOT ALLOW AN EXCEPTION TO ESCAPE.
+      (with-handlers ([(lambda (exn) #t)
+                       (lambda (exn)
+                         (channel-put/async response-channel exn)
+                         'pa-abort)])
+        (signal/block/s16 output frame-offset frame-count)
+         (set! frame-offset (+ frame-offset frame-count))
         'pa-continue))))
 

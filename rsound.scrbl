@@ -6,8 +6,6 @@
 
 @author[(author+email "John Clements" "clements@racket-lang.org")]
 
-@(require (planet cce/scheme:7:2/require-provide))
-
 @(require (for-label racket
                      (this-package-in main)
                      (this-package-in frequency-response)))

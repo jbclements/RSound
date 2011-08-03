@@ -5,4 +5,5 @@
          "test-portaudio.rkt"
          "test-rsound.rkt"
          "test-util.rkt"
-         "test-fft.rkt")
+         "test-fft.rkt"
+         "test-s16vector-add.rkt")

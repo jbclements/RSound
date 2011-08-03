@@ -4,8 +4,13 @@
          "../util.rkt"
          "../write-wav.rkt"
          "../read-wav.rkt"
-         rackunit)
+         rackunit
+         rackunit/text-ui)
 
+(run-tests
+(test-suite 
+ "write-wav"
+(let ()
 (define sound-len 32114)
 (define test-samplerate 30022)
 (define r (make-tone 882 0.20 sound-len test-samplerate))
@@ -25,6 +30,6 @@
 (check-true
  (for/and ([i (in-range sound-len)])
    (and (= (rsound-ith/left/s16 r i) (rsound-ith/left/s16 s i))
-        (= (rsound-ith/right/s16 r i) (rsound-ith/right/s16 s i)))))
+        (= (rsound-ith/right/s16 r i) (rsound-ith/right/s16 s i))))))))
 
 

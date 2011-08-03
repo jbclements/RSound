@@ -2,6 +2,7 @@
 
 (require "../rsound.rkt"
          rackunit
+         rackunit/text-ui
          racket/runtime-path
          ffi/vector)
 
@@ -19,28 +20,40 @@
 
 ;; make a monaural pitch with the given number of frames
 (define (make-tone pitch volume frames sample-rate)
-  (signal->rsound frames sample-rate (sine-wave pitch sample-rate volume)))
-;;; TEST CASES
+  (mono-signal->rsound frames sample-rate (sine-wave pitch sample-rate volume)))
 
-(let ([t (signal->rsound 100 44100 (lambda (i) (sin (* twopi 13/44100 i))))])
+
+(define-runtime-path short-test-wav "./short-test.wav")
+
+(define-runtime-path kick-wav "./kick_01.wav")
+
+
+(define-runtime-path short-with-pad-wav "./short-with-pad.wav")
+
+
+;;; TEST CASES
+(run-tests
+(test-suite "rsound"
+(let ()
+(let ([t (mono-signal->rsound 100 44100 (lambda (i) (sin (* twopi 13/44100 i))))])
   (check-equal? (rsound-ith/left/s16 t 0) 0)
   (check-equal? (rsound-ith/right/s16 t 1) (inexact->exact
                                             (round (* s16max (sin (* twopi 13/44100)))))))
 
 
 ;; signal->rsound/stereo
-(let ([s (signal->rsound/stereo 100 44100 (lambda (i) (/ i 100)) (lambda (i) (- 1 (/ i 100))))])
+(let ([s (signals->rsound/stereo 100 44100 (lambda (i) (/ i 100)) (lambda (i) (- 1 (/ i 100))))])
   (check-= (rsound-ith/left s 13) 13/100 1e-4)
   (check-= (rsound-ith/right s 89) 11/100 1e-4))
 
 ;; test rsound-ith/left & right
-(let ([t (signal->rsound 100 44100 (lambda (i) (sin (* twopi 13/44100 i))))])
+(let ([t (mono-signal->rsound 100 44100 (lambda (i) (sin (* twopi 13/44100 i))))])
   (check-= (rsound-ith/left t 0) 0 1e-4)
   (check-= (rsound-ith/right t 1) (sin (* twopi 13/44100)) 1e-4))
 
 ;; test of rsound-equal?
-(let ([v1 (signal->rsound 100 44100 (lambda (i) (/ i 100)))]
-      [v2 (signal->rsound 100 44100 (lambda (i) (/ i 100)))])
+(let ([v1 (mono-signal->rsound 100 44100 (lambda (i) (/ i 100)))]
+      [v2 (mono-signal->rsound 100 44100 (lambda (i) (/ i 100)))])
   (check rsound-equal? v1 v2)
   (s16vector-set! (rsound-data v2) 50 -30)
   (check-equal? (rsound-equal? v1 v2) false))
@@ -95,6 +108,27 @@
   (for ([i (in-range 6)])
     (check-= (rsound-ith/left/s16 overlaid i) (rsound-ith/left/s16 doublevol i) 1.0)
     (check-= (rsound-nth-sample overlaid i) (rsound-nth-sample doublevol i) 2.0)))
+  
+  (let* ([sample-sound (mono-signal->rsound 100 44100 (lambda (x) (* 0.2 (random))))]
+         [overlaid (rsound-overlay* (list (list sample-sound 25) 
+                                          (list sample-sound 0)
+                                          (list sample-sound 75)))])
+    (for ([i (in-range 25)])
+      (check-equal? (rsound-ith/left/s16 overlaid i)
+                    (rsound-ith/left/s16 sample-sound i)))
+    (for ([i (in-range 25 75)])
+      (check-equal? (rsound-ith/right/s16 overlaid i)
+                    (+ (rsound-ith/right/s16 sample-sound i)
+                       (rsound-ith/right/s16 sample-sound (- i 25)))))
+    (for ([i (in-range 75 100)])
+      (check-equal? (rsound-ith/right/s16 overlaid i)
+                    (+ (rsound-ith/right/s16 sample-sound i)
+                       (rsound-ith/right/s16 sample-sound (- i 25))
+                       (rsound-ith/right/s16 sample-sound (- i 75)))))
+    (for ([i (in-range 100 125)])
+      (check-equal? (rsound-ith/left/s16 overlaid i)
+                    (+ (rsound-ith/left/s16 sample-sound (- i 25))
+                       (rsound-ith/left/s16 sample-sound (- i 75))))))
 
 (check-exn exn:fail? 
            (lambda ()
@@ -105,7 +139,6 @@
 
 ;; tests copied from read-wav; these call the rsound-read funs directly:
 
-(define-runtime-path short-test-wav "./short-test.wav")
 (define test-rsound (rsound-read short-test-wav))
 
 (check-equal? (rsound-frames test-rsound) 100)
@@ -165,7 +198,6 @@
                 (rsound-ith/left/s16 test-rsound 36)))
 
 
-(define-runtime-path kick-wav "./kick_01.wav")
 
 (define kick-rsound (rsound-read kick-wav))
 
@@ -176,7 +208,6 @@
 
 ;; test with PAD
 
-(define-runtime-path short-with-pad-wav "./short-with-pad.wav")
 (define short-with-pad (rsound-read short-with-pad-wav))
 (check-equal? (rsound-frames short-with-pad) #x21)
 (check-equal? (rsound-ith/left/s16 short-with-pad 5) #x892)
@@ -189,7 +220,7 @@
 
 ;; clipping isn't happening right.
 
-(check-= (/ (rsound-ith/left/s16 (signal->rsound 300 44100
+(check-= (/ (rsound-ith/left/s16 (mono-signal->rsound 300 44100
                                                  (lambda (i) (* 1.5 (sin (* twopi 147/44100 i)))))
                                  73)
             #x7fff)
@@ -212,4 +243,4 @@
 (time (rsound-draw (rsound-overlay* (list (list (make-tone 400 0.15 1000 44100) 0)
                                           (list (make-tone 404 0.15 1000 44100) 0))) 400 100))
 
-|#
+|#)))

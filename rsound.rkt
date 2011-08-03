@@ -2,16 +2,22 @@
 
 (require ffi/unsafe
          ffi/vector
+         racket/unsafe/ops
          "read-wav.rkt"
          "write-wav.rkt"
          ;; sndfile not available on windows...
          #;ffi/examples/sndfile
-         (prefix-in rc: "private/rsound-commander.rkt"))
+         (prefix-in rc: "private/rsound-commander.rkt")
+         "private/s16vector-add.rkt"
+         )
 
 
 (provide (struct-out rsound)
          rsound-play
+         signal?
          signal-play
+         signal/block?
+         signal/block-play
          rsound-loop
          stop-playing
          change-loop
@@ -28,7 +34,7 @@
          rsound-append
          rsound-append*
          rsound-overlay*
-         signal->rsound
+         mono-signal->rsound
          signals->rsound/stereo
          signal->rsound/filtered
          make-silence
@@ -46,19 +52,29 @@
 
 (define s16max #x7fff)
 (define s16max/i (exact->inexact #x7fff))
+(define s16-size 2)
+
+
+;; this is a fixed global for rsounds:
+(define channels 2)
 
 ;; an rsound (racket sound) provides a representation for sounds 
 ;; that leaves them packed as C data. For the moment, it's 
 ;; 2-channel float only. Also, it discards all meta-information
 ;; except length and sample-rate.
 
-;; a rsound is (rsound s16vector nat)
+;; a rsound is (rsound rdata nat nat)
 (provide (struct-out rsound))
 (define-struct rsound (data frames sample-rate) 
   #:transparent
   ;#:property prop:equal+hash
   ;(list rsound=? rsound-hash-1 rsound-hash-2)
   )
+
+;; an rdata is either
+;; an s16vector, 
+;; a function from time to a pair of real numbers in the range -1 to 1, or
+;; a function of no arguments that produces real numbers in the range -1 to 1.
 
 (define (rsound-equal? r1 r2)
   (and (= (rsound-frames r1)
@@ -76,10 +92,15 @@
 #;(define (rsound-hash-1 x y) 3)
 #;(define (rsound-hash-2 x y) 3)
 
+;; can this procedure be used as a signal? 
+(define (signal? f)
+  (and (procedure? f) (procedure-arity-includes? f 1)))
+
+;; can this procedure be used as a signal/block?
+(define (signal/block? f)
+  (and (procedure? f) (procedure-arity-includes? f 3)))
 
 
-;; this is a fixed global for rsounds:
-(define channels 2)
 
 ;; ** FILE I/O **
 
@@ -138,6 +159,17 @@
   (unless (sample-rate? sample-rate)
     (raise-type-error 'signal-play "sample rate (nonnegative exact integer)" 1 signal sample-rate))
   (rc:signal-play signal sample-rate))
+
+;; play a signal/block using portaudio:
+(define (signal/block-play signal/block sample-rate)
+  (unless (and (procedure? signal/block)
+               (procedure-arity-includes? signal/block 3))
+    (raise-type-error 'signal-play "signal/block" 0 signal/block sample-rate))
+  (unless (sample-rate? sample-rate)
+    (raise-type-error 'signal-play 
+                      "sample rate (nonnegative exact integer)"
+                      1 signal/block sample-rate))
+  (rc:signal/block-play signal/block sample-rate))
 
 ;; play a sound using portaudio:
 (define ((rsound-play/helper loop?) sound)
@@ -325,6 +357,8 @@
 ;; I'm picking the straightforward one (go through each input, add
 ;; it to the accumulator one frame at a time), and we'll see how it
 ;; performs.
+;;
+;; N.B.: currently, summing to larger amplitudes will just wrap.
 (define (rsound-overlay* sound&times)
   (unless (and (list? sound&times) 
                (andmap list? sound&times)
@@ -338,12 +372,17 @@
     (for ([s&t (in-list sound&times)])
       (match-let* ([(list sound offset) s&t]
                    [(struct rsound (src-buffer frames sample-rate)) sound])
-        (for ([i (in-range (* channels frames))]
-              [j (in-range (* channels (inexact->exact (round offset))) (* channels (+ (inexact->exact (round offset)) frames)))])
-          (s16vector-set! cblock j
-                          (+ (s16vector-ref cblock j)
-                             (s16vector-ref src-buffer i))))))
+        (define dst-offset (* channels (inexact->exact (round offset))))
+        (define src-offset 0)
+        (define num-samples (* channels frames))
+        (s16buffer-add!/c (ptr-add (s16vector->cpointer cblock)
+                                   (* s16-size dst-offset))
+                          (ptr-add (s16vector->cpointer src-buffer)
+                                   (* s16-size src-offset))
+                          num-samples)))
     (rsound cblock total-frames (rsound-sample-rate (caar sound&times)))))
+
+
 
 ;; add-on-as-computed
 (define (mono-fun->buffer-overlay sound offset fun overlay-frames)
@@ -381,7 +420,7 @@
 ;; make a monaural sound of the given number of frames at the specified sample-rate
 ;; using the function 'f' applied to the frame number to generate each sample. It 
 ;; assumes that the result is a floating-point number between -1 and 1.
-(define (signal->rsound frames sample-rate f)
+(define (mono-signal->rsound frames sample-rate f)
   (unless (frame? frames)
     (raise-type-error 'signal->rsound "non-negative integer" 0 frames sample-rate f))
   (unless (sample-rate? sample-rate)
@@ -392,7 +431,7 @@
          [int-sample-rate (inexact->exact (round sample-rate))]
          [cblock (make-s16vector (* channels int-frames))])
     (for ([i (in-range int-frames)])
-      (let* ([offset (* 2 i)]
+      (let* ([offset (* channels i)]
              [sample (inexact->s16 (f i))])
         (s16vector-set! cblock offset       sample)
         (s16vector-set! cblock (+ offset 1) sample)))
@@ -415,7 +454,7 @@
          [int-sample-rate (inexact->exact (round sample-rate))]
          [cblock (make-s16vector (* channels int-frames))])
     (for ([i (in-range int-frames)])
-      (let* ([offset (* 2 i)])
+      (let* ([offset (* channels i)])
         (s16vector-set! cblock offset       (inexact->s16 (fleft i)))
         (s16vector-set! cblock (+ offset 1) (inexact->s16 (fright i)))))
     (rsound cblock int-frames int-sample-rate)))
@@ -431,7 +470,7 @@
          [int-sample-rate (inexact->exact (round sample-rate))]
          [cblock (make-s16vector (* channels int-frames))])
     (for ([i (in-range int-frames)])
-      (let* ([offset (* 2 i)]
+      (let* ([offset (* channels i)]
              [sample (inexact->s16 (filter (f i)))])
         (s16vector-set! cblock offset       sample)
         (s16vector-set! cblock (+ offset 1) sample)))
@@ -485,12 +524,20 @@
 ;; left-channel only
 (define (buffer-largest-sample/range/left buffer frames min-frame max-frame)
   (frame-range-checks frames min-frame max-frame)
-  (buffer-largest-sample/range/helper buffer (* channels frames) (* channels min-frame) (* channels max-frame) 2))
+  (buffer-largest-sample/range/helper buffer
+                                      (* channels frames)
+                                      (* channels min-frame)
+                                      (* channels max-frame)
+                                      2))
 
 ;; right channel only
 (define (buffer-largest-sample/range/right buffer frames min-frame max-frame)
   (frame-range-checks frames min-frame max-frame)
-  (buffer-largest-sample/range/helper buffer (* channels frames) (add1 (* channels min-frame)) (add1 (* channels max-frame)) 2))
+  (buffer-largest-sample/range/helper buffer
+                                      (* channels frames)
+                                      (add1 (* channels min-frame))
+                                      (add1 (* channels max-frame))
+                                      2))
 
 ;; sample-based, for internal use only:
 (define (buffer-largest-sample/range/helper buffer samples min-sample max-sample increment)

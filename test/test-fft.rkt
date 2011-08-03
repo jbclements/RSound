@@ -2,6 +2,7 @@
 
 (require #;plot
          rackunit
+         rackunit/text-ui
          "../fft.rkt")
 
 ;;; Data
@@ -142,7 +143,9 @@ t
       #:y-max 1.2)
 |#
 
-
+(run-tests
+(test-suite "ffi"
+(let ()
 (let* ([vect (build-vector 4800 (lambda (i) (cos (* i 2*pi 147/44100))))])
   (time (fft-complex-forward vect))
   (check-= (magnitude (vector-ref vect 15)) 0.0 1e-3)
@@ -159,6 +162,6 @@ t
 
 (check-not-exn (lambda () (fft-complex-radix2-inverse (build-vector 16 (lambda (i) 0)))))
 (check-not-exn (lambda () (fft-complex-radix2-forward (build-vector 16 (lambda (i) 0)))))
-(check-not-exn (lambda () (fft-complex-forward (build-vector 16 (lambda (i) 0)))))
+(check-not-exn (lambda () (fft-complex-forward (build-vector 16 (lambda (i) 0))))))))
 
 

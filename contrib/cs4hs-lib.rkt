@@ -6,34 +6,55 @@
 (provide (all-from-out (planet clements/rsound))
          (all-defined-out))
 
+(define volume (make-parameter 0.5))
+(define tempo (make-parameter 200))
+(define measures (make-parameter 24))
+
+(define beats-per-measure 4)
+(define frames-per-second 44100)
+
+
 (define sample-path "/Users/clements/Renoise2 Sample Library/Samples")
 
+(define (rsound-badoverlay sound1 sound2)
+  (unless (= (rsound-sample-rate sound1) (rsound-sample-rate sound2))
+    (error 'rsound-mix "expected two sounds with the same sample rate, got sounds with sample rates ~s and ~s"
+           (rsound-sample-rate sound1) (rsound-sample-rate sound2)))
+  (define (left i) (+ (rsound-ith/left sound1 i) (rsound-ith/left sound2 i)))
+  (define (right i) (+ (rsound-ith/right sound1 i) (rsound-ith/right sound2 i)))
+  (signals->rsound/stereo (rsound-frames sound1)
+                   (rsound-sample-rate sound1)
+                   left
+                   right))
+
+(define (rsound-map fun sound)
+  (define (left i) (fun (rsound-ith/left sound i)))
+  (define (right i) (fun (rsound-ith/right sound i)))
+  (signals->rsound/stereo (rsound-frames sound)
+                   (rsound-sample-rate sound)
+                   left
+                   right))
+
 (define (rsound-scale scale sound)
-  (define (left i) (* scale (rsound-ith/left sound i)))
-  (define (right i) (* scale (rsound-ith/right sound i)))
-  (signal->rsound/stereo (rsound-frames sound)
-                       (rsound-sample-rate sound)
-                       left
-                       right))
+  (rsound-map (lambda (x) (* scale x)) sound))
 
 ;; read the wav file, scale it down to avoid clipping
 (define (sample-load path)
   (rsound-scale 0.05 (rsound-read path)))
 
-(define kick (sample-load (build-path sample-path "Kicks/Kick 13.wav")))
 (define misc08 (sample-load (build-path sample-path "Misc/Misc 08.wav")))
 (define clap06 (sample-load (build-path sample-path "Clap/Clap 06.wav")))
 (define hi-hat04 (sample-load (build-path sample-path "Hi Hats/HiHat 04.wav")))
 
 (define square1 (sample-load (build-path sample-path
                                                 "Single Cycle/AnaSquareEmu.01.wav")))
+
+(define f (/ 44100 678))
+
 (define square3 (sample-load (build-path sample-path
                                                 "Single Cycle/AnaSquareEmu.03.wav")))
 
 (define instrument (make-parameter square1))
-
-
-
 
 (define (rsound-overlay sound1 sound2)
   (rsound-overlay* (list (list sound1 0) (list sound2 0))))
@@ -42,16 +63,17 @@
 ;; to obtain a new one. Using e.g. factor of 2 will make the sound one
 ;; octave higher and half as long.
 (define (resample factor sound)
-  (define (left i) (rsound-ith/left sound (round (* factor i))))
-  (define (right i) (rsound-ith/right sound (round (* factor i))))
-  (signal->rsound/stereo (round (/ (rsound-frames sound) factor))
+  (define v (volume))
+  (define (left i) (* v (rsound-ith/left sound (round (* factor i)))))
+  (define (right i) (* v (rsound-ith/right sound (round (* factor i)))))
+  (signals->rsound/stereo (round (/ (rsound-frames sound) factor))
                        (rsound-sample-rate sound)
                        left
                        right))
 
 ;; given an rsound and a duration in seconds, make enough copies of the rsound
 ;; (possibly less than 1) to make a sound of the given duration
-(define (single-cycle->tone rsound dur)
+(define (single-cycle->dur rsound dur)
   (let ()
     (define num-frames (round (* (rsound-sample-rate rsound) dur)))
     (define num-whole-copies (quotient num-frames (rsound-frames rsound)))
@@ -62,34 +84,29 @@
                      (list (rsound-clip rsound 0 leftover-frames))))))
 
 ;; quick test case:
-(let* ([saw3 (fun->mono-rsound 4 44100 (lambda (x) (/ x 4)))]
-       [extended-saw (single-cycle->tone saw3 0.01)])
+(let* ([saw3 (mono-signal->rsound 4 44100 (lambda (x) (/ x 4)))]
+       [extended-saw (single-cycle->dur saw3 0.01)])
   (check-equal? (rsound-frames extended-saw) 441)
   (check-= (rsound-ith/left extended-saw 402) 0.5 0.001))
 
+(define (single-cycle->tone rsound native-pitch desired-pitch dur)
+  (define resample-rate (/ desired-pitch native-pitch))
+  (define resampled (resample resample-rate rsound))
+  (single-cycle->dur resampled dur))
+
 (define (single-cycle->note rsound native-pitch note-num dur)
-  (let ()
-    (define desired-pitch (midi-note-num->pitch note-num))
-    (define resample-rate (/ desired-pitch native-pitch))
-    (define resampled (resample resample-rate rsound))
-    (single-cycle->tone resampled dur)))
+  (define desired-pitch (midi-note-num->pitch note-num))
+  (rsound-overlay 
+   (single-cycle->tone rsound native-pitch (* 1.01 desired-pitch) dur)
+   (single-cycle->tone rsound native-pitch desired-pitch dur)))
 
 (define (frac num)
   (- num (floor num)))
 
-(define tempo (make-parameter 200))
-(define measures (make-parameter 24))
-
-(define beats-per-measure 4)
-(define frames-per-second 44100)
-
-(define beat-dur (/ 60 (tempo)))
-(define frames-per-beat (* frames-per-second beat-dur))
-
-(define measure-frames (* frames-per-beat beats-per-measure))
-(define 8th-note-dur (/ beat-dur 2))
 
 (define (note-num-sequence beats lon)
+  (define beat-dur (/ 60 (tempo)))
+  (define frames-per-beat (* frames-per-second beat-dur))  
   (define dur (* beat-dur beats))
   (define instr (instrument))
   (rsound-append*
@@ -117,7 +134,6 @@
 
 (define mintriad '(60 63 67))
 (define minarpeg '(60 63 67 72))
-(define f (/ 44100 678))
 (define melody1
   (note-num-8ths (n-times 20 (append mintriad minarpeg))))
 (define melody2
@@ -145,7 +161,7 @@
   (note-num-2s (n-times 7 (transpose -24 rand-minor-seq))))
 
 
-(define melody-axel-f '(60 #f #f #f 
+#;(define melody-axel-f '(60 #f #f #f 
                         63 #f #f 60 
                         #f 60 65 #f
                         60 #f 58 #f
@@ -158,20 +174,23 @@
                         #f 58 55 #f 
                         63 #f 60 #f))
 
+#;(define s (note-num-8ths melody-axel-f))
 
-
-#;(rsound-play (note-num-8ths melody-axel-f))
-
-(define (measure/beat->frame measure beat)
+(define (measure/beat->frame measure beat frames-per-beat)
   (define beats (+ (* measure beats-per-measure) (- beat 1)))
   (round (* beats frames-per-beat)))
 
-(define ((on-beat beat) sound)
+(define (((on-beat frames-per-beat) beat) sound)
   (for/list ([measure (in-range (measures))])
-    (list sound (measure/beat->frame measure beat))))
+    (list (rsound-scale (volume) sound)
+          (measure/beat->frame measure beat frames-per-beat))))
 
-(define ((on-beats beats) sound)
-  (apply append (map (lambda (f) (f sound)) (map on-beat beats))))
+
+(define (on-beats beats)
+  (define beat-dur (/ 60 (tempo)))
+  (define frames-per-beat (* frames-per-second beat-dur))  
+  (lambda (sound)
+    (apply append (map (lambda (f) (f sound)) (map (on-beat frames-per-beat) beats)))))
 
 (define on-1 (on-beats '(1)))
 (define on-1-and (on-beats '(1 1.5)))
@@ -227,15 +246,14 @@
 #;(rsound-play song)
 
 
-#;(rsound-play
- (pl (list ((on-str "| | | | | | | ||") hi-hat04)
-           ((on-str "| |     |       ") kick)
-           ((on-str "    |       |   ") clap06)
-           ((on-str "            |   ") ding))))
-
 #;(pl #;(on-offbeats misc08)
     #;((on-beats '(1 1.5 2.5 3.5)) kick)
     #;(on-2-4 clap06)
     #;((on-beats hi-hat-pattern) hi-hat04)
     (on-1-3 kick)
     #;(on-2-4 clap06))
+
+(define (delay-beats n)
+  (define beat-dur (/ 60 (tempo)))
+  (define frames-per-beat (* frames-per-second beat-dur))
+  (* frames-per-beat n))

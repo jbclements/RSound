@@ -3,6 +3,7 @@
 (require "rsound.rkt"
          "fft.rkt"
          racket/flonum
+         racket/runtime-path
          ffi/vector
          racket/unsafe/ops)
 
@@ -29,7 +30,6 @@
          ;; signal combiners
          signal-*s
          signal-+s
-         signal?
          thresh/signal
          scale
          clip&volume
@@ -59,6 +59,11 @@
          raw-square-wave
          raw-sawtooth-wave
          binary-logn
+         ;; sampled sounds
+         kick
+         snare
+         hi-hat
+         clap
          )
 
 
@@ -186,10 +191,6 @@
 (define (signal-+s lof)
   (lambda (i) (apply + (map (lambda (x) (x i)) lof))))
 
-;; can this procedure be used as a signal? 
-(define (signal? f)
-  (and (procedure? f) (procedure-arity-includes? f 1)))
-
 ;; convert a wavefun into a tone-maker; basically just keep a hash table
 ;; of previously generated sounds.
 (define (wavefun->tone-maker wavefun)
@@ -197,7 +198,7 @@
     (lambda (pitch volume frames sample-rate)
       (let ([key (list pitch volume sample-rate)])
         (define (compute-and-store)
-          (let ([s (signal->rsound frames sample-rate (wavefun pitch volume sample-rate))])
+          (let ([s (mono-signal->rsound frames sample-rate (wavefun pitch volume sample-rate))])
             (hash-set! tone-table key s)
             s))
         (match (hash-ref tone-table key #f)
@@ -245,18 +246,19 @@
 
 
 
+
 ;; sounds like a ding...
-(define ding (signal->rsound 44100 44100 (signal-*s (list (sine-wave 600 44100)
+(define ding (mono-signal->rsound 44100 44100 (signal-*s (list (sine-wave 600 44100)
                                                             (dc-signal 0.35)
                                                             (fader 44100)))))
 
 (define (make-ding pitch)
-  (signal->rsound 44100 44100 (signal-*s (list (sine-wave pitch 44100)
+  (mono-signal->rsound 44100 44100 (signal-*s (list (sine-wave pitch 44100)
                                                  (dc-signal 0.35)
                                                  (fader 44100)))))
 
 (define (split-in-4 s)
-  (let ([len (/ (rsound-frames s) 4)])
+  (let ([len (floor (/ (rsound-frames s) 4))])
     (apply values (for/list ([i (in-range 4)])
                     (rsound-clip s (* i len) (* (+ 1 i) len))))))
 
@@ -476,24 +478,10 @@
 
 
 
-#;(define (try-wave-fun fun)
-  (signal->rsound (* 4 44100) 44100 (signal-*s (list (dc-signal 0.35)
-                                                 (fun 100 44100)))))
+(define-runtime-path samples "./samples")
+(define kick (rsound-read (build-path samples "kick.wav")))
+(define snare (rsound-read (build-path samples "snare.wav")))
+(define clap (rsound-read (build-path samples "clap.wav")))
+(define hi-hat (rsound-read (build-path samples "hi-hat.wav")))
 
-
-#;(play-rsound (try-wave-fun square-wave))
-
-#;(define (gug pitch)
-  (signal-+s (list (signal-*s (list (dc-signal 0.25)
-                                    (square-wave pitch 44100)))
-                   (signal-*s (list
-                               (dc-signal 0.25)
-                               (sine-wave .5 44100)
-                               (square-wave (* 2 pitch) 44100))))))
-
-#;(change-loop
- (rsound-append* (list (signal->rsound (* 2 44100) 44100 (gug 100))
-                       (signal->rsound (* 2 44100) 44100 (gug 75))
-                       (signal->rsound (* 2 44100) 44100 (gug 79))
-                       (signal->rsound (* 2 44100) 44100 (gug 89)))))
 
