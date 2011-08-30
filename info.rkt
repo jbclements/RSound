@@ -8,8 +8,6 @@
                    "linux.")))
 
 (define scribblings '(("rsound.scrbl" () (tool))))
-(define drracket-tools '[("tool.rkt")])
-(define drracket-tool-names '["RSound Global Control Master Unit Incorporated"])
 (define categories '(media))
 (define version "2010-11-17-18:13")
 (define release-notes '((p "signals can be played directly, switched to a 'pull' architecture")))

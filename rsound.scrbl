@@ -1,6 +1,7 @@
 #lang scribble/doc
 
-@(require scribble/manual)
+@(require scribble/manual
+          planet/scribble)
 
 @title{@bold{RSound}: An Adequate Sound Engine for Racket}
 
