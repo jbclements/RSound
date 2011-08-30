@@ -36,8 +36,14 @@
     (define/override (on-char evt)
       (match (send evt get-key-code)
         [#\; (g (midi-note-num->pitch 60))]
+        [#\o (g (midi-note-num->pitch 61))]
         [#\q (g (midi-note-num->pitch 62))]
+        [#\e (g (midi-note-num->pitch 63))]
         [#\j (g (midi-note-num->pitch 64))]
+        [#\k (g (midi-note-num->pitch 65))]
+        [#\i (g (midi-note-num->pitch 66))]
+        [#\x (g (midi-note-num->pitch 67))]
+        [#\b (g (midi-note-num->pitch 69))]
         [other #f]))
     (super-new)))
 
