@@ -423,6 +423,23 @@ typedef enum PaHostApiTypeId
      paWASAPI = 13
      paAudioScienceHPI = 14
      )))
+
+;; useful in enumerating them, below.
+(define pa-all-host-api-type-ids
+  '(paInDevelopment
+     paDirectSound
+     paMME
+     paASIO
+     paSoundManager
+     paCoreAudio
+     paOSS
+     paALSA
+     paAL
+     paBeOS
+     paWDMKS
+     paJACK
+     paWASAPI
+     paAudioScienceHPI))
 #|
 
 
@@ -465,6 +482,7 @@ typedef struct PaHostApiInfo
    [device-count _int]
    [default-input-device _pa-device-index]
    [default-output-device _pa-device-index]))
+
 #|
 
 
@@ -486,7 +504,7 @@ const PaHostApiInfo * Pa_GetHostApiInfo( PaHostApiIndex hostApi );
 (define pa-get-host-api-info
   (get-ffi-obj "Pa_GetHostApiInfo"
                libportaudio
-               (_fun _pa-host-api-index -> _pa-host-api-info)))
+               (_fun _pa-host-api-index -> _pa-host-api-info-pointer)))
 #|
 
 
@@ -506,6 +524,18 @@ const PaHostApiInfo * Pa_GetHostApiInfo( PaHostApiIndex hostApi );
  @see PaHostApiTypeId
 */
 PaHostApiIndex Pa_HostApiTypeIdToHostApiIndex( PaHostApiTypeId type );
+|#
+(define pa-host-api-type-id-to-host-api-index
+  (get-ffi-obj "Pa_HostApiTypeIdToHostApiIndex"
+               libportaudio
+               (_fun _pa-host-api-type-id -> _pa-host-api-index)))
+
+(define (pa-get-supported-host-apis)
+  (for/list ([api (in-list pa-all-host-api-type-ids)]
+        #:when (<= 0 (pa-host-api-type-id-to-host-api-index api)))
+    api))
+
+#|
 
 
 /** Convert a host-API-specific device index to standard PortAudio device index.
