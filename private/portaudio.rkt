@@ -367,7 +367,7 @@ PaHostApiIndex Pa_GetHostApiCount( void );
 
 ;; has portaudio been initialized?
 (define (pa-initialized?)
-  (= (pa-get-host-api-count/raw) pa-not-initialized-error))
+  (not (= (pa-get-host-api-count/raw) pa-not-initialized-error)))
 
 ;; import the function with a plain int return, to simplify
 ;; checking to see whether things have already been initialized.

@@ -20,8 +20,10 @@
              (lambda () (pa-get-host-api-count)))
   (check-exn (lambda (exn) (string=? (exn-message exn) "PortAudio not initialized"))
              (lambda () (pa-get-default-host-api)))
-  
+
+  (check-equal? (pa-initialized?) #f)
   (check-not-exn (lambda () (pa-initialize)))
+  (check-equal? (pa-initialized?) #t)
   
   ;; on different platforms, the results will be different....
   (check < 0 (pa-get-host-api-count))
