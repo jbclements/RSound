@@ -15,8 +15,7 @@
   ;; this can change, as long as it's something sensible:
   (check-equal? (pa-get-error-text 'paBufferTooBig) "Buffer too big")
   
-  
-  
+  ;; if portaudio is already initialized, these tests will fail:
   (check-exn (lambda (exn) (string=? (exn-message exn) "PortAudio not initialized"))
              (lambda () (pa-get-host-api-count)))
   (check-exn (lambda (exn) (string=? (exn-message exn) "PortAudio not initialized"))
@@ -24,8 +23,12 @@
   
   (check-not-exn (lambda () (pa-initialize)))
   
+  ;; on different platforms, the results will be different....
   (check < 0 (pa-get-host-api-count))
   (check <= 0 (pa-get-default-host-api))
+  (check-not-exn (lambda () (pa-get-host-api-info 0)))
+  (check-exn exn:fail? 
+             (lambda () (pa-get-host-api-info (+ 14 (pa-get-host-api-count)))))
   
   (check-not-exn (lambda () (pa-terminate))))))
 

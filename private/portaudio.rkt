@@ -188,11 +188,12 @@ typedef enum PaErrorCode
 } PaErrorCode;
 |#
 
+(define pa-not-initialized-error -10000)
 (define _pa-error
   (_enum
-   '(paNoError = 0
+   `(paNoError = 0
                
-     paNotInitialized = -10000
+     paNotInitialized = ,pa-not-initialized-error
      paUnanticipatedHostError
      paInvalidChannelCount
      paInvalidSampleRate
@@ -270,6 +271,11 @@ PaError Pa_Initialize( void );
   (get-ffi-obj "Pa_Initialize" 
                libportaudio(_fun -> _pa-error)
                (_fun -> _pa-error)))
+
+;; initialize unless it's already been initialized.
+(define (pa-maybe-initialize)
+  (cond [(pa-initialized?) (void)]
+        [else (pa-initialize)]))
 
 #|
 /** Library termination function - call this when finished using PortAudio.
@@ -358,6 +364,17 @@ PaHostApiIndex Pa_GetHostApiCount( void );
   (get-ffi-obj "Pa_GetHostApiCount"
                libportaudio
                (_fun -> _pa-host-api-index)))
+
+;; has portaudio been initialized?
+(define (pa-initialized?)
+  (= (pa-get-host-api-count/raw) pa-not-initialized-error))
+
+;; import the function with a plain int return, to simplify
+;; checking to see whether things have already been initialized.
+(define pa-get-host-api-count/raw
+  (get-ffi-obj "Pa_GetHostApiCount"
+               libportaudio
+               (_fun -> _int)))
 #|
 
 
@@ -501,7 +518,16 @@ typedef struct PaHostApiInfo
 */
 const PaHostApiInfo * Pa_GetHostApiInfo( PaHostApiIndex hostApi );
 |#
-(define pa-get-host-api-info
+(define (pa-get-host-api-info index)
+  (define num-indexes (pa-get-host-api-count))
+  (unless (and (integer? index) (<= 0 index (sub1 num-indexes)))
+    (raise-type-error 'pa-get-host-api-info 
+                      (format "number in [0,~s] (legal API index)" (sub1 num-indexes))
+                      0
+                      index))
+  (pa-get-host-api-info/core index))
+
+(define pa-get-host-api-info/core
   (get-ffi-obj "Pa_GetHostApiInfo"
                libportaudio
                (_fun _pa-host-api-index -> _pa-host-api-info-pointer)))
@@ -571,6 +597,12 @@ typedef struct PaHostErrorInfo{
     long errorCode;                 /**< the error code returned */
     const char *errorText;          /**< a textual description of the error if available, otherwise a zero-length string */
 }PaHostErrorInfo;
+|#
+(define-cstruct _pa-host-error-info
+  ([host-api-type _pa-host-api-type-id]
+   [error-code _long]
+   [error-text _string]))
+#|
 
 
 /** Return information about the last host error encountered. The error
@@ -587,7 +619,12 @@ typedef struct PaHostErrorInfo{
  error code.
 */
 const PaHostErrorInfo* Pa_GetLastHostErrorInfo( void );
-
+|#
+(define pa-get-last-host-error-info
+  (get-ffi-obj "Pa_GetLastHostErrorInfo"
+               libportaudio
+               (_fun -> _pa-host-error-info-pointer)))
+#|
 
 
 /* Device enumeration and capabilities */
