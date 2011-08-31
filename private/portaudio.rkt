@@ -328,6 +328,7 @@ typedef int PaDeviceIndex;
 (define _pa-device-index _int)
 (define _pa-no-device -1)
 (define _pa-use-host-api-specific-device-specification -2)
+;; these literal numbers also appear below in 'get-default-<i/o>-device'
 
 #|
 
@@ -627,10 +628,18 @@ PaDeviceIndex Pa_GetDeviceCount( void );
 */
 PaDeviceIndex Pa_GetDefaultInputDevice( void );
 |#
-(define-semi-checked pa-get-default-input-device
+(define pa-get-default-input-device
   (get-ffi-obj "Pa_GetDefaultInputDevice"
                libportaudio
-               (_fun -> _pa-device-index)))
+               (_fun -> (index : _pa-device-index)
+                     -> (match index
+                          [-1 (error 'pa-get-default-input-device
+                                                "no devices available")]
+                          [-2
+                           (error 'pa-get-default-input-device
+                                  "use host-api-specific device specification")]
+                          [other index]))))
+
 #|
 
 
@@ -651,10 +660,17 @@ PaDeviceIndex Pa_GetDefaultInputDevice( void );
 */
 PaDeviceIndex Pa_GetDefaultOutputDevice( void );
 |#
-(define-semi-checked pa-get-default-output-device
+(define pa-get-default-output-device
   (get-ffi-obj "Pa_GetDefaultOutputDevice"
                libportaudio
-               (_fun -> _pa-device-index)))
+               (_fun -> (index : _pa-device-index)
+                     -> (match index
+                          [-1 (error 'pa-get-default-input-device
+                                                "no devices available")]
+                          [-2
+                           (error 'pa-get-default-input-device
+                                  "use host-api-specific device specification")]
+                          [other index]))))
 #|
 
 
