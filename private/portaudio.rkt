@@ -35,11 +35,35 @@
 ;; a convenience abstraction for defining checked functions.
 (define-syntax (define-checked stx)
   (syntax-parse stx
-    [(_ name:id c-name:expr type)
-     (with-syntax ([name-as-string #`(#%datum . #,(syntax-e #'name))])
+    [(_ name:id binding:expr)
+     (with-syntax ([name-as-symbol #`(#%datum . #,(syntax-e #'name))])
        #`(define name
-           (pa-checked (get-ffi-obj c-name libportaudio type)
-                       name-as-string)))]))
+           (pa-checked binding name-as-symbol)))]))
+
+
+
+;; wrap a function to signal an error when an integer < 0 is returned.
+;; only apply it to things that return ints
+(define (pa-semi-checked pa-fun name)
+  (lambda args
+    (define result (apply pa-fun args))
+    (cond [(not (integer? result))
+           (error 'name 
+                  "internal error: checker applied to fun returning non-int: ~e"
+                  result)]
+          [(< result 0)
+           (error (pa-get-error-text/int result))]
+          [else
+           result])))
+
+;; a convenience abstraction for defining semi-checked functions.
+(define-syntax (define-semi-checked stx)
+  (syntax-parse stx
+    [(_ name:id binding:expr)
+     (with-syntax ([name-as-symbol #`(#%datum . #,(syntax-e #'name))])
+       #`(define name
+           (pa-semi-checked binding name-as-symbol)))]))
+
 
 
 ;; headers taken from 19.20110326 release of portaudio.h
@@ -210,6 +234,14 @@ const char *Pa_GetErrorText( PaError errorCode );
                libportaudio
                (_fun _pa-error -> _string)))
 
+;; useful when you have the result as an int rather
+;; than a symbol, as e.g. when returned by 
+;; pa-get-host-api-count
+(define pa-get-error-text/int
+  (get-ffi-obj "Pa_GetErrorText"
+               libportaudio
+               (_fun _int -> _string)))
+
 #|
 
 /** Library initialization function - call this before using PortAudio.
@@ -234,11 +266,10 @@ const char *Pa_GetErrorText( PaError errorCode );
 PaError Pa_Initialize( void );
 |#
 
-#;(define pa-initialize/unchecked
+(define-checked pa-initialize 
   (get-ffi-obj "Pa_Initialize" 
                libportaudio(_fun -> _pa-error)
                (_fun -> _pa-error)))
-(define-checked pa-initialize "Pa_Initialize" (_fun -> _pa-error))
 
 #|
 /** Library termination function - call this when finished using PortAudio.
@@ -260,7 +291,7 @@ PaError Pa_Initialize( void );
 PaError Pa_Terminate( void );
 |#
 
-(define pa-terminate/unchecked
+(define-checked pa-terminate
   (get-ffi-obj "Pa_Terminate"
                libportaudio
                (_fun -> _pa-error)))
@@ -323,7 +354,7 @@ typedef int PaHostApiIndex;
 */
 PaHostApiIndex Pa_GetHostApiCount( void );
 |#
-(define pa-get-host-api-count/unchecked
+(define-semi-checked pa-get-host-api-count
   (get-ffi-obj "Pa_GetHostApiCount"
                libportaudio
                (_fun -> _pa-host-api-index)))
@@ -339,7 +370,12 @@ PaHostApiIndex Pa_GetHostApiCount( void );
  negative) if PortAudio is not initialized or an error is encountered.
 */
 PaHostApiIndex Pa_GetDefaultHostApi( void );
-
+|#
+(define-semi-checked pa-get-default-host-api
+  (get-ffi-obj "Pa_GetDefaultHostApi"
+               libportaudio
+               (_fun -> _pa-host-api-index)))
+#|
 
 /** Unchanging unique identifiers for each supported host API. This type
  is used in the PaHostApiInfo structure. The values are guaranteed to be
@@ -369,6 +405,25 @@ typedef enum PaHostApiTypeId
     paWASAPI=13,
     paAudioScienceHPI=14
 } PaHostApiTypeId;
+|#
+(define _pa-host-api-type-id
+  (_enum
+   '(paInDevelopment = 0 ;;/* use while developing support for a new host API */
+     paDirectSound = 1
+     paMME = 2
+     paASIO = 3
+     paSoundManager = 4
+     paCoreAudio = 5
+     paOSS = 7
+     paALSA = 8
+     paAL = 9
+     paBeOS = 10
+     paWDMKS = 11
+     paJACK = 12
+     paWASAPI = 13
+     paAudioScienceHPI = 14
+     )))
+#|
 
 
 /** A structure containing information about a particular host API. */
@@ -402,6 +457,15 @@ typedef struct PaHostApiInfo
     PaDeviceIndex defaultOutputDevice;
     
 } PaHostApiInfo;
+|#
+(define-cstruct _pa-host-api-info
+  ([struct-version _int]
+   [type _pa-host-api-type-id]
+   [name _string]
+   [device-count _int]
+   [default-input-device _pa-device-index]
+   [default-output-device _pa-device-index]))
+#|
 
 
 /** Retrieve a pointer to a structure containing information about a specific
@@ -418,6 +482,12 @@ typedef struct PaHostApiInfo
  calls to Pa_Initialize() and Pa_Terminate().
 */
 const PaHostApiInfo * Pa_GetHostApiInfo( PaHostApiIndex hostApi );
+|#
+(define pa-get-host-api-info
+  (get-ffi-obj "Pa_GetHostApiInfo"
+               libportaudio
+               (_fun _pa-host-api-index -> _pa-host-api-info)))
+#|
 
 
 /** Convert a static host API unique identifier, into a runtime
@@ -1134,7 +1204,7 @@ PaError Pa_OpenDefaultStream( PaStream** stream,
 */
 PaError Pa_CloseStream( PaStream *stream );
 |#
-(define pa-close-stream/unchecked 
+(define-checked pa-close-stream 
   (get-ffi-obj "Pa_CloseStream"
                libportaudio
                (_fun _pa-stream -> _pa-error)))
@@ -1183,7 +1253,7 @@ PaError Pa_SetStreamFinishedCallback( PaStream *stream, PaStreamFinishedCallback
 */
 PaError Pa_StartStream( PaStream *stream );
 |#
-(define pa-start-stream/unchecked
+(define-checked pa-start-stream
   (get-ffi-obj "Pa_StartStream"
                libportaudio
                (_fun _pa-stream -> _pa-error)))
@@ -1195,7 +1265,7 @@ PaError Pa_StartStream( PaStream *stream );
 */
 PaError Pa_StopStream( PaStream *stream );
 |#
-(define pa-stop-stream/unchecked
+(define-checked pa-stop-stream
   (get-ffi-obj "Pa_StopStream"
                libportaudio
                (_fun _pa-stream -> _pa-error)))
@@ -1210,7 +1280,7 @@ PaError Pa_AbortStream( PaStream *stream );
 
 ;; *** UNTESTED ***:
 
-(define pa-abort-stream/unchecked
+(define-checked pa-abort-stream
   (get-ffi-obj "Pa_AbortStream"
                libportaudio
                (_fun _pa-stream -> _pa-error)))
@@ -1369,7 +1439,7 @@ PaError Pa_ReadStream( PaStream* stream,
 
 ;; *** UNTESTED ***:
 
-(define pa-read-stream/unchecked
+(define-checked pa-read-stream
   (get-ffi-obj "Pa_ReadStream"
                libportaudio
                (_fun _pa-stream _pointer _ulong -> _pa-error)))
@@ -1403,7 +1473,7 @@ PaError Pa_WriteStream( PaStream* stream,
                         unsigned long frames );
 |#
 
-(define pa-write-stream/unchecked
+(define-checked pa-write-stream
   (get-ffi-obj "Pa_WriteStream"
                libportaudio
                (_fun _pa-stream _pointer _ulong -> _pa-error)))
@@ -1488,23 +1558,6 @@ void Pa_Sleep( long msec );
 #endif /* PORTAUDIO_H */
 
 |#
-
-
-
-;; defined checked forms of functions
-
-#;(define pa-initialize (pa-checked pa-initialize/unchecked 'pa-initialize))
-(define pa-terminate (pa-checked pa-terminate/unchecked 'pa-terminate))
-
-;; pa-open-default-stream already checked...
-(define pa-close-stream (pa-checked pa-close-stream/unchecked 'pa-close-stream))
-
-(define pa-start-stream (pa-checked pa-start-stream/unchecked 'pa-start-stream))
-(define pa-stop-stream (pa-checked pa-stop-stream/unchecked 'pa-stop-stream))
-(define pa-abort-stream (pa-checked pa-abort-stream/unchecked 'pa-abort-stream))
-
-(define pa-read-stream (pa-checked pa-read-stream/unchecked 'pa-read-stream))
-(define pa-write-stream (pa-checked pa-write-stream/unchecked 'pa-write-stream))
 
 
 ;; spawn a new thread to put a value on a synchronous channel
