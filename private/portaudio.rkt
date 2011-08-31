@@ -272,11 +272,6 @@ PaError Pa_Initialize( void );
                libportaudio(_fun -> _pa-error)
                (_fun -> _pa-error)))
 
-;; initialize unless it's already been initialized.
-(define (pa-maybe-initialize)
-  (cond [(pa-initialized?) (void)]
-        [else (pa-initialize)]))
-
 #|
 /** Library termination function - call this when finished using PortAudio.
  This function deallocates all resources allocated by PortAudio since it was
@@ -365,10 +360,6 @@ PaHostApiIndex Pa_GetHostApiCount( void );
                libportaudio
                (_fun -> _pa-host-api-index)))
 
-;; has portaudio been initialized?
-(define (pa-initialized?)
-  (not (= (pa-get-host-api-count/raw) pa-not-initialized-error)))
-
 ;; import the function with a plain int return, to simplify
 ;; checking to see whether things have already been initialized.
 (define pa-get-host-api-count/raw
@@ -440,23 +431,6 @@ typedef enum PaHostApiTypeId
      paWASAPI = 13
      paAudioScienceHPI = 14
      )))
-
-;; useful in enumerating them, below.
-(define pa-all-host-api-type-ids
-  '(paInDevelopment
-     paDirectSound
-     paMME
-     paASIO
-     paSoundManager
-     paCoreAudio
-     paOSS
-     paALSA
-     paAL
-     paBeOS
-     paWDMKS
-     paJACK
-     paWASAPI
-     paAudioScienceHPI))
 #|
 
 
@@ -531,6 +505,11 @@ const PaHostApiInfo * Pa_GetHostApiInfo( PaHostApiIndex hostApi );
   (get-ffi-obj "Pa_GetHostApiInfo"
                libportaudio
                (_fun _pa-host-api-index -> _pa-host-api-info-pointer)))
+
+;; enumerate the symbols associated with the supported APIs
+(define (pa-get-all-api-ids)
+  (for/list ([i (in-range (pa-get-host-api-count))])
+    (pa-host-api-info-type (pa-get-host-api-info i))))
 #|
 
 
@@ -555,11 +534,6 @@ PaHostApiIndex Pa_HostApiTypeIdToHostApiIndex( PaHostApiTypeId type );
   (get-ffi-obj "Pa_HostApiTypeIdToHostApiIndex"
                libportaudio
                (_fun _pa-host-api-type-id -> _pa-host-api-index)))
-
-(define (pa-get-supported-host-apis)
-  (for/list ([api (in-list pa-all-host-api-type-ids)]
-        #:when (<= 0 (pa-host-api-type-id-to-host-api-index api)))
-    api))
 
 #|
 
@@ -637,6 +611,12 @@ const PaHostErrorInfo* Pa_GetLastHostErrorInfo( void );
  or an error is encountered.
 */
 PaDeviceIndex Pa_GetDeviceCount( void );
+|#
+(define-semi-checked pa-get-device-count
+  (get-ffi-obj "Pa_GetDeviceCount"
+               libportaudio
+               (_fun -> _pa-device-index)))
+#|
 
 
 /** Retrieve the index of the default input device. The result can be
@@ -646,6 +626,12 @@ PaDeviceIndex Pa_GetDeviceCount( void );
  if no default input device is available or an error was encountered.
 */
 PaDeviceIndex Pa_GetDefaultInputDevice( void );
+|#
+(define-semi-checked pa-get-default-input-device
+  (get-ffi-obj "Pa_GetDefaultInputDevice"
+               libportaudio
+               (_fun -> _pa-device-index)))
+#|
 
 
 /** Retrieve the index of the default output device. The result can be
@@ -664,6 +650,12 @@ PaDeviceIndex Pa_GetDefaultInputDevice( void );
  the supplied application "pa_devs".
 */
 PaDeviceIndex Pa_GetDefaultOutputDevice( void );
+|#
+(define-semi-checked pa-get-default-output-device
+  (get-ffi-obj "Pa_GetDefaultOutputDevice"
+               libportaudio
+               (_fun -> _pa-device-index)))
+#|
 
 
 /** The type used to represent monotonic time in seconds. PaTime is 
@@ -753,7 +745,19 @@ typedef struct PaDeviceInfo
 
     double defaultSampleRate;
 } PaDeviceInfo;
+|#
+(define-cstruct _pa-device-info
+  ([struct-version      _int]
+   [name                _string]
+   [host-api            _pa-host-api-index]
+   [max-input-channels  _int]
+   [max-output-channels _int]
+   [default-input-latency       _pa-time]
+   [default-output-latency      _pa-time]
+   [default-high-input-latency  _pa-time]
+   [default-high-output-latency _pa-time]))
 
+#|
 
 /** Retrieve a pointer to a PaDeviceInfo structure containing information
  about the specified device.
@@ -769,6 +773,12 @@ typedef struct PaDeviceInfo
  @see PaDeviceInfo, PaDeviceIndex
 */
 const PaDeviceInfo* Pa_GetDeviceInfo( PaDeviceIndex device );
+|#
+(define pa-get-device-info
+  (get-ffi-obj "Pa_GetDeviceInfo"
+               libportaudio
+               (_fun _pa-device-index -> _pa-device-info-pointer)))
+#|
 
 
 /** Parameters for one direction (input or output) of a stream.
@@ -1625,6 +1635,23 @@ void Pa_Sleep( long msec );
 #endif /* PORTAUDIO_H */
 
 |#
+
+;; UTILITIES:
+
+
+
+;; initialize unless it's already been initialized.
+(define (pa-maybe-initialize)
+  (cond [(pa-initialized?) (void)]
+        [else (pa-initialize)]))
+
+;; has portaudio been initialized?
+(define (pa-initialized?)
+  (not (= (pa-get-host-api-count/raw) pa-not-initialized-error)))
+
+
+
+
 
 
 ;; spawn a new thread to put a value on a synchronous channel
