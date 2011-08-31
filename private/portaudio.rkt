@@ -1,8 +1,10 @@
 #lang racket
 
 (require ffi/unsafe
-         racket/runtime-path)
+         racket/runtime-path
+         (for-syntax syntax/parse))
 
+(provide (all-defined-out))
 
 ;; use local copies of the libraries for Windows & Mac...
 (define-runtime-path win-dll-path "..\\lib\\portaudio_x86")
@@ -19,7 +21,26 @@
                                          (exn-message exn)))])
                  (ffi-lib "libportaudio" '("2.0.0" "")))]))
 
-(provide (all-defined-out))
+;; wrap a function to signal an error when an error code is returned.
+;; (any ... -> pa-error) -> (any ... -> )
+(define (pa-checked pa-fun name)
+  (lambda args
+    (match (apply pa-fun args)
+      ['paNoError (void)]
+      [(? symbol? s) (error (pa-get-error-text s))]
+      [other (error name
+                    "internal error: expected a symbol, got: ~s"
+                    other)])))
+
+;; a convenience abstraction for defining checked functions.
+(define-syntax (define-checked stx)
+  (syntax-parse stx
+    [(_ name:id c-name:expr type)
+     (with-syntax ([name-as-string #`(#%datum . #,(syntax-e #'name))])
+       #`(define name
+           (pa-checked (get-ffi-obj c-name libportaudio type)
+                       name-as-string)))]))
+
 
 ;; headers taken from 19.20110326 release of portaudio.h
 
@@ -213,10 +234,11 @@ const char *Pa_GetErrorText( PaError errorCode );
 PaError Pa_Initialize( void );
 |#
 
-(define pa-initialize/unchecked
+#;(define pa-initialize/unchecked
   (get-ffi-obj "Pa_Initialize" 
-               libportaudio
+               libportaudio(_fun -> _pa-error)
                (_fun -> _pa-error)))
+(define-checked pa-initialize "Pa_Initialize" (_fun -> _pa-error))
 
 #|
 /** Library termination function - call this when finished using PortAudio.
@@ -285,6 +307,9 @@ typedef int PaDeviceIndex;
  @see Pa_GetHostApiCount
 */
 typedef int PaHostApiIndex;
+|#
+(define _pa-host-api-index _int)
+#|
 
 
 /** Retrieve the number of available host APIs. Even if a host API is
@@ -297,6 +322,12 @@ typedef int PaHostApiIndex;
  @see PaHostApiIndex
 */
 PaHostApiIndex Pa_GetHostApiCount( void );
+|#
+(define pa-get-host-api-count/unchecked
+  (get-ffi-obj "Pa_GetHostApiCount"
+               libportaudio
+               (_fun -> _pa-host-api-index)))
+#|
 
 
 /** Retrieve the index of the default host API. The default host API will be
@@ -1459,21 +1490,10 @@ void Pa_Sleep( long msec );
 |#
 
 
-;; wrap a function to signal an error when an error code is returned.
-;; (any ... -> pa-error) -> (any ... -> )
-(define (pa-checked pa-fun name)
-  (lambda args
-    (match (apply pa-fun args)
-      ['paNoError (void)]
-      [(? symbol? s) (error (pa-get-error-text s))]
-      [other (error name
-                    "internal error: expected a symbol, got: ~s"
-                    other)])))
-
 
 ;; defined checked forms of functions
 
-(define pa-initialize (pa-checked pa-initialize/unchecked 'pa-initialize))
+#;(define pa-initialize (pa-checked pa-initialize/unchecked 'pa-initialize))
 (define pa-terminate (pa-checked pa-terminate/unchecked 'pa-terminate))
 
 ;; pa-open-default-stream already checked...
