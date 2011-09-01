@@ -23,6 +23,12 @@
 ;; consume too much memory or time, and I can't figure out a better way to
 ;; make it happen on shutdown. (Actually, I'm not sure that *this* does it,
 ;; either....)
+;; 
+;; ... Update: i've discovered how to check whether initialization has already
+;; happened, and also I've discovered that initialization causes a bunch of
+;; ugly output on linux, so I'm going to go to pa-maybe-initialize, and 
+;; just forget about terminate....
+
 
 (define (frames? n) 
   (and (exact-integer? n)
@@ -146,7 +152,7 @@
 (define (playing-state callback-maker sample-rate)
   (define response-channel (make-channel))
   (define callback (callback-maker response-channel))
-  (pa-initialize)
+  (pa-maybe-initialize)
   (let* ([stream (pa-open-default-stream
                   0             ;; input channels
                   channels      ;; output channels
@@ -180,7 +186,8 @@
              ['finished (begin (pa-stop-stream stream) #f)]))))
      (lambda () 
        (pa-close-stream stream)
-       (pa-terminate)))))
+       ;; trying to live without this....
+       #;(pa-terminate)))))
 
 
 
