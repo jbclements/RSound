@@ -1214,22 +1214,19 @@ PaError Pa_OpenStream( PaStream** stream,
 
 ;; *** UNTESTED ***:
 
-#;(define pa-open-stream
+(define-checked pa-open-stream
   (get-ffi-obj "Pa_OpenStream"
                libportaudio
                (_fun (result : (_ptr o _pa-stream)) ;; stream
-                     _pa-stream-parameters ;; inputParameters
-                     _pa-stream-parameters ;; outputParameters
+                     _pa-stream-parameters-pointer ;; inputParameters
+                     _pa-stream-parameters-pointer ;; outputParameters
                      _double ;; sampleRate
                      _ulong ;; framesPerBuffer
                      _pa-stream-flags ;; streamFlags
                      ;; note: give this a name to prevent it from getting collected:
                      (callback : _pa-stream-callback) ;; streamCallback
                      _pointer ;; userData?
-                     -> (err : _pa-error)
-                     -> (match err
-                          ['paNoError result]
-                          [other (error 'pa-open-default-stream "~a" (pa-get-error-text err))]))))
+                     -> _pa-error)))
 
 
 #| 
@@ -1272,7 +1269,7 @@ PaError Pa_OpenDefaultStream( PaStream** stream,
                               PaStreamCallback *streamCallback,
                               void *userData );
 |#
-(define pa-open-default-stream
+(define-checked pa-open-default-stream
   (get-ffi-obj "Pa_OpenDefaultStream"
                libportaudio
                (_fun (result : (_ptr o _pa-stream)) ;; stream
