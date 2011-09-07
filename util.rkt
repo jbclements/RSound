@@ -59,11 +59,6 @@
          raw-square-wave
          raw-sawtooth-wave
          binary-logn
-         ;; sampled sounds
-         kick
-         snare
-         hi-hat
-         clap
          )
 
 
@@ -475,13 +470,5 @@
                (set! last-t (add1 last-t))
                (set! next-idx (modulo (add1 next-idx) max-delay)))))))]
     [other (raise-type-error 'iir-filter "(listof (list number number))" 0 params)]))
-
-
-
-(define-runtime-path samples "./samples")
-(define kick (rsound-read (build-path samples "kick.wav")))
-(define snare (rsound-read (build-path samples "snare.wav")))
-(define clap (rsound-read (build-path samples "clap.wav")))
-(define hi-hat (rsound-read (build-path samples "hi-hat.wav")))
 
 
