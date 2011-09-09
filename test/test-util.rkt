@@ -171,7 +171,7 @@
 
 (let* ([f (lambda (t) (* 2 (sin (* t twopi 1 1/12))))]
        [vf (clip&volume 0.5 f)]
-       [sf (scale 4.0 f)])
+       [sf (signal-scale 4.0 f)])
   (check-= (f 0) 0 1e-4)
   (check-= (f 6) 0 1e-4)
   (check-= (f 3) 2.0 1e-4)

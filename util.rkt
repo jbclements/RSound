@@ -31,7 +31,8 @@
          signal-*s
          signal-+s
          thresh/signal
-         scale
+         rsound-scale
+         signal-scale
          clip&volume
          rsound->signal/left
          rsound->signal/right
@@ -60,6 +61,25 @@
          raw-sawtooth-wave
          binary-logn
          )
+
+
+;; given a function from numbers to numbers and an rsound, 
+;; produce a new rsound where every sample is modified 
+;; by applying the given sound.
+(define (rsound-map fun sound)
+  (define (left i) (fun (rsound-ith/left sound i)))
+  (define (right i) (fun (rsound-ith/right sound i)))
+  (signals->rsound/stereo (rsound-frames sound)
+                          (rsound-sample-rate sound)
+                          left
+                          right))
+
+;; rsound-scale : number rsound -> rsound
+(define (rsound-scale scalar rsound)
+  (rsound-map (lambda (x) (* x scalar)) rsound))
+
+
+
 
 
 
@@ -389,14 +409,14 @@
 
 ;; scale : number signal -> signal
 ;; scale the signal by the given number
-(define (scale volume signal)
+(define (signal-scale volume signal)
   (lambda (t)
     (* volume (signal t))))
 
 ;; clip&volume : number signal -> signal
 ;; clip the given signal to 1.0, then multiply by the volume.
 (define (clip&volume volume signal)
-  (scale volume (thresh/signal 1.0 signal)))
+  (signal-scale volume (thresh/signal 1.0 signal)))
 
 ;; FIR filters
 

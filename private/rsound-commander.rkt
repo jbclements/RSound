@@ -1,7 +1,7 @@
 #lang racket
 
-(require racket/class
-         "portaudio.rkt"
+(require "portaudio.rkt"
+         "portaudio-utils.rkt"
          (only-in ffi/unsafe cpointer?))
 
 ;; implementation overview: this module starts a player thread that interacts
@@ -113,7 +113,6 @@
 
 
 
-
 (define (idle-state message)
   (define next-evt
     (or 
@@ -161,33 +160,26 @@
                   1000 ;;frames-per-buffer  ;; frames per buffer
                   callback     ;; callback (NULL means just wait for data)
                   #f)])         ;; user data (unnecessary in a world with closures))
-    (dynamic-wind
-     void
-     (lambda ()
-       (pa-start-stream stream)
-       ;; block until getting a message on *either* the response
-       ;; channel or the command channel:
-       (let loop ()
-         (let ([response (sync player-evt-channel response-channel)])
-           (match response 
-             [(? play-sound-msg? p) (begin (pa-stop-stream stream)
-                                           p)]
-             [(? loop-sound-msg? p) (begin (pa-stop-stream stream)
-                                           p)]
-             [(? stop-playing-msg? p) (begin (pa-stop-stream stream)
-                                             #f)]
-             [(? change-loop-msg? p) 
-              ;; to get loops working, send a message to the callback.
-              (loop)]
-             [(? play-signal-msg? p) (begin (pa-stop-stream stream)
-                                            p)]
-             [(? exn? e) (begin (pa-stop-stream stream)
-                                (raise e))]
-             ['finished (begin (pa-stop-stream stream) #f)]))))
-     (lambda () 
-       (pa-close-stream stream)
-       ;; trying to live without this....
-       #;(pa-terminate)))))
+    (pa-start-stream stream)
+    ;; block until getting a message on *either* the response
+    ;; channel or the command channel:
+    (let loop ()
+      (let ([response (sync player-evt-channel response-channel)])
+        (match response 
+          [(? play-sound-msg? p) (begin (pa-close-stream stream)
+                                        p)]
+          [(? loop-sound-msg? p) (begin (pa-close-stream stream)
+                                        p)]
+          [(? stop-playing-msg? p) (begin (pa-close-stream stream)
+                                          #f)]
+          [(? change-loop-msg? p) 
+           ;; to get loops working, send a message to the callback.
+           (loop)]
+          [(? play-signal-msg? p) (begin (pa-close-stream stream)
+                                         p)]
+          [(? exn? e) (begin (pa-close-stream stream)
+                             (raise e))]
+          ['finished (begin (pa-close-stream stream) #f)])))))
 
 
 

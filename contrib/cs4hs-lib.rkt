@@ -27,17 +27,6 @@
                    left
                    right))
 
-(define (rsound-map fun sound)
-  (define (left i) (fun (rsound-ith/left sound i)))
-  (define (right i) (fun (rsound-ith/right sound i)))
-  (signals->rsound/stereo (rsound-frames sound)
-                   (rsound-sample-rate sound)
-                   left
-                   right))
-
-(define (rsound-scale scale sound)
-  (rsound-map (lambda (x) (* scale x)) sound))
-
 ;; read the wav file, scale it down to avoid clipping
 (define (sample-load path)
   (rsound-scale 0.05 (rsound-read path)))

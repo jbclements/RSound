@@ -154,6 +154,9 @@ These procedures allow the creation, analysis, and manipulation of rsounds.
  
  }
 
+@defproc[(rsound-scale (scalar nonnegative-number?) (rsound rsound?)) rsound?]{
+ Scale the given sound by multiplying all of its samples by the given scalar.}
+
 @section{Signals}
 
 A signal is a function mapping a frame number to a real number in the range @racket[-1.0] to @racket[1.0]. There
@@ -204,7 +207,7 @@ In order to listen to them, you'll need to transform them into rsounds:
  @racketblock[
 (define samplerate 44100)
 
-(define r (signal->rsound (* samplerate 4) samplerate (scale 0.1 (sine-wave 560 samplerate))))
+(define r (signal->rsound (* samplerate 4) samplerate (rsound-scale 0.1 (sine-wave 560 samplerate))))
 
 (rsound-play r)]}
                                                   

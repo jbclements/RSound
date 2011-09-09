@@ -2,9 +2,11 @@
 
 (require ffi/unsafe
          racket/runtime-path
-         (for-syntax syntax/parse))
+         (for-syntax syntax/parse)
+         (only-in '#%foreign ffi-callback))
 
 (provide (all-defined-out))
+
 
 ;; use local copies of the libraries for Windows & Mac...
 (define-runtime-path win-dll-path "..\\lib\\portaudio_x86")
@@ -67,6 +69,12 @@
 
 
 ;; headers taken from 19.20110326 release of portaudio.h
+
+;; note that every line of the header file appears here verbatim; this means
+;; that you can 'diff' this file against the header file, and check that the
+;; only differences are additions to verify that the header file is up-to-date.
+;; (Yes, this can fail, but only if the racket part of the file contains the
+;; newly appeared header file line, which seems exceedingly unlikely.)
 
 ;; initial block:
 #|
@@ -1214,7 +1222,7 @@ PaError Pa_OpenStream( PaStream** stream,
 
 ;; *** UNTESTED ***:
 
-(define-checked pa-open-stream
+(define pa-open-stream
   (get-ffi-obj "Pa_OpenStream"
                libportaudio
                (_fun (result : (_ptr o _pa-stream)) ;; stream
@@ -1226,7 +1234,12 @@ PaError Pa_OpenStream( PaStream** stream,
                      ;; note: give this a name to prevent it from getting collected:
                      (callback : _pa-stream-callback) ;; streamCallback
                      _pointer ;; userData?
-                     -> _pa-error)))
+                     -> (err : _pa-error)
+                     -> (match err
+                          ['paNoError (add-managed result close-stream-callback)
+                                      result]
+                          [other (error 'pa-open-default-stream "~a ~a" (pa-get-error-text err)
+                                        callback)]))))
 
 
 #| 
@@ -1269,7 +1282,7 @@ PaError Pa_OpenDefaultStream( PaStream** stream,
                               PaStreamCallback *streamCallback,
                               void *userData );
 |#
-(define-checked pa-open-default-stream
+(define pa-open-default-stream
   (get-ffi-obj "Pa_OpenDefaultStream"
                libportaudio
                (_fun (result : (_ptr o _pa-stream)) ;; stream
@@ -1283,7 +1296,8 @@ PaError Pa_OpenDefaultStream( PaStream** stream,
                      _pointer ;; userData?
                      -> (err : _pa-error)
                      -> (match err
-                          ['paNoError result]
+                          ['paNoError (add-managed result close-stream-callback)
+                                      result]
                           [other (error 'pa-open-default-stream "~a ~a" (pa-get-error-text err)
                                         callback)]))))
 #|
@@ -1294,10 +1308,23 @@ PaError Pa_OpenDefaultStream( PaStream** stream,
 */
 PaError Pa_CloseStream( PaStream *stream );
 |#
-(define-checked pa-close-stream 
+(define (pa-close-stream stream)
+  ;; unregister with the custodian
+  (remove-managed stream)
+  (pa-close-stream/raw stream))
+
+(define-checked pa-close-stream/raw
   (get-ffi-obj "Pa_CloseStream"
                libportaudio
                (_fun _pa-stream -> _pa-error)))
+
+(define close-stream-callback
+ (ffi-callback (lambda (p _) 
+                 (log-info "closing stream")
+                 (pa-close-stream p)) 
+               (list _scheme _pointer)
+               _void))
+
 
 #|
 
@@ -1649,9 +1676,20 @@ void Pa_Sleep( long msec );
 
 |#
 
-;; UTILITIES:
+;; SUPPORT:
+
+;; import add-managed so that we can associate streams with custodians:
+(define add-managed
+ (get-ffi-obj "scheme_add_managed" #f
+             (_fun (_pointer = #f) _racket _fpointer (_pointer = #f) (_int = 1) -> _pointer)))
+
+;; import remove-managed so that we can detach streams from custodians:
+(define remove-managed
+ (get-ffi-obj "scheme_remove_managed" #f
+             (_fun (_pointer = #f) _racket -> _void)))
 
 
+;; WRAPPERS:
 
 ;; initialize unless it's already been initialized.
 (define (pa-maybe-initialize)
@@ -1662,78 +1700,17 @@ void Pa_Sleep( long msec );
 (define (pa-initialized?)
   (not (= (pa-get-host-api-count/raw) pa-not-initialized-error)))
 
+;; terminate until pa-initialized returns false
+(define (pa-terminate-completely)
+  (let loop ([count terminate-absurd-threshold])
+    (cond ([< count 0] (error 'pa-terminate-completely 
+                              "terminated more than ~s times and initialized? still returns true."
+                              terminate-absurd-threshold))
+          [(pa-initialized?) (pa-terminate)
+                             (loop (- count 1))]
+          [else #t])))
 
+;; the number of times to try terminating before giving up:
+(define terminate-absurd-threshold 1000000)
 
-
-
-
-;; spawn a new thread to put a value on a synchronous channel
-(define (channel-put/async channel val)
-  (thread (lambda () 
-            (channel-put channel val))))
-
-;; create a callback that supplies frames from a buffer, using memcpy.
-(define ((make-copying-callback total-frames master-buffer) response-channel)
-  (let* ([channels 2]
-         [sample-offset 0] ;; mutable, to track through the buffer
-         [total-samples (* total-frames channels)])
-    (lambda (input output frame-count time-info status-flags user-data)
-      ;; MUST NOT ALLOW AN EXCEPTION TO ESCAPE.
-      (with-handlers ([(lambda (exn) #t)
-                       (lambda (exn)
-                         (channel-put/async response-channel exn)
-                         'pa-abort)])
-        (let ([buffer-samples (* frame-count channels)])
-          (cond
-            [(> (+ sample-offset buffer-samples) total-samples)
-             (channel-put/async response-channel 'finished)
-             ;; for now, just truncate if it doesn't come out even:
-             ;; NB: all zero bits is the sint16 representation of 0
-             (begin (memset output 0 buffer-samples _sint16)
-                    'pa-complete)]
-            [else
-             (begin (memcpy output
-                            0
-                            master-buffer
-                            sample-offset
-                            buffer-samples
-                            _sint16)
-                    (set! sample-offset (+ sample-offset buffer-samples))
-                    'pa-continue)]))))))
-
-;; create a callback that creates frames by calling a signal repeatedly
-(define ((make-generating-callback signal) response-channel)
-  (let* (#;[channels 2] ;; only works for 2 channels
-         [s16max 32767]
-         [frame-offset 0] ;; mutable, to track time
-         )
-    (lambda (input output frame-count time-info status-flags user-data)
-      ;; MUST NOT ALLOW AN EXCEPTION TO ESCAPE.
-      (with-handlers ([(lambda (exn) #t)
-                       (lambda (exn)
-                         (channel-put/async response-channel exn)
-                         'pa-abort)])
-        (for ([t (in-range frame-offset (+ frame-offset frame-count))]
-              [i (in-range 0 (* 2 frame-count) 2)])
-          (let ([sample (inexact->exact (round (* s16max (min 1.0 (max -1.0 (signal t))))))])
-            (ptr-set! output _sint16 i sample)
-            (ptr-set! output _sint16 (+ i 1) sample)))
-         (set! frame-offset (+ frame-offset frame-count))
-        'pa-continue))))
-
-;; create a callback that creates frames by passing a cblock to a function
-(define ((make-block-generating-callback signal/block/s16) response-channel)
-  (let* (#;[channels 2]
-         [s16max 32767]
-         [frame-offset 0] ;; mutable, to track time
-         )
-    (lambda (input output frame-count time-info status-flags user-data)
-      ;; MUST NOT ALLOW AN EXCEPTION TO ESCAPE.
-      (with-handlers ([(lambda (exn) #t)
-                       (lambda (exn)
-                         (channel-put/async response-channel exn)
-                         'pa-abort)])
-        (signal/block/s16 output frame-offset frame-count)
-         (set! frame-offset (+ frame-offset frame-count))
-        'pa-continue))))
 
