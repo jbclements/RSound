@@ -41,7 +41,7 @@
   (match-let* ([(list next-chunk-offset channels samplerate) (read-formatting-info port 0)]
                [(list data-chunk-len data-offset) (scan-for-data-chunk port next-chunk-offset)])
     (match-let ([(list data frames) (parse-data-chunk port data-chunk-len data-offset channels begin-frame end-frame)])
-      (list data frames samplerate))))
+      (list data samplerate))))
 
 ;; read-formatting-info : port nat -> nat nat nat 
 ;; parse the header of the file, return the offset of the next

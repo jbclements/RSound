@@ -1,7 +1,6 @@
 #lang racket
 
-(require "private/portaudio.rkt"
-         "rsound.rkt"
+(require "rsound.rkt"
          "util.rkt"
          "drum-samples.rkt")
 
