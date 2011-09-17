@@ -46,7 +46,10 @@
   (pa-start-stream stream)
   (async-channel-put 
    live-stream-channel
-   (lambda () (stop-sound sndinfo-record))))
+   (lambda () (stop-sound sndinfo-record)
+     #;(thread (lambda ()
+                 (sleep 0.5)
+                 ())))))
 
 ;; channels... don't change this, unless 
 ;; you also change the copying-callback.

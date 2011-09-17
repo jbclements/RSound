@@ -35,8 +35,19 @@
 (check-= ((raw-square-wave 2 500) 250)  1.0 1e-4)
 (check-= ((raw-square-wave 3 500) 166) -1.0 1e-4)
 (check-= ((raw-square-wave 3 500) 167)  1.0 1e-4)
+  
+  (define pulse-12.5 (make-pulse-tone 0.125))
+  (define short-pulse  (pulse-12.5 441 0.2 50))
+  (check-= (rsound-ith/left short-pulse 0) 0.1 1e-4)
+  (check-= (rsound-ith/left short-pulse 11) 0.1 1e-4)
+  (check-= (rsound-ith/left short-pulse 13) -0.1 1e-4)
 
 
+;; overlay*
+  (define-syntax (mono stx)
+    (syntax-rules)) ;; RIGHT HERE!
+  (define shorty (mono 20 t
+                       (* 0.1 t)))
 
 ;; vectors->rsound
 
@@ -190,7 +201,7 @@
 
 ;; how much slower is signal?
 ;; answer: negligible; only about 2% slower
-(define (n-times-throwaway n x) 
+#|(define (n-times-throwaway n x) 
   (time
    (for ([i (in-range n)])
      (x))))
@@ -212,4 +223,5 @@
  40
  (lambda ()
    (mono-signal->rsound (default-sample-rate) (signal testfun 340))))
+|#
 )))

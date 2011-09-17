@@ -9,9 +9,12 @@
 
 (provide s16buffer-add!/c)
 
-(define-runtime-path buffer-add-libpath "buffer-add")
+(define-runtime-path here ".")
 
-(define buffer-add-lib (ffi-lib buffer-add-libpath '("")))
+(define buffer-add-lib (ffi-lib 
+                        (build-path here
+                                    (system-library-subpath)
+                                    "buffer-add")))
 
 (define s16buffer-add!/c
   (get-ffi-obj "bufferAdd"

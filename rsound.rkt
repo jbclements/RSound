@@ -34,13 +34,13 @@
                   [channels positive-integer?])
 
 (provide (struct-out rsound)
-         rsound-play
+         play
          signal?
          signal-play
          signal/block?
          signal/block-play
          rsound-loop
-         stop-playing
+         stop
          #;change-loop
          ;; why is this necessary?
          #;rsound-nth-sample
@@ -52,23 +52,23 @@
          set-rsound-ith/right!
          #;rsound-scale
          rsound-equal?
-         rsound-clip
-         rsound-append
-         rsound-append*
-         rsound-overlay*
+         clip
+         rs-append
+         rs-append*
+         assemble
          default-sample-rate
          mono-signal->rsound
          signals->rsound
          signal->rsound/filtered
-         make-silence
-         rsound-read
-         rsound-read/clip
-         rsound-read-frames
-         rsound-read-sample-rate
+         silence
+         rs-read
+         rs-read/clip
+         rs-read-frames
+         rs-read-sample-rate
          rsound-write
-         rsound-largest-frame/range/left
-         rsound-largest-frame/range/right
-         rsound-largest-sample
+         rs-largest-frame/range/left
+         rs-largest-frame/range/right
+         rs-largest-sample
          ;; for testing...
          sound-list-total-frames
          same-sample-rate-check)
@@ -80,7 +80,7 @@
 (define s16-size 2)
 
 (define channels rc:channels)
-(define stop-playing rc:stop-playing)
+(define stop rc:stop-playing)
 
 ;; used for creating sounds; specifying the 
 ;; sample rate every time is too much of a pain
@@ -130,14 +130,14 @@
 ;; ** FILE I/O **
 
 ;; just a wrapper around read-sound/floatblock
-(define (rsound-read path)
+(define (rs-read path)
   (unless (path-string? path)
     (raise-type-error 'rsound-read "path-string" 0 path))
   (match (read-sound/s16vector path 0 #f)
     [(list data sample-rate) (rsound data sample-rate)]))
 
 ;; read a portion of a sound
-(define (rsound-read/clip path start-frame end-frame)
+(define (rs-read/clip path start-frame end-frame)
   (unless (path-string? path)
     (raise-type-error 'rsound-read "path-string" 0 path start-frame end-frame))
   (unless (nonnegative-integer? start-frame)
@@ -148,13 +148,13 @@
     [(list data sample-rate) (rsound data sample-rate)]))
 
 ;; what is the sample-rate of a file?
-(define (rsound-read-sample-rate path)
+(define (rs-read-sample-rate path)
   (unless (path-string? path)
     (raise-type-error 'rsound-read-sample-rate "path-string" 0 path))
   (second (read-sound/formatting path)))
 
 ;; how many frames are in the file?
-(define (rsound-read-frames path)
+(define (rs-read-frames path)
   (unless (path-string? path)
     (raise-type-error 'rsound-read-frames "path-string" 0 path))
   (first (read-sound/formatting path)))
@@ -183,7 +183,7 @@
     (raise-type-error 'signal-play "signal" 0 signal sample-rate))
   (unless (positive-integer? sample-rate)
     (raise-type-error 'signal-play "sample rate (nonnegative exact integer)" 1 signal sample-rate))
-  (signal-play signal sample-rate))
+  (rc:signal-play signal sample-rate))
 
 ;; play a signal/block using portaudio:
 (define (signal/block-play signal/block sample-rate)
@@ -211,7 +211,7 @@
      (error 'rsound-play/helper "expected an rsound, got: ~e" sound)]))
 
 ;; play an rsound
-(define rsound-play 
+(define play 
   (rsound-play/helper #f))
 
 ;; loop an rsound endlessly
@@ -324,7 +324,7 @@
 ;; extract a chunk of an rsound, beginning at frame 'start'
 ;; and ending before frame 'end'. *Does* copy the memory.
 ;; (an alternate representation could avoid this, if important)
-(define (rsound-clip sound start finish)
+(define (clip sound start finish)
   (unless (rsound? sound)
     (raise-type-error 'rsound-clip "rsound" 0 sound start finish))
   (unless (nonnegative-integer? start)
@@ -346,11 +346,11 @@
                  "You provided start ~s and end ~s for a sound with ~s frames."))
 
 ;; rsound-append : rsound rsound -> rsound
-(define (rsound-append sound-a sound-b)
-  (rsound-append* (list sound-a sound-b)))
+(define (rs-append sound-a sound-b)
+  (rs-append* (list sound-a sound-b)))
 
 ;; rsound-append* : (listof rsound) -> rsound
-(define (rsound-append* los)
+(define (rs-append* los)
   (unless (and (list? los) (andmap rsound? los))
     (raise-type-error 'rsound-append* "list of rsounds" 0 los))
   (same-sample-rate-check los)
@@ -371,7 +371,7 @@
 ;; ** early implementations were too slow, so now I call out to C.
 ;;
 ;; N.B.: currently, summing to larger amplitudes will just wrap.
-(define (rsound-overlay* sound&times)
+(define (assemble sound&times)
   (unless (and (list? sound&times) 
                (andmap list? sound&times)
                (andmap rsound? (map first sound&times))
@@ -396,7 +396,7 @@
     (rsound cblock (rsound-sample-rate (caar sound&times)))))
 
 
-
+;; UNTESTED!
 ;; add-on-as-computed
 (define (mono-fun->buffer-overlay sound offset fun overlay-frames)
   (define frames (rsound-frames sound))
@@ -469,6 +469,8 @@
         (s16vector-set! cblock (+ offset 1) (real->s16 (fright i)))))
     (rsound cblock sample-rate)))
 
+
+;; UNTESTED!
 (define (signal->rsound/filtered frames filter f)
   (define sample-rate (default-sample-rate))
   (unless (nonnegative-integer? frames)
@@ -485,7 +487,7 @@
 
 
 ;; special-case silence (it's easy to generate):
-(define (make-silence frames)
+(define (silence frames)
   (define sample-rate (default-sample-rate))
   (unless (nonnegative-integer? frames)
     (raise-type-error 'make-silence "non-negative integer" 0 frames sample-rate))
@@ -505,13 +507,13 @@
 
 ;; UTILITY FUNCTION (should be defined in a util file?)
 
-(define (rsound-largest-sample sound)
+(define (rs-largest-sample sound)
   (buffer-largest-sample (rsound-data sound) (rsound-frames sound)))
 
-(define (rsound-largest-frame/range/left sound min-frame max-frame)
+(define (rs-largest-frame/range/left sound min-frame max-frame)
   (buffer-largest-sample/range/left (rsound-data sound) (rsound-frames sound) min-frame max-frame))
 
-(define (rsound-largest-frame/range/right sound min-frame max-frame)
+(define (rs-largest-frame/range/right sound min-frame max-frame)
   (buffer-largest-sample/range/right (rsound-data sound) (rsound-frames sound) min-frame max-frame))
 
 (define (buffer-largest-sample buffer frames)

@@ -57,61 +57,61 @@
   (check rsound-equal? v1 v2)
   (s16vector-set! (rsound-data v2) 50 -30)
   (check-equal? (rsound-equal? v1 v2) false))
-;; tests of make-silence
+;; tests of silence
 
 
 ;; tests of rsound-largest-sample
 (let ([sample-sound (make-tone 2000 0.15 10)])
-  (check-= (/ (rsound-largest-sample sample-sound) s16max) 0.15 1))
+  (check-= (/ (rs-largest-sample sample-sound) s16max) 0.15 1))
 
 ;; tests of check-below-threshold:
-#;(let ([sample-sound (rsound-append* (list (make-silence 10) 
+#;(let ([sample-sound (rsound-append* (list (silence 10) 
                                           (make-tone 2000 0.15 10)))])
   (check-not-exn (lambda () (check-below-threshold (rsound-data sample-sound) (rsound-frames sample-sound) 0.15)))
   (check-exn exn:fail? (lambda () (check-below-threshold (rsound-data sample-sound) (rsound-frames sample-sound) 0.1))))
 
 (check-exn (lambda (exn)
              (regexp-match #px"^rsound-append\\*: " (exn-message exn)))
-           (lambda () (rsound-append* 34)))
+           (lambda () (rs-append* 34)))
 
 ;; how long does it take to scan a minute of sound for loud things?
 #;(let ([sample-sound (make-tone 400 0.15 (* 60 (default-sample-rate)))])
   (time (check-below-threshold sample-sound 0.2)))
 
-;; make-silence:
-(let ([s (make-silence 100)])
+;; silence:
+(let ([s (silence 100)])
   (for ([i (in-range 100)])
     (check-equal? (rsound-ith/left/s16 s i) 0)
     (check-equal? (rsound-ith/right/s16 s i) 0)))
-(check-equal? (rsound-frames (make-silence 22050)) 22050)
-(check-equal? (rsound-sample-rate (make-silence 22050)) (default-sample-rate))
+(check-equal? (rsound-frames (silence 22050)) 22050)
+(check-equal? (rsound-sample-rate (silence 22050)) (default-sample-rate))
 
 ;; sound-list-total-frames:
-(check-equal? (sound-list-total-frames (list (list (make-silence 22050) 0))) 22050)
-(check-equal? (sound-list-total-frames (list (list (make-silence 22050) 0)
-                                             (list (make-silence 44100) 22050)
-                                             (list (make-silence 20000) 44100)))
+(check-equal? (sound-list-total-frames (list (list (silence 22050) 0))) 22050)
+(check-equal? (sound-list-total-frames (list (list (silence 22050) 0)
+                                             (list (silence 44100) 22050)
+                                             (list (silence 20000) 44100)))
               66150)
 
 ;; different sample rates:
 (check-exn exn:fail? (lambda () (same-sample-rate-check (list (parameterize ([default-sample-rate 22050])
-                                                                (make-silence 10)) 
-                                                              (make-silence 20)))))
+                                                                (silence 10)) 
+                                                              (silence 20)))))
 (check-exn exn:fail? (lambda () (same-sample-rate-check (list ))))
-(check-not-exn       (lambda () (same-sample-rate-check (list (make-silence 10) 
-                                                              (make-silence 20)))))
+(check-not-exn       (lambda () (same-sample-rate-check (list (silence 10) 
+                                                              (silence 20)))))
 
 
-;; rsound-overlay*
+;; rsound-assemble
 (let* ([sample-sound (make-tone 400 0.15 6)]
-       [overlaid (rsound-overlay* (list (list sample-sound 0) (list sample-sound 0)))]
+       [overlaid (assemble (list (list sample-sound 0) (list sample-sound 0)))]
        [doublevol (make-tone 400 0.3 6)])
   (for ([i (in-range 6)])
     (check-= (rsound-ith/left/s16 overlaid i) (rsound-ith/left/s16 doublevol i) 1.0)
     (check-= (rsound-ith/right/s16 overlaid i) (rsound-ith/right/s16 doublevol i) 1.0)))
   
   (let* ([sample-sound (mono-signal->rsound 100 (lambda (x) (* 0.2 (random))))]
-         [overlaid (rsound-overlay* (list (list sample-sound 25) 
+         [overlaid (assemble (list (list sample-sound 25) 
                                           (list sample-sound 0)
                                           (list sample-sound 75)))])
     (for ([i (in-range 25)])
@@ -133,18 +133,18 @@
 
 (check-exn exn:fail? 
            (lambda ()
-             (rsound-overlay* (list (list (make-tone 400 0.15 3) 0)
+             (assemble (list (list (make-tone 400 0.15 3) 0)
                                     (list (make-tone 400 0.15 3) 34/5)))))
 
 ;; rsound-read
 
 ;; tests copied from read-wav; these call the rsound-read funs directly:
 
-(define test-rsound (rsound-read short-test-wav))
+(define test-rsound (rs-read short-test-wav))
 
 (check-equal? (rsound-frames test-rsound) 100)
-(check-equal? (rsound-read-sample-rate short-test-wav) 44100)
-(check-equal? (rsound-read-frames short-test-wav) 100)
+(check-equal? (rs-read-sample-rate short-test-wav) 44100)
+(check-equal? (rs-read-frames short-test-wav) 100)
 
 (define (desired-nth-sample n)
   (round (* #x8000 (sin (* 2 pi (/ n 44100) 700)))))
@@ -161,9 +161,9 @@
 (check-= (rsound-ith/right/s16 test-rsound 50) fiftieth-sample 1)
 
 
-(define test-sub-rsound (rsound-read/clip short-test-wav 30 40))
+(define test-sub-rsound (rs-read/clip short-test-wav 30 40))
 
-(check-not-exn (lambda () (rsound-read/clip short-test-wav 30 40.0)))
+(check-not-exn (lambda () (rs-read/clip short-test-wav 30 40.0)))
 
 (check-equal? (rsound-frames test-sub-rsound) 10)
 (check-= (rsound-ith/left/s16 test-sub-rsound 0) (desired-nth-sample 30) 1e-4)
@@ -173,16 +173,16 @@
 
 (let ([temp (make-temporary-file)])
   (rsound-write test-rsound temp)
-  (check rsound-equal? (rsound-read temp) test-rsound))
+  (check rsound-equal? (rs-read temp) test-rsound))
 
 ;;rsound-append (*)
-(let ([short-test2 (rsound-append test-rsound test-rsound)])
+(let ([short-test2 (rs-append test-rsound test-rsound)])
   (check-equal? (rsound-ith/left/s16 short-test2 150) 
                 (rsound-ith/left/s16 short-test2 50))
   (check-equal? (rsound-ith/right/s16 short-test2 153) 
                 (rsound-ith/right/s16 short-test2 53)))
 
-(let ([short-test2 (rsound-append* (list (make-silence 50)
+(let ([short-test2 (rs-append* (list (silence 50)
                                          test-rsound
                                          test-rsound))])
   (check-equal? (rsound-ith/left/s16 short-test2 200)
@@ -192,7 +192,7 @@
 
 ;; rsound-clip
 
-(let ([shorter-test (rsound-clip test-rsound 30 60)])
+(let ([shorter-test (clip test-rsound 30 60)])
   (check-equal? (rsound-frames shorter-test) 30)
   (check-equal? (rsound-sample-rate shorter-test) 44100)
   (check-equal? (rsound-ith/left/s16 shorter-test 6)
@@ -200,7 +200,7 @@
 
 
 
-(define kick-rsound (rsound-read kick-wav))
+(define kick-rsound (rs-read kick-wav))
 
 ;; purely regression testing:
 (check-equal? (rsound-frames kick-rsound) 4410)
@@ -209,7 +209,7 @@
 
 ;; test with PAD
 
-(define short-with-pad (rsound-read short-with-pad-wav))
+(define short-with-pad (rs-read short-with-pad-wav))
 (check-equal? (rsound-frames short-with-pad) #x21)
 (check-equal? (rsound-ith/left/s16 short-with-pad 5) #x892)
 (check-equal? (rsound-ith/right/s16 short-with-pad 6) #x478)
@@ -217,7 +217,7 @@
 
 ;; check that you can't loop with an rsound of length 0
 (check-exn exn:fail?
-           (lambda () (rsound-loop (make-silence 0))))
+           (lambda () (rsound-loop (silence 0))))
 
 ;; clipping isn't happening right.
 
@@ -230,7 +230,7 @@
 
 
 ;; set-rsound-ith/left! and right!
-(let ([s (make-silence 100)])
+(let ([s (silence 100)])
   (set-rsound-ith/left! s 34 0.7)
   (set-rsound-ith/right! s 87 0.3)
   (check-= (rsound-ith/left s 34) 0.7 1e-5)
@@ -241,7 +241,7 @@
 #|(time (rsound-draw (make-tone 400 0.15 10) 400 100))
 (time (rsound-draw (make-tone 400 0.15 100) 400 100))
 (time (rsound-draw (make-tone 400 0.15 1000) 400 100))
-(time (rsound-draw (rsound-overlay* (list (list (make-tone 400 0.15 1000) 0)
+(time (rsound-draw (rsound-assemble (list (list (make-tone 400 0.15 1000) 0)
                                           (list (make-tone 404 0.15 1000) 0))) 400 100))
 
 |#)))

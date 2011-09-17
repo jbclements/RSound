@@ -1,5 +1,8 @@
 #lang racket
 
+
+;; untested: error clauses
+
 (require ffi/vector)
 
 (provide read-sound/s16vector

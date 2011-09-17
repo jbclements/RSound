@@ -124,6 +124,6 @@
 ;; try something too short:
 (check-exn 
  (lambda (exn) (regexp-match #rx"fewer than" (exn-message exn)))
- (lambda () (rsound-fft-draw (make-silence 500))))
+ (lambda () (rsound-fft-draw (silence 500))))
 
 

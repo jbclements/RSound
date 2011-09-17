@@ -1,5 +1,18 @@
 #lang racket
 
+;; untested:
+#|make-squaretone
+make-zugtone
+make-sawtooth-tone
+signal-*
+signal-+s
+split-in-4
+times
+adsr
+rsound-fft/right
+rsound-max-volume
+|#
+
 (require "rsound.rkt"
          "fft.rkt"
          racket/flonum
@@ -40,11 +53,14 @@
          make-sawtooth-tone
          make-zugtone
          make-harm3tone
+         make-pulse-tone
          wavefun->tone-maker
          ding
          make-ding
          split-in-4
          times
+         overlay*
+         overlay
          vectors->rsound
          fir-filter
          iir-filter
@@ -232,7 +248,7 @@
            (define stored-frames (/ (s16vector-length data) channels))
            (cond [(= frames stored-frames) s]
                  ;; opportunity for real laziness here:
-                 [(< frames stored-frames) (rsound-clip s 0 frames)]
+                 [(< frames stored-frames) (clip s 0 frames)]
                  [else (compute-and-store)]))]))))
 
 ;; a memoized harm3 tone
@@ -268,6 +284,23 @@
      (signal-*s (list (dc-signal volume)
                       (sawtooth-wave pitch sample-rate))))))
 
+(define (make-pulse-tone duty-cycle)
+  (when (not (< 0.0 duty-cycle 1.0))
+    (raise-type-error 'make-pulse-tone
+                      "number between 0 and 1"
+                      0
+                      duty-cycle))
+  (wavefun->tone-maker
+   (lambda (pitch volume sample-rate)
+     (define wavelength (/ sample-rate pitch))
+     (define on-samples (round (* duty-cycle wavelength)))
+     (define total-samples (round wavelength))
+     (define up (* volume 0.5))
+     (define down (- up))
+     (lambda (i)
+       (cond [(< (modulo i total-samples) on-samples) up]
+             [else down])))))
+
 
 
 
@@ -285,11 +318,11 @@
 (define (split-in-4 s)
   (let ([len (floor (/ (rsound-frames s) 4))])
     (apply values (for/list ([i (in-range 4)])
-                    (rsound-clip s (* i len) (* (+ 1 i) len))))))
+                    (clip s (* i len) (* (+ 1 i) len))))))
 
 ;; play a sound 'n' times
 (define (times n s)
-  (rsound-append* (build-list n (lambda (x) s))))
+  (rs-append* (build-list n (lambda (x) s))))
 
 
 
@@ -370,7 +403,7 @@
 
 ;; make the sound as lound as possible without distortion
 (define (rsound-max-volume rsound)
-  (let* ([scalar (fl/ 1.0 (exact->inexact (rsound-largest-sample rsound)))])
+  (let* ([scalar (fl/ 1.0 (exact->inexact (rs-largest-sample rsound)))])
     (signals->rsound (rsound-frames rsound)
                      (rsound-sample-rate rsound)
                      (lambda (i) (fl* scalar (exact->inexact (rsound-ith/left/s16 rsound i))))
@@ -502,4 +535,11 @@
                (set! next-idx (modulo (add1 next-idx) max-delay)))))))]
     [other (raise-type-error 'iir-filter "(listof (list number number))" 0 params)]))
 
+;; overlay a list of sounds on top of each other
+(define (overlay* los)
+  (assemble (map (lambda (s) (list s 0)) los)))
 
+;; overlay two sounds on top of each other
+(define (overlay sound1 sound2)
+  (assemble (list (list sound1 0)
+                  (list sound2 0))))

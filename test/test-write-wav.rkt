@@ -23,8 +23,8 @@
 (define temp-filename (make-temporary-file))
 (write-sound/s16vector (rsound-data r) (rsound-sample-rate r) (path->string temp-filename))
 
-(check-equal? (rsound-read-frames temp-filename) sound-len)
-(check-equal? (rsound-read-sample-rate temp-filename) test-samplerate)
+(check-equal? (rs-read-frames temp-filename) sound-len)
+(check-equal? (rs-read-sample-rate temp-filename) test-samplerate)
 
 (define s (apply rsound (read-sound/s16vector (path->string temp-filename) 0 #f)))
 
