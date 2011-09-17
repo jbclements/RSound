@@ -26,11 +26,13 @@
 ;; these don't really lend themselves to testing; I suppose if I separated
 ;; the rendering from the drawing...
 
-(define rsound-4samp (rsound (s16vector 0 0 50 50 -50 -50 0 0) 4 44100))
+(define rsound-4samp (rsound (s16vector 0 0 50 50 -50 -50 0 0) 44100))
 
 (rsound-draw rsound-4samp #:title "4 samples")
 
-(define rsound-800samp (rsound (apply s16vector (build-list 1600 (lambda (i) (inexact->exact (round (* s16max (sin (* 2 pi 3/800 i)))))))) 800 44100))
+(define rsound-800samp (rsound
+                        (apply s16vector (build-list 1600 (lambda (i) (inexact->exact (round (* s16max (sin (* 2 pi 3/800 i))))))))
+                        44100))
 
 (rsound-draw rsound-800samp #:width 800 #:title "800 samples")
 
@@ -45,7 +47,7 @@
 #;(rsound-draw rsound-longer #:width 800)
 
 ;; there should be no gap in the waveform:
-(rsound-draw (signal->rsound 300 44100 (lambda (i) (* 1.5 (sin (* twopi 147/44100 i)))))
+(rsound-draw (mono-signal->rsound 300 (lambda (i) (* 1.5 (sin (* twopi 147/44100 i)))))
                #:title "no gap in waveform")
 
 
@@ -122,6 +124,6 @@
 ;; try something too short:
 (check-exn 
  (lambda (exn) (regexp-match #rx"fewer than" (exn-message exn)))
- (lambda () (rsound-fft-draw (make-silence 500 500))))
+ (lambda () (rsound-fft-draw (make-silence 500))))
 
 

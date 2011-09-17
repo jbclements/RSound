@@ -19,7 +19,6 @@
          abs-max-from
          phase)
 
-(define channels 2)
 (define s16max #x7fff)
 
 ;; make-sound-drawing-callback 

@@ -11,8 +11,6 @@
 
 (define s16max #x7fff)
 
-(define common-sample-rate 44100)
-
 (provide twopi 
          s16max
          sine-wave
@@ -69,10 +67,10 @@
 (define (rsound-map fun sound)
   (define (left i) (fun (rsound-ith/left sound i)))
   (define (right i) (fun (rsound-ith/right sound i)))
-  (signals->rsound/stereo (rsound-frames sound)
-                          (rsound-sample-rate sound)
-                          left
-                          right))
+  (signals->rsound (rsound-frames sound)
+                   (rsound-sample-rate sound)
+                   left
+                   right))
 
 ;; rsound-scale : number rsound -> rsound
 (define (rsound-scale scalar rsound)
@@ -90,14 +88,22 @@
       (flvector-set! newvec i (exact->inexact (fun i))))
     newvec))
 
+;; build a wavetable for a periodic function
 (define (build-wavetable fun)
-  (build-flvector common-sample-rate (fun 1 common-sample-rate)))
+  (build-flvector wavetable-build-sample-rate
+                  (fun 1 wavetable-build-sample-rate)))
+
+;; this is independent, but it should be nice and high to get 
+;; good wavetables
+(define wavetable-build-sample-rate 44100)
 
 ;; given a wavetable, make a wavetable lookup function
+;; how much slower would it be with interpolation?
 (define ((make-table-based-wavefun vec) pitch sample-rate)
-  (let ([exact-pitch (inexact->exact pitch)])
-    (lambda (i)
-      (flvector-ref vec (modulo (* i exact-pitch) common-sample-rate)))))
+  (define relative-pitch (* pitch (/ wavetable-build-sample-rate sample-rate)))
+  (define skip-rate (inexact->exact (round relative-pitch)))
+  (lambda (i)
+    (flvector-ref vec (modulo (* i skip-rate) wavetable-build-sample-rate))))
 
 
 ;; given a raw function, produce a table-based version of it
@@ -105,12 +111,12 @@
 (define (make-checked-wave-fun raw-wave-fun)
   (let* ([table (build-wavetable raw-wave-fun)]
          [table-based-fun (make-table-based-wavefun table)])
-    (lambda (pitch sample-rate) 
+    (lambda (pitch sample-rate)
       (when (= 0 pitch)
         (raise-type-error 'wave-fun "nonzero number" 0 pitch sample-rate))
       (when (= 0 sample-rate)
         (raise-type-error 'wave-fun "nonzero number" 1 pitch sample-rate))
-      (cond [(and (= sample-rate common-sample-rate)
+      (cond [(and (= sample-rate (default-sample-rate))
                   (integer? pitch))         
              (table-based-fun (inexact->exact pitch) sample-rate)]
             [else
@@ -210,20 +216,24 @@
 ;; of previously generated sounds.
 (define (wavefun->tone-maker wavefun)
   (let ([tone-table (make-hash)])
-    (lambda (pitch volume frames sample-rate)
-      (let ([key (list pitch volume sample-rate)])
-        (define (compute-and-store)
-          (let ([s (mono-signal->rsound frames sample-rate (wavefun pitch volume sample-rate))])
-            (hash-set! tone-table key s)
-            s))
-        (match (hash-ref tone-table key #f)
-          ;; 
-          [#f (compute-and-store)]
-          [(and s (struct rsound (data stored-frames sample-rate)))
-           (cond [(= stored-frames frames) s]
+    (lambda (pitch volume frames)
+      (define sample-rate (default-sample-rate))
+      (define key (list pitch volume sample-rate))
+      (define (compute-and-store)
+        (let ([s (mono-signal->rsound frames 
+                                      (wavefun pitch volume sample-rate))])
+          (hash-set! tone-table key s)
+          s))
+      (match (hash-ref tone-table key #f)
+        ;; 
+        [#f (compute-and-store)]
+        [(and s (struct rsound (data sample-rate)))
+         (let ()
+           (define stored-frames (/ (s16vector-length data) channels))
+           (cond [(= frames stored-frames) s]
                  ;; opportunity for real laziness here:
                  [(< frames stored-frames) (rsound-clip s 0 frames)]
-                 [else (compute-and-store)])])))))
+                 [else (compute-and-store)]))]))))
 
 ;; a memoized harm3 tone
 (define make-harm3tone
@@ -262,15 +272,15 @@
 
 
 
-;; sounds like a ding...
-(define ding (mono-signal->rsound 44100 44100 (signal-*s (list (sine-wave 600 44100)
-                                                            (dc-signal 0.35)
-                                                            (fader 44100)))))
-
 (define (make-ding pitch)
-  (mono-signal->rsound 44100 44100 (signal-*s (list (sine-wave pitch 44100)
-                                                 (dc-signal 0.35)
-                                                 (fader 44100)))))
+  (define sample-rate (default-sample-rate))
+  (mono-signal->rsound sample-rate
+                       (signal-*s (list (sine-wave pitch sample-rate)
+                                        (dc-signal 0.35)
+                                        (fader sample-rate)))))
+
+;; sounds like a ding...
+(define ding (make-ding 600))
 
 (define (split-in-4 s)
   (let ([len (floor (/ (rsound-frames s) 4))])
@@ -284,9 +294,10 @@
 
 
 
-;; put vectors together into an rsound at the given sample-rate. Ignores
+;; put vectors together into an rsound at the default sample-rate. Ignores
 ;; the complex component entirely.
-(define (vectors->rsound leftvec rightvec sample-rate)
+(define (vectors->rsound leftvec rightvec)
+  (define sample-rate (default-sample-rate))
   (unless (equal? (vector-length leftvec) (vector-length rightvec))
     (error 'vectors->rsound "expected vectors of equal length, given vectors of lengths ~v and ~v." 
            (vector-length leftvec) (vector-length rightvec)))
@@ -302,7 +313,7 @@
     (for ([i (in-range len)])
       (s16vector-set! newvec (* 2 i)        (inexact->exact (round (* scaling (real-part (vector-ref leftvec i))))))
       (s16vector-set! newvec (add1 (* 2 i)) (inexact->exact (round (* scaling (real-part (vector-ref rightvec i)))))))
-    (rsound newvec len sample-rate)))
+    (rsound newvec sample-rate)))
 
 
 ;; ADSR envelope (actually more of an ADS envelope)
@@ -360,10 +371,10 @@
 ;; make the sound as lound as possible without distortion
 (define (rsound-max-volume rsound)
   (let* ([scalar (fl/ 1.0 (exact->inexact (rsound-largest-sample rsound)))])
-    (signals->rsound/stereo (rsound-frames rsound)
-                            (rsound-sample-rate rsound)
-                            (lambda (i) (fl* scalar (exact->inexact (rsound-ith/left/s16 rsound i))))
-                            (lambda (i) (fl* scalar (exact->inexact (rsound-ith/right/s16 rsound i)))))))
+    (signals->rsound (rsound-frames rsound)
+                     (rsound-sample-rate rsound)
+                     (lambda (i) (fl* scalar (exact->inexact (rsound-ith/left/s16 rsound i))))
+                     (lambda (i) (fl* scalar (exact->inexact (rsound-ith/right/s16 rsound i)))))))
 
 
 ;; midi-note-num->pitch : number -> number

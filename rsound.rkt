@@ -1,14 +1,37 @@
 #lang racket
 
-(require ffi/unsafe
+;; to-do:
+;; contracts everywhere?
+;; change "rsound-" to "rs-"
+;; check okay for inputs to be inexact integers?
+;; go to time instead of frames?
+;; tighter sanity checks on sample rate?
+
+(require (only-in ffi/unsafe memcpy _sint16 memset ptr-add cpointer?)
          ffi/vector
          racket/unsafe/ops
          "read-wav.rkt"
          "write-wav.rkt"
          (prefix-in rc: "rsound-commander.rkt")
-         "private/s16vector-add.rkt"
-         )
+         "private/s16vector-add.rkt")
 
+(define (positive-integer? n)
+  (and (integer? n) (< 0 n)))
+
+(define (nonnegative-integer? n)
+  (and (integer? n) (<= 0 n)))
+
+;; a rsound is (rsound rdata positive-integer)
+(provide (struct-out rsound))
+(struct rsound (data sample-rate) 
+  #:transparent
+  ;#:property prop:equal+hash
+  ;(list rsound=? rsound-hash-1 rsound-hash-2)
+  )
+
+
+(provide/contract [rsound-frames (-> rsound? nonnegative-integer?)]
+                  [channels positive-integer?])
 
 (provide (struct-out rsound)
          rsound-play
@@ -18,7 +41,7 @@
          signal/block-play
          rsound-loop
          stop-playing
-         change-loop
+         #;change-loop
          ;; why is this necessary?
          #;rsound-nth-sample
          rsound-ith/left/s16
@@ -33,8 +56,9 @@
          rsound-append
          rsound-append*
          rsound-overlay*
+         default-sample-rate
          mono-signal->rsound
-         signals->rsound/stereo
+         signals->rsound
          signal->rsound/filtered
          make-silence
          rsound-read
@@ -55,18 +79,22 @@
 (define s16max/i (exact->inexact #x7fff))
 (define s16-size 2)
 
+(define channels rc:channels)
+(define stop-playing rc:stop-playing)
+
+;; used for creating sounds; specifying the 
+;; sample rate every time is too much of a pain
+;; for students.
+(define default-sample-rate (make-parameter 44100))
+
 ;; an rsound (racket sound) provides a representation for sounds 
 ;; that leaves them packed as C data. For the moment, it's 
 ;; 2-channel float only. Also, it discards all meta-information
 ;; except length and sample-rate.
 
-;; a rsound is (rsound rdata nat nat)
-(provide (struct-out rsound))
-(struct rsound (data sample-rate) 
-  #:transparent
-  ;#:property prop:equal+hash
-  ;(list rsound=? rsound-hash-1 rsound-hash-2)
-  )
+
+(define (rsound-frames rsound)
+  (/ (s16vector-length (rsound-data rsound)) 2))
 
 ;; an rdata is either
 ;; an s16vector, 
@@ -112,12 +140,12 @@
 (define (rsound-read/clip path start-frame end-frame)
   (unless (path-string? path)
     (raise-type-error 'rsound-read "path-string" 0 path start-frame end-frame))
-  (unless (frame? start-frame)
+  (unless (nonnegative-integer? start-frame)
     (raise-type-error 'rsound-read "non-negative integer" 1 path start-frame end-frame))
-  (unless (frame? end-frame)
+  (unless (nonnegative-integer? end-frame)
     (raise-type-error 'rsound-read "non-negative integer" 2 path start-frame end-frame))
   (match (read-sound/s16vector path (inexact->exact start-frame) (inexact->exact end-frame))
-    [(list data frames sample-rate) (rsound data sample-rate)]))
+    [(list data sample-rate) (rsound data sample-rate)]))
 
 ;; what is the sample-rate of a file?
 (define (rsound-read-sample-rate path)
@@ -153,20 +181,21 @@
   (unless (and (procedure? signal)
                (procedure-arity-includes? signal 1))
     (raise-type-error 'signal-play "signal" 0 signal sample-rate))
-  (unless (sample-rate? sample-rate)
+  (unless (positive-integer? sample-rate)
     (raise-type-error 'signal-play "sample rate (nonnegative exact integer)" 1 signal sample-rate))
   (signal-play signal sample-rate))
 
 ;; play a signal/block using portaudio:
 (define (signal/block-play signal/block sample-rate)
-  (unless (and (procedure? signal/block)
+  (error 'signal/block-play "not implemented")
+  #;(unless (and (procedure? signal/block)
                (procedure-arity-includes? signal/block 3))
     (raise-type-error 'signal-play "signal/block" 0 signal/block sample-rate))
-  (unless (sample-rate? sample-rate)
+  #;(unless (positive-integer? sample-rate)
     (raise-type-error 'signal-play 
                       "sample rate (nonnegative exact integer)"
                       1 signal/block sample-rate))
-  (rsignal/block-play signal/block sample-rate))
+  #;(rsignal/block-play signal/block sample-rate))
 
 ;; play a sound using portaudio:
 (define ((rsound-play/helper loop?) sound)
@@ -177,7 +206,7 @@
      #;(check-below-threshold data frames 4.0)
      (if loop?
          (error 'rsound-play/helper "not implemented")
-         (buffer-play data sample-rate))]
+         (rc:buffer-play data sample-rate))]
     [other
      (error 'rsound-play/helper "expected an rsound, got: ~e" sound)]))
 
@@ -234,11 +263,11 @@
 (define (rsound-extractor rsound frame left? scale-fun)
   (unless (rsound? rsound)
     (raise-type-error 'rsound-extractor "rsound" 0 rsound frame))
-  (unless (frame? frame)
+  (unless (nonnegative-integer? frame)
     (raise-type-error 'rsound-extractor "nonnegative integer" 1 rsound frame))
   (unless (< frame (rsound-frames rsound))
     (raise-type-error 'rsound-extractor (format "frame index less than available # of frames ~s" (rsound-frames rsound)) 1 rsound frame))
-  (scale-fun (s16vector-ref (rsound-data rsound) (frame->)(+ (* frame channels) (if left? 0 1)))))
+  (scale-fun (s16vector-ref (rsound-data rsound) (frame->sample frame left?))))
 
 ;; set the ith frame of the left channel to be new-val
 (define (set-rsound-ith/left! sound frame new-val)
@@ -252,7 +281,7 @@
 (define (rsound-mutator rsound frame left? new-val)
   (unless (rsound? rsound)
     (raise-type-error 'rsound-mutator "rsound" 0 rsound frame new-val))
-  (unless (frame? frame)
+  (unless (nonnegative-integer? frame)
     (raise-type-error 'rsound-mutator "nonnegative integer" 1 rsound frame new-val))
   (unless (< frame (rsound-frames rsound))
     (raise-type-error 'rsound-mutator (format "frame index less than available # of frames ~s" (rsound-frames rsound)) 1 rsound frame new-val))
@@ -264,13 +293,13 @@
 
 ;; translate a frame number and a channel into a sample number
 (define (frame->sample f left?)
-  (+ (* f channels) (if left? 0 1)))
+  (+ (* f rc:channels) (if left? 0 1)))
 
 ;; return the nth *sample* (not frame) of an rsound.
 #;(define (rsound-nth-sample sound sample)
   (unless (rsound? sound)
     (raise-type-error 'rsound-nth-sample/right "rsound" 0 sound sample))
-  (unless (frame? sample)
+  (unless (positive-integer? sample)
     (raise-type-error 'rsound-nth-sample/right "positive integer" 1 sound sample))
   (match-let* ([(struct rsound (data frames sample-rate)) sound])
     (when (>= sample (* channels frames))
@@ -298,19 +327,19 @@
 (define (rsound-clip sound start finish)
   (unless (rsound? sound)
     (raise-type-error 'rsound-clip "rsound" 0 sound start finish))
-  (unless (frame? start)
+  (unless (nonnegative-integer? start)
     (raise-type-error 'rsound-clip "non-negative integer" 1 sound start finish))
-  (unless (frame? finish)
+  (unless (nonnegative-integer? finish)
     (raise-type-error 'rsound-clip "non-negative integer" 2 sound start finish))
   (unless (and (<= 0 start finish (rsound-frames sound)))
     (error 'rsound-clip 
            frames-out-of-range-msg
            start finish (rsound-frames sound)))
-  (let* ([cblock (make-s16vector (* channels (- finish start)))])
+  (let* ([cblock (make-s16vector (* rc:channels (- finish start)))])
     (memcpy (s16vector->cpointer cblock) 0
-            (s16vector->cpointer (rsound-data sound)) (* start channels)
-            (* channels (- finish start)) _sint16)
-    (rsound cblock (- finish start) (rsound-sample-rate sound))))
+            (s16vector->cpointer (rsound-data sound)) (* start rc:channels)
+            (* rc:channels (- finish start)) _sint16)
+    (rsound cblock (rsound-sample-rate sound))))
 
 (define frames-out-of-range-msg
   (string-append "must have 0 < start < end < frames.  "
@@ -326,10 +355,10 @@
     (raise-type-error 'rsound-append* "list of rsounds" 0 los))
   (same-sample-rate-check los)
   (define total-frames (apply + (map rsound-frames los)))
-  (define cblock (make-s16vector (* channels total-frames)))
+  (define cblock (make-s16vector (* rc:channels total-frames)))
   (for/fold ([offset-samples 0])
     ([sound (in-list los)])
-    (let ([sound-samples (* channels (rsound-frames sound))])
+    (let ([sound-samples (* rc:channels (rsound-frames sound))])
       (memcpy (s16vector->cpointer cblock) offset-samples
               (s16vector->cpointer (rsound-data sound)) 0
               sound-samples _sint16)
@@ -350,17 +379,18 @@
     (raise-type-error 'rsound-overlay* "list of lists containing rsounds and times" 0 sound&times))
   (same-sample-rate-check (map car sound&times))
   (let* ([total-frames (inexact->exact (round (sound-list-total-frames sound&times)))]
-         [cblock (make-s16vector (* total-frames channels))])
-    (memset (s16vector->cpointer cblock) 0 #x00 (* total-frames channels) _sint16)
+         [cblock (make-s16vector (* total-frames rc:channels))])
+    (memset (s16vector->cpointer cblock) 0 #x00 (* total-frames rc:channels) _sint16)
     (for ([s&t (in-list sound&times)])
       (match-let* ([(list sound offset) s&t]
-                   [(struct rsound (src-buffer frames sample-rate)) sound])
-        (define dst-offset (* channels (inexact->exact (round offset))))
+                   [(struct rsound (s16vec sample-rate)) sound])
+        (define frames (/ (s16vector-length s16vec) rc:channels))
+        (define dst-offset (* rc:channels (inexact->exact (round offset))))
         (define src-offset 0)
-        (define num-samples (* channels frames))
+        (define num-samples (* rc:channels frames))
         (s16buffer-add!/c (ptr-add (s16vector->cpointer cblock)
                                    (* s16-size dst-offset))
-                          (ptr-add (s16vector->cpointer src-buffer)
+                          (ptr-add (s16vector->cpointer s16vec)
                                    (* s16-size src-offset))
                           num-samples)))
     (rsound cblock (rsound-sample-rate (caar sound&times)))))
@@ -369,7 +399,8 @@
 
 ;; add-on-as-computed
 (define (mono-fun->buffer-overlay sound offset fun overlay-frames)
-  (match-let ([(struct rsound (data frames sample-rate)) sound]) 
+  (define frames (rsound-frames sound))
+  (match-let ([(struct rsound (data sample-rate)) sound])
     (let ([okay-frames (min overlay-frames (- frames offset))])
     (for ([i (in-range okay-frames)]
           [j (in-range offset (+ offset okay-frames))])
@@ -405,15 +436,15 @@
 ;; assumes that the result is a floating-point number between -1 and 1.
 (define (mono-signal->rsound frames f)
   (define sample-rate (default-sample-rate))
-  (unless (frame? frames)
+  (unless (nonnegative-integer? frames)
     (raise-type-error 'signal->rsound "non-negative integer" 0 frames sample-rate f))
   (unless (and (procedure? f) (procedure-arity-includes? f 1))
     (raise-type-error 'signal->rsound "function of one argument" 2 frames sample-rate f)) 
   (let* ([int-frames (inexact->exact (round frames))]
          [int-sample-rate (inexact->exact (round sample-rate))]
-         [cblock (make-s16vector (* channels int-frames))])
+         [cblock (make-s16vector (* rc:channels int-frames))])
     (for ([i (in-range int-frames)])
-      (let* ([offset (* channels i)]
+      (let* ([offset (* rc:channels i)]
              [sample (real->s16 (f i))])
         (s16vector-set! cblock offset       sample)
         (s16vector-set! cblock (+ offset 1) sample)))
@@ -425,28 +456,28 @@
 ;; assumes that the result is a floating-point number between -1 and 1.
 (define (signals->rsound frames fleft fright)
   (define sample-rate (default-sample-rate))
-  (unless (frame? frames)
+  (unless (nonnegative-integer? frames)
     (raise-type-error 'signal->rsound/stereo "non-negative integer" 0 frames sample-rate fleft fright))
   (unless (and (procedure? fleft) (procedure-arity-includes? fleft 1))
     (raise-type-error 'signal->rsound/stereo "function of one argument" 2 frames sample-rate fleft fright))  
   (unless (and (procedure? fright) (procedure-arity-includes? fright 1))
     (raise-type-error 'signal->rsound/stereo "function of one argument" 3 frames sample-rate fleft fright)) 
-  (let* ([cblock (make-s16vector (* channels frames))])
+  (let* ([cblock (make-s16vector (* rc:channels frames))])
     (for ([i (in-range frames)])
-      (let* ([offset (* channels i)])
+      (let* ([offset (* rc:channels i)])
         (s16vector-set! cblock offset       (real->s16 (fleft i)))
         (s16vector-set! cblock (+ offset 1) (real->s16 (fright i)))))
     (rsound cblock sample-rate)))
 
 (define (signal->rsound/filtered frames filter f)
   (define sample-rate (default-sample-rate))
-  (unless (frame? frames)
+  (unless (nonnegative-integer? frames)
     (raise-type-error 'fun->filtered-mono-rsound "non-negative integer" 0 frames sample-rate f))
   (unless (and (procedure? f) (procedure-arity-includes? f 1))
     (raise-type-error 'fun->filtered-mono-rsound "function of one argument" 2 frames sample-rate f)) 
-  (let* ([cblock (make-s16vector (* channels frames))])
+  (let* ([cblock (make-s16vector (* rc:channels frames))])
     (for ([i (in-range frames)])
-      (let* ([offset (* channels i)]
+      (let* ([offset (* rc:channels i)]
              [sample (real->s16 (filter (f i)))])
         (s16vector-set! cblock offset       sample)
         (s16vector-set! cblock (+ offset 1) sample)))
@@ -456,22 +487,12 @@
 ;; special-case silence (it's easy to generate):
 (define (make-silence frames)
   (define sample-rate (default-sample-rate))
-  (unless (frame? frames)
-    (raise-type-error 'make-silence "non-negative integer" 0 frames sample-rate))\
-  (let* ([cblock (make-s16vector (* channels frames))])
-    (memset (s16vector->cpointer cblock) #x0 (* channels frames) _sint16)
+  (unless (nonnegative-integer? frames)
+    (raise-type-error 'make-silence "non-negative integer" 0 frames sample-rate))
+  (let* ([cblock (make-s16vector (* rc:channels frames))])
+    (memset (s16vector->cpointer cblock) #x0 (* rc:channels frames) _sint16)
     (rsound cblock sample-rate)))
 
-
-;; TYPE-LIKE CHECKS:
-(define (sample-rate? s)
-  (and (exact-integer? s) (< 0 s)))
-
-(define (frame? f)
-  (and (integer? f) (<= 0 f)))
-
-(define (nonnegative-integer? i)
-  (and (integer? i) (<= 0 i)))
 
 ;; CONVERSIONS
 
@@ -494,7 +515,7 @@
   (buffer-largest-sample/range/right (rsound-data sound) (rsound-frames sound) min-frame max-frame))
 
 (define (buffer-largest-sample buffer frames)
-  (buffer-largest-sample/range/helper buffer (* channels frames) 0 (* channels frames) 1))
+  (buffer-largest-sample/range/helper buffer (* rc:channels frames) 0 (* rc:channels frames) 1))
 
 ;; what's the largest sample from min to max-1 ?
 
@@ -503,18 +524,18 @@
 (define (buffer-largest-sample/range/left buffer frames min-frame max-frame)
   (frame-range-checks frames min-frame max-frame)
   (buffer-largest-sample/range/helper buffer
-                                      (* channels frames)
-                                      (* channels min-frame)
-                                      (* channels max-frame)
+                                      (* rc:channels frames)
+                                      (* rc:channels min-frame)
+                                      (* rc:channels max-frame)
                                       2))
 
 ;; right channel only
 (define (buffer-largest-sample/range/right buffer frames min-frame max-frame)
   (frame-range-checks frames min-frame max-frame)
   (buffer-largest-sample/range/helper buffer
-                                      (* channels frames)
-                                      (add1 (* channels min-frame))
-                                      (add1 (* channels max-frame))
+                                      (* rc:channels frames)
+                                      (add1 (* rc:channels min-frame))
+                                      (add1 (* rc:channels max-frame))
                                       2))
 
 ;; sample-based, for internal use only:
