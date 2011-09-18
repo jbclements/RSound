@@ -3,7 +3,8 @@
 (require "../rsound.rkt"
          "../util.rkt"
          rackunit
-         rackunit/text-ui)
+         rackunit/text-ui
+         (for-syntax syntax/parse))
 
 (run-tests
 (test-suite "utils tests"
@@ -44,10 +45,20 @@
 
 
 ;; overlay*
-  (define-syntax (mono stx)
-    (syntax-rules)) ;; RIGHT HERE!
-  (define shorty (mono 20 t
-                       (* 0.1 t)))
+  
+  (define shorty (mono 20 t (* 0.01 t)))
+  (check-= (rsound-ith/left shorty 2) 0.02 1e-4)
+  (check-= (rsound-ith/right shorty 9) 0.09 1e-4)
+  
+  (define shorty2 (overlay shorty shorty))
+  (check-= (rsound-ith/right shorty2 13) 0.26 1e-4)
+  
+  (define shorty3 (overlay* (list shorty shorty shorty)))
+  (check-= (rsound-ith/left shorty3 6) 0.18 1e-4)
+  
+  (let ([s (scale 0.75 shorty)])
+    (check-= (rsound-ith/left s 8) 0.06 1e-4))
+  
 
 ;; vectors->rsound
 

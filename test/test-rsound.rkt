@@ -102,13 +102,18 @@
                                                               (silence 20)))))
 
 
-;; rsound-assemble
+;; assemble
 (let* ([sample-sound (make-tone 400 0.15 6)]
        [overlaid (assemble (list (list sample-sound 0) (list sample-sound 0)))]
        [doublevol (make-tone 400 0.3 6)])
   (for ([i (in-range 6)])
     (check-= (rsound-ith/left/s16 overlaid i) (rsound-ith/left/s16 doublevol i) 1.0)
-    (check-= (rsound-ith/right/s16 overlaid i) (rsound-ith/right/s16 doublevol i) 1.0)))
+    (check-= (rsound-ith/right/s16 overlaid i) (rsound-ith/right/s16 doublevol i) 1.0))
+  
+  (define s2 (assemble (list (list sample-sound 0) (list sample-sound 3.5))))
+  (check-equal? (rsound-ith/left/s16 s2 5)
+                (+ (rsound-ith/left/s16 sample-sound 5)
+                   (rsound-ith/left/s16 sample-sound 1))))
   
   (let* ([sample-sound (mono-signal->rsound 100 (lambda (x) (* 0.2 (random))))]
          [overlaid (assemble (list (list sample-sound 25) 
@@ -131,10 +136,6 @@
                     (+ (rsound-ith/left/s16 sample-sound (- i 25))
                        (rsound-ith/left/s16 sample-sound (- i 75))))))
 
-(check-exn exn:fail? 
-           (lambda ()
-             (assemble (list (list (make-tone 400 0.15 3) 0)
-                                    (list (make-tone 400 0.15 3) 34/5)))))
 
 ;; rsound-read
 

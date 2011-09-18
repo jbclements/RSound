@@ -29,9 +29,14 @@
   ;(list rsound=? rsound-hash-1 rsound-hash-2)
   )
 
+(define s&t-list? (listof (list/c rsound? number?)))
 
 (provide/contract [rsound-frames (-> rsound? nonnegative-integer?)]
-                  [channels positive-integer?])
+                  [channels positive-integer?]
+                  [assemble (-> s&t-list? rsound?)]
+                  ;; for testing...
+                  [sound-list-total-frames (-> s&t-list? number?)]
+)
 
 (provide (struct-out rsound)
          play
@@ -55,7 +60,6 @@
          clip
          rs-append
          rs-append*
-         assemble
          default-sample-rate
          mono-signal->rsound
          signals->rsound
@@ -70,7 +74,6 @@
          rs-largest-frame/range/right
          rs-largest-sample
          ;; for testing...
-         sound-list-total-frames
          same-sample-rate-check)
 
 
@@ -372,11 +375,6 @@
 ;;
 ;; N.B.: currently, summing to larger amplitudes will just wrap.
 (define (assemble sound&times)
-  (unless (and (list? sound&times) 
-               (andmap list? sound&times)
-               (andmap rsound? (map first sound&times))
-               (andmap nonnegative-integer? (map second sound&times)))
-    (raise-type-error 'rsound-overlay* "list of lists containing rsounds and times" 0 sound&times))
   (same-sample-rate-check (map car sound&times))
   (let* ([total-frames (inexact->exact (round (sound-list-total-frames sound&times)))]
          [cblock (make-s16vector (* total-frames rc:channels))])
@@ -413,8 +411,6 @@
 ;; sound-list-total-frames : (listof (list/c rsound nat)) -> nat
 ;; how long a sound is needed to hold all of the given sounds & offsets?
 (define (sound-list-total-frames sound&times)
-  (unless (andmap integer? (map second sound&times))
-    (error 'sound-list-total-frames "all offets must be integers, given ~s" (map second sound&times)))
   (apply max (for/list ([s&t (in-list sound&times)])
                (+ (rsound-frames (car s&t)) (cadr s&t)))))
 

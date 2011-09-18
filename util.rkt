@@ -18,11 +18,14 @@ rsound-max-volume
          racket/flonum
          racket/runtime-path
          ffi/vector
-         racket/unsafe/ops)
+         racket/unsafe/ops
+         (for-syntax syntax/parse))
 
 (define twopi (* 2 pi))
 
 (define s16max #x7fff)
+
+(provide/contract [scale (-> number? rsound? rsound?)])
 
 (provide twopi 
          s16max
@@ -42,7 +45,7 @@ rsound-max-volume
          signal-*s
          signal-+s
          thresh/signal
-         rsound-scale
+         
          signal-scale
          clip&volume
          rsound->signal/left
@@ -61,6 +64,7 @@ rsound-max-volume
          times
          overlay*
          overlay
+         mono
          vectors->rsound
          fir-filter
          iir-filter
@@ -83,13 +87,13 @@ rsound-max-volume
 (define (rsound-map fun sound)
   (define (left i) (fun (rsound-ith/left sound i)))
   (define (right i) (fun (rsound-ith/right sound i)))
+  (parameterize ([default-sample-rate (rsound-sample-rate sound)])
   (signals->rsound (rsound-frames sound)
-                   (rsound-sample-rate sound)
                    left
-                   right))
+                   right)))
 
 ;; rsound-scale : number rsound -> rsound
-(define (rsound-scale scalar rsound)
+(define (scale scalar rsound)
   (rsound-map (lambda (x) (* x scalar)) rsound))
 
 
@@ -543,3 +547,11 @@ rsound-max-volume
 (define (overlay sound1 sound2)
   (assemble (list (list sound1 0)
                   (list sound2 0))))
+
+;; a wrapper to simplify specifying sounds.
+;; e.g.: (mono 30 t (sin (* t 300 twopi 1/44100)))
+(define-syntax (mono stx)
+  (syntax-parse stx
+    [(_ frames:expr timevar:id body:expr ...)
+     #'(mono-signal->rsound frames 
+                            (lambda (timevar) body ...))]))
