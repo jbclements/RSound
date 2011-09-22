@@ -11,9 +11,9 @@
 (let ()
 (define r (make-tone 882 0.2 (default-sample-rate)))
 
-(check-equal? (rsound-ith/left/s16 r 0) 0)
-(check-equal? (rsound-ith/right/s16 r 50) 0)
-(check-= (rsound-ith/left/s16 r 27) 
+(check-equal? (rs-ith/left/s16 r 0) 0)
+(check-equal? (rs-ith/right/s16 r 50) 0)
+(check-= (rs-ith/left/s16 r 27) 
          (round (* s16max (* 0.2 (sin (* twopi 882 27/44100))))) 0.0)
   
   ;; non-default sample-rate:
@@ -21,7 +21,7 @@
              (make-tone 882 0.2 1000))])
     (check-equal? (rsound-sample-rate r) 3420)
     ;; serious inexactness results from rounding in wavetables:
-    (check-= (rsound-ith/left/s16 r 27) 
+    (check-= (rs-ith/left/s16 r 27) 
              (round (* s16max (* 0.2 (sin (* twopi 882 27/3420))))) 4.0))
 
 ;; table-based-sine-wave
@@ -39,33 +39,33 @@
   
   (define pulse-12.5 (make-pulse-tone 0.125))
   (define short-pulse  (pulse-12.5 441 0.2 50))
-  (check-= (rsound-ith/left short-pulse 0) 0.1 1e-4)
-  (check-= (rsound-ith/left short-pulse 11) 0.1 1e-4)
-  (check-= (rsound-ith/left short-pulse 13) -0.1 1e-4)
+  (check-= (rs-ith/left short-pulse 0) 0.1 1e-4)
+  (check-= (rs-ith/left short-pulse 11) 0.1 1e-4)
+  (check-= (rs-ith/left short-pulse 13) -0.1 1e-4)
 
 
 ;; overlay*
   
   (define shorty (mono 20 t (* 0.01 t)))
-  (check-= (rsound-ith/left shorty 2) 0.02 1e-4)
-  (check-= (rsound-ith/right shorty 9) 0.09 1e-4)
+  (check-= (rs-ith/left shorty 2) 0.02 1e-4)
+  (check-= (rs-ith/right shorty 9) 0.09 1e-4)
   
   (define shorty2 (overlay shorty shorty))
-  (check-= (rsound-ith/right shorty2 13) 0.26 1e-4)
+  (check-= (rs-ith/right shorty2 13) 0.26 1e-4)
   
   (define shorty3 (overlay* (list shorty shorty shorty)))
-  (check-= (rsound-ith/left shorty3 6) 0.18 1e-4)
+  (check-= (rs-ith/left shorty3 6) 0.18 1e-4)
   
   (let ([s (scale 0.75 shorty)])
-    (check-= (rsound-ith/left s 8) 0.06 1e-4))
+    (check-= (rs-ith/left s 8) 0.06 1e-4))
   
 
 ;; vectors->rsound
 
 (let ([r (vectors->rsound (vector 3 4 5) (vector 2 -15 0))]
       [s (/ s16max 15)])
-  (check-equal? (rsound-ith/left/s16 r 0)  (round (* s 3)))
-  (check-equal? (rsound-ith/right/s16 r 1)  (round (* s -15))))
+  (check-equal? (rs-ith/left/s16 r 0)  (round (* s 3)))
+  (check-equal? (rs-ith/right/s16 r 1)  (round (* s -15))))
 
 (check-not-exn (lambda () (make-harm3tone 430 0.1 400)))
 
@@ -93,11 +93,11 @@
 (let ([s1 (mono-signal->rsound 200 (signal-*s (list (dc-signal 0.5) (sine-wave 100 44100))))]
       [s2 (time (make-tone 100 0.5 441000))]
       [s3 (time (make-tone 100 0.5 441000))])
-  (check-= (rsound-ith/right/s16 s1 73)
-           (rsound-ith/right/s16 s2 73)
+  (check-= (rs-ith/right/s16 s1 73)
+           (rs-ith/right/s16 s2 73)
            1e-2)
-  (check-= (rsound-ith/right/s16 s2 73)
-           (rsound-ith/right/s16 s3 73)
+  (check-= (rs-ith/right/s16 s2 73)
+           (rs-ith/right/s16 s3 73)
            1e-2))
 
 ;; bug in memoization:
@@ -168,27 +168,27 @@
 
 (let* ([my-filter (fir-filter '((13 0.2) (5 0.1)))]
        [test-sound (mono-signal->rsound 100 (my-filter (lambda (x) (/ x 500))))])
-  (check-= (rsound-ith/right test-sound 0) 0 1e-7)
-  (check-= (rsound-ith/right test-sound 1) (mush 1/500) 1e-7)
-  (check-= (rsound-ith/right test-sound 4) (mush 4/500) 1e-7)
-  (check-= (rsound-ith/right test-sound 5) (mush (+ 5/500 0/5000)) 1e-7)
-  (check-= (rsound-ith/right test-sound 6) (mush (+ 6/500 1/5000)) 1e-7)
-  (check-= (rsound-ith/right test-sound 12) (mush (+ 12/500 7/5000)) 1e-7)
-  (check-= (rsound-ith/left test-sound 78) (mush (+ 78/500 73/5000 65/2500)) 1e-7))
+  (check-= (rs-ith/right test-sound 0) 0 1e-7)
+  (check-= (rs-ith/right test-sound 1) (mush 1/500) 1e-7)
+  (check-= (rs-ith/right test-sound 4) (mush 4/500) 1e-7)
+  (check-= (rs-ith/right test-sound 5) (mush (+ 5/500 0/5000)) 1e-7)
+  (check-= (rs-ith/right test-sound 6) (mush (+ 6/500 1/5000)) 1e-7)
+  (check-= (rs-ith/right test-sound 12) (mush (+ 12/500 7/5000)) 1e-7)
+  (check-= (rs-ith/left test-sound 78) (mush (+ 78/500 73/5000 65/2500)) 1e-7))
 
 ;; IIR-FILTER
 
 (let* ([my-filter (iir-filter '((13 0.2) (5 0.1)))]
        [test-sound (mono-signal->rsound 100 (my-filter (lambda (x) (/ x 500))))])
-  (check-= (rsound-ith/right test-sound 0) 0 1e-7)
-  (check-= (rsound-ith/right test-sound 1) (mush 1/500) 1e-7)
-  (check-= (rsound-ith/right test-sound 4) (mush 4/500) 1e-7)
-  (check-= (rsound-ith/right test-sound 5) (mush (+ 5/500 0/5000)) 1e-7)
-  (check-= (rsound-ith/right test-sound 6) (mush (+ 6/500 1/5000)) 1e-7)
-  (check-= (rsound-ith/right test-sound 10) (mush (+ 10/500 5/5000)) 1e-7)
+  (check-= (rs-ith/right test-sound 0) 0 1e-7)
+  (check-= (rs-ith/right test-sound 1) (mush 1/500) 1e-7)
+  (check-= (rs-ith/right test-sound 4) (mush 4/500) 1e-7)
+  (check-= (rs-ith/right test-sound 5) (mush (+ 5/500 0/5000)) 1e-7)
+  (check-= (rs-ith/right test-sound 6) (mush (+ 6/500 1/5000)) 1e-7)
+  (check-= (rs-ith/right test-sound 10) (mush (+ 10/500 5/5000)) 1e-7)
   ;; now the IIR starts to behave differently:
-    (check-= (rsound-ith/right test-sound 11) (mush (+ 11/500 (* 1/10 (+ 6/500 1/5000)))) 1e-7)
-  (check-= (rsound-ith/right test-sound 12) (mush (+ 12/500 (* 1/10 (+ 7/500 2/5000)))) 1e-7))
+    (check-= (rs-ith/right test-sound 11) (mush (+ 11/500 (* 1/10 (+ 6/500 1/5000)))) 1e-7)
+  (check-= (rs-ith/right test-sound 12) (mush (+ 12/500 (* 1/10 (+ 7/500 2/5000)))) 1e-7))
 
 ;; CLIP&SCALE
 

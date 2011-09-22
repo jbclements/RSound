@@ -228,8 +228,8 @@
 (define (rsound-draw sound #:title [title "picture of sound"] 
                      #:width [width 800] #:height [height 200])
   (vectors-draw title
-                (lambda (i) (rsound-ith/left/s16 sound i))
-                (lambda (i) (rsound-ith/right/s16 sound i))
+                (lambda (i) (rs-ith/left/s16 sound i))
+                (lambda (i) (rs-ith/right/s16 sound i))
                 (rsound-frames sound)
                 width
                 height
@@ -376,8 +376,8 @@
         (fft-complex-radix2-forward v)
         v)))
   
-  (ffts-draw (ffts-from-getter rsound-ith/left/s16) 
-             (ffts-from-getter rsound-ith/right/s16) 
+  (ffts-draw (ffts-from-getter rs-ith/left/s16) 
+             (ffts-from-getter rs-ith/right/s16) 
              (* windows window-size)
              (if zoom-freq
                  (round (* window-size 

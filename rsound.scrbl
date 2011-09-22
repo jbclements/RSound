@@ -12,18 +12,13 @@
                      (this-package-in frequency-response)))
 
 @defmodule[(planet clements/rsound)]{This collection provides a means to represent, read,
-write, play, and manipulate sounds. It uses the 'portaudio' library, which appears
+write, play, and manipulate sounds. It depends on the @racket[clements/portaudio] 
+package to provide bindings to the cross-platform `PortAudio' library which appears
 to run on Linux, Mac, and Windows.
 
-The package contains binary versions of the Mac & Windows portaudio libraries. This is
-because Windows and Mac users are less likely to be able to install their own 
-versions of the library; naturally, this is a less-than-perfect solution. In particular,
-it appears that Windows users often get an error message about a missing DLL that can
-be solved by installing a separate bundle... from Microsoft?
-
-Sound playing happens on a separate racket thread and custodian. This means 
-that re-running the program or interrupting with a "Kill" will not halt the 
-sound. (Use @racket[(stop-playing)] for that.)
+Sound playing happens on a separate OS thread. This means that re-running
+the program or interrupting with a "Kill" will not halt the sound. (Use
+@racket[(stop)] for that.)
 
 It represents all sounds internally as stereo 16-bit PCM, with all the attendant
 advantages (speed, mostly) and disadvantages (clipping).
@@ -31,10 +26,11 @@ advantages (speed, mostly) and disadvantages (clipping).
 Does it work on your machine? Try this example (and accept my 
 apologies if I forget to update the version number):
 @racketblock[
- (require (planet "main.rkt" ("clements" "rsound.plt" 1 10)))
+ (require (planet "main.rkt" ("clements" "rsound.plt" 1 11)))
   
- (rsound-play ding)
+ (play ding)
  ]
+
 }
 
 A note about volume: be careful not to damage your hearing, please. To take a simple example,
@@ -47,27 +43,27 @@ volume. Hmm.
 
 These procedures start and stop playing sounds and loops.
 
-@defproc[(rsound-play (rsound rsound?)) void?]{
+@defproc[(play (rsound rsound?)) void?]{
  Plays an rsound. Interrupts an already-playing sound, if there is one.}
 
-@defproc[(rsound-loop (rsound rsound?)) void?]{
+@;{@defproc[(rsound-loop (rsound rsound?)) void?]{
  Plays an rsound repeatedly.  Continues looping until interrupted by 
  another sound command.}
 
 @defproc[(change-loop (rsound rsound?)) void?]{
  When the current sound or loop finishes, starts looping this one instead.}
-
-@defproc[(stop-playing) void]{
- Stop the currently playing sound.}
+}
+@defproc[(stop) void]{
+ Stop all of the the currently playing sounds.}
 
 @section{Sound I/O}
 
 These procedures read and write rsounds from/to disk.
 
 The RSound library reads and writes WAV files only; this means fewer FFI dependencies
-(the reading & writing is done in racket), and works on all platforms. 
+(the reading & writing is done in Racket), and works on all platforms. 
 
-@defproc[(rsound-read (path path-string?)) rsound?]{
+@defproc[(rs-read (path path-string?)) rsound?]{
  Reads a WAV file from the given path, returns it as an rsound.
  
  It currently
@@ -77,9 +73,9 @@ extra blank bytes at the end of the fmt chunk, etc.), and tries to fail
 relatively gracefully on files it can't handle.
 
 Reading in a large sound can result in a very large value (~10 Megabytes per minute);
-for larger sounds, consider reading in only a part of the file, using @racket[rsound-read/clip].}
+for larger sounds, consider reading in only a part of the file, using @racket[rs-read/clip].}
 
-@defproc[(rsound-read/clip (path path-string?) (start nonnegative-integer?) (finish nonnegative-integer?)) rsound?]{
+@defproc[(rs-read/clip (path path-string?) (start nonnegative-integer?) (finish nonnegative-integer?)) rsound?]{
  Reads a portion of a WAV file from a given path, starting at frame @racket[start]  and ending at frame @racket[finish].
                                                                     
  It currently
@@ -88,20 +84,20 @@ with a number of common bizarre conventions that certain WAV files have (PAD chu
 extra blank bytes at the end of the fmt chunk, etc.), and tries to fail
 relatively gracefully on files it can't handle.}
 
-@defproc[(read-rsound-frames (path path-string?)) nonnegative-integer?]{
+@defproc[(rs-read-frames (path path-string?)) nonnegative-integer?]{
  Returns the number of frames in the sound indicated by the path. It parses
  the header only, and is therefore much faster than reading in the whole sound.
  
  The file must be encoded as a WAV file readable with @racket[rsound-read].}
 
-@defproc[(read-rsound-sample-rate (path path-string?)) number?]{
+@defproc[(rs-read-sample-rate (path path-string?)) number?]{
  Returns the sample-rate of the sound indicated by the path. It parses
  the header only, and is therefore much faster than reading in the whole sound.
  
-  The file must be encoded as a WAV file readable with @racket[rsound-read].}
+  The file must be encoded as a WAV file readable with @racket[rs-read].}
 
 
-@defproc[(rsound-write (rsound rsound?) (path path-string?)) void?]{
+@defproc[(rs-write (rsound rsound?) (path path-string?)) void?]{
  Writes an rsound to a WAV file, using stereo 16-bit PCM encoding. It
  overwrites an existing file at the given path, if one exists.}
 
@@ -109,7 +105,7 @@ relatively gracefully on files it can't handle.}
 
 These procedures allow the creation, analysis, and manipulation of rsounds.
 
-@defstruct[rsound ([data s16vector?] [frames nonnegative-integer?] [sample-rate nonnegative-number?])]{
+@defstruct[rsound ([data s16vector?] [sample-rate nonnegative-number?])]{
  Represents a sound.}
 
 @defproc[(rsound-equal? [sound1 rsound?] [sound2 rsound?]) boolean?]{
@@ -117,26 +113,36 @@ These procedures allow the creation, analysis, and manipulation of rsounds.
          
  This procedure is necessary because s16vectors don't natively support @racket[equal?].}
 
-@defproc[(make-silence [frames nonnegative-integer?] [sample-rate nonnegative-number?]) rsound?]{
+@defproc[(silence [frames nonnegative-integer?]) rsound?]{
  Returns an rsound of length @racket[frames] containing silence.  This procedure is relatively fast.}
 
-@defproc[(rsound-ith/left (rsound rsound?) (frame nonnegative-integer?)) nonnegative-integer?]{
+@defproc[(rs-ith/left (rsound rsound?) (frame nonnegative-integer?)) nonnegative-integer?]{
  Returns the @racket[n]th sample from the left channel of the rsound, represented as a number in the range @racket[-1.0]
  to @racket[1.0].}
 
-@defproc[(rsound-ith/right (rsound rsound?) (frame nonnegative-integer?)) nonnegative-integer?]{
+@defproc[(rs-ith/right (rsound rsound?) (frame nonnegative-integer?)) nonnegative-integer?]{
  Returns the @racket[n]th sample from the right channel of the rsound, represented as a number in the range @racket[-1.0]
  to @racket[1.0].}
 
-@defproc[(rsound-clip (rsound rsound?) (start nonnegative-integer?) (finish nonnegative-integer?)) rsound?]{
+@defproc[(clip (rsound rsound?) (start nonnegative-integer?) (finish nonnegative-integer?)) rsound?]{
  Returns a new rsound containing the frames in @racket[rsound] from the @racket[start]th to the @racket[finish]th - 1.
  This procedure copies the required portion of the sound.}
 
-@defproc[(rsound-append* (rsounds (listof rsound?))) rsound?]{
+@defproc[(rs-append* (rsounds (listof rsound?))) rsound?]{
  Returns a new rsound containing the given @racket[rsounds], appended sequentially. This procedure is relatively
  fast. All of the given rsounds must have the same sample-rate.}
 
-@defproc[(rsound-overlay* (assembly-list (listof (list/c rsound? nonnegative-integer?)))) rsound?]{
+@defproc[(overlay (rsound-1 rsound?) (rsound-2 rsound?)) rsound?]{
+ Returns a new rsound containing the two sounds played simultaneously.  
+ Note that unless both sounds have amplitudes less that 0.5, clipping
+ or wrapping is likely.}
+
+@defproc[(overlay* (rsounds (listof rsound?))) rsound?]{
+ Returns a new rsound containing all of the sounds played simultaneously.  
+ Note that unless all of the sounds have low amplitudes, clipping
+ or wrapping is likely.}
+
+@defproc[(assemble (assembly-list (listof (list/c rsound? nonnegative-integer?)))) rsound?]{
  Returns a new rsound containing all of the given rsounds. Each sound begins at the frame number 
  indicated by its associated offset. The rsound will be exactly the length required to contain all of
  the given sounds.
@@ -145,7 +151,7 @@ These procedures allow the creation, analysis, and manipulation of rsounds.
  Evaluating
  
  @racketblock[
-  (rsound-overlay* (list (list a 5000)
+  (rs-overlay* (list (list a 5000)
                          (list b 0)
                          (list b 11000)))]
  
@@ -154,7 +160,7 @@ These procedures allow the creation, analysis, and manipulation of rsounds.
  
  }
 
-@defproc[(rsound-scale (scalar nonnegative-number?) (rsound rsound?)) rsound?]{
+@defproc[(scale (scalar nonnegative-number?) (rsound rsound?)) rsound?]{
  Scale the given sound by multiplying all of its samples by the given scalar.}
 
 @section{Signals}
@@ -182,9 +188,8 @@ are several built-in functions that produce signals.
 
 In order to listen to them, you'll need to transform them into rsounds:
 
-@defproc[(signal->rsound (frames nonnegative-integer?) (sample-rate nonnegative-integer?) 
-                           (signal signal?)) rsound?]{
- Builds a sound of length @racket[frames] and sample-rate @racket[sample-rate] by calling 
+@defproc[(mono-signal->rsound (frames nonnegative-integer?) (signal signal?)) rsound?]{
+ Builds a sound of length @racket[frames] at the default sample-rate by calling 
  @racket[signal] with integers from 0 up to @racket[frames]-1. The result should be an inexact 
  number in the range @racket[-1.0] to @racket[1.0]. Values outside this range are clipped.
  Both channels are identical. 
@@ -198,22 +203,22 @@ In order to listen to them, you'll need to transform them into rsounds:
 (define (sig1 t)
   (* 0.1 (sin (* t 560 twopi sr/inv))))
 
-(define r (signal->rsound (* samplerate 4) samplerate sig1))
+(define r (mono-signal->rsound (* samplerate 4) sig1))
 
-(rsound-play r)]
+(play r)]
  
  Alternatively, we could use @racket[sine-wave] to achieve the same result:
  
  @racketblock[
-(define samplerate 44100)
+(define samplerate (default-sample-rate))
 
-(define r (signal->rsound (* samplerate 4) samplerate (rsound-scale 0.1 (sine-wave 560 samplerate))))
+(define r (mono-signal->rsound (* samplerate 4) (scale 0.1 (sine-wave 560 samplerate))))
 
-(rsound-play r)]}
+(play r)]}
                                                   
                                                   
 
-@defproc[(signals->rsound/stereo (frames nonnegative-integer?) (sample-rate nonnegative-integer?) 
+@defproc[(signals->rsound (frames nonnegative-integer?) 
                              (left-fun signal?) (right-fun signal?)) rsound?]{
  Builds a stereo sound of length @racket[frames] and sample-rate @racket[sample-rate] by calling 
  @racket[left-fun] and @racket[right-fun] 
@@ -410,6 +415,7 @@ not-yet-documented: @racket[(provide twopi
          fft-complex-forward
          fft-complex-inverse
          )]
+
 
 @section{Reporting Bugs}
 
