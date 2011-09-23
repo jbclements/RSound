@@ -49,12 +49,12 @@
          #;change-loop
          ;; why is this necessary?
          #;rsound-nth-sample
-         rsound-ith/left/s16
-         rsound-ith/right/s16
-         rsound-ith/left
-         rsound-ith/right
-         set-rsound-ith/left!
-         set-rsound-ith/right!
+         rs-ith/left/s16
+         rs-ith/right/s16
+         rs-ith/left
+         rs-ith/right
+         set-rs-ith/left!
+         set-rs-ith/right!
          #;rsound-scale
          rsound-equal?
          clip
@@ -69,7 +69,7 @@
          rs-read/clip
          rs-read-frames
          rs-read-sample-rate
-         rsound-write
+         rs-write
          rs-largest-frame/range/left
          rs-largest-frame/range/right
          rs-largest-sample
@@ -163,7 +163,7 @@
   (first (read-sound/formatting path)))
 
 ;; just a wrapper around write-sound/floatblock
-(define (rsound-write sound path)
+(define (rs-write sound path)
   (unless (rsound? sound)
     (raise-type-error 'rsound-write "rsound" 0 sound path))
   (unless (path-string? path)
@@ -248,17 +248,17 @@
      (error 'change-loop "expected an rsound, got: ~e" sound)]))
 
 ;; return the nth sample of an rsound's left channel.
-(define (rsound-ith/left/s16 sound frame)
+(define (rs-ith/left/s16 sound frame)
   (rsound-extractor sound frame #t (lambda (x) x)))
 
 ;; return the nth sample of an rsound's right channel
-(define (rsound-ith/right/s16 sound frame)
+(define (rs-ith/right/s16 sound frame)
   (rsound-extractor sound frame #f (lambda (x) x)))
 
-(define (rsound-ith/left sound frame)
+(define (rs-ith/left sound frame)
   (rsound-extractor sound frame #t s16->real))
 
-(define (rsound-ith/right sound frame)
+(define (rs-ith/right sound frame)
   (rsound-extractor sound frame #f s16->real))
 
 
@@ -273,11 +273,11 @@
   (scale-fun (s16vector-ref (rsound-data rsound) (frame->sample frame left?))))
 
 ;; set the ith frame of the left channel to be new-val
-(define (set-rsound-ith/left! sound frame new-val)
+(define (set-rs-ith/left! sound frame new-val)
   (rsound-mutator sound frame #t new-val))
 
 ;; set the ith frame of the right channel to be new-val
-(define (set-rsound-ith/right! sound frame new-val)
+(define (set-rs-ith/right! sound frame new-val)
   (rsound-mutator sound frame #f new-val))
 
 ;; a mutation abstraction:

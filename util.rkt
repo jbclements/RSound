@@ -85,8 +85,8 @@ rsound-max-volume
 ;; produce a new rsound where every sample is modified 
 ;; by applying the given sound.
 (define (rsound-map fun sound)
-  (define (left i) (fun (rsound-ith/left sound i)))
-  (define (right i) (fun (rsound-ith/right sound i)))
+  (define (left i) (fun (rs-ith/left sound i)))
+  (define (right i) (fun (rs-ith/right sound i)))
   (parameterize ([default-sample-rate (rsound-sample-rate sound)])
   (signals->rsound (rsound-frames sound)
                    left
@@ -389,11 +389,11 @@ rsound-max-volume
 
 ;; return the (complex) fft of the left channel
 (define (rsound-fft/left rsound)
-  (channel-fft (lambda (i) (rsound-ith/left/s16 rsound i)) (rsound-frames rsound)))
+  (channel-fft (lambda (i) (rs-ith/left/s16 rsound i)) (rsound-frames rsound)))
 
 ;; return the (complex) fft of the right channel
 (define (rsound-fft/right rsound)
-  (channel-fft (lambda (i) (rsound-ith/right/s16 rsound i)) (rsound-frames rsound)))
+  (channel-fft (lambda (i) (rs-ith/right/s16 rsound i)) (rsound-frames rsound)))
 
 ;; the common left-right abstraction
 (define (channel-fft accessor len)
@@ -410,8 +410,8 @@ rsound-max-volume
   (let* ([scalar (fl/ 1.0 (exact->inexact (rs-largest-sample rsound)))])
     (signals->rsound (rsound-frames rsound)
                      (rsound-sample-rate rsound)
-                     (lambda (i) (fl* scalar (exact->inexact (rsound-ith/left/s16 rsound i))))
-                     (lambda (i) (fl* scalar (exact->inexact (rsound-ith/right/s16 rsound i)))))))
+                     (lambda (i) (fl* scalar (exact->inexact (rs-ith/left/s16 rsound i))))
+                     (lambda (i) (fl* scalar (exact->inexact (rs-ith/right/s16 rsound i)))))))
 
 
 ;; midi-note-num->pitch : number -> number
@@ -435,11 +435,11 @@ rsound-max-volume
 
 ;; rsound->signal/left : rsound -> signal
 ;; produce the signal that corresponds to the rsound's left channel, followed by silence.
-(define rsound->signal/left (rsound->signal/either rsound-ith/left))
+(define rsound->signal/left (rsound->signal/either rs-ith/left))
 
 ;; rsound->signal/right : rsound -> signal
 ;; produce the signal that corresponds to the rsound's right channel, followed by silence.
-(define rsound->signal/right (rsound->signal/either rsound-ith/right))
+(define rsound->signal/right (rsound->signal/either rs-ith/right))
 
 ;; thresh : number number -> number
 ;; clip to a threshold

@@ -9,8 +9,8 @@
 
 (define scribblings '(("rsound.scrbl" () (tool))))
 (define categories '(media))
-(define version "2010-11-17-18:13")
-(define release-notes '((p "signals can be played directly, switched to a 'pull' architecture")))
+(define version "2011-09-21-09:30")
+(define release-notes '((p "new back-end C interaction, should be more stable")))
 
 ;; don't compile the stuff in the contrib subdirectory.
 (define compile-omit-paths '("contrib"))

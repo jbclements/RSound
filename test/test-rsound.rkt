@@ -36,20 +36,20 @@
 (test-suite "rsound"
 (let ()
 (let ([t (mono-signal->rsound 100 (lambda (i) (sin (* twopi 13/44100 i))))])
-  (check-equal? (rsound-ith/left/s16 t 0) 0)
-  (check-equal? (rsound-ith/right/s16 t 1) (inexact->exact
+  (check-equal? (rs-ith/left/s16 t 0) 0)
+  (check-equal? (rs-ith/right/s16 t 1) (inexact->exact
                                             (round (* s16max (sin (* twopi 13/44100)))))))
 
 
 ;; signal->rsound/stereo
 (let ([s (signals->rsound 100 (lambda (i) (/ i 100)) (lambda (i) (- 1 (/ i 100))))])
-  (check-= (rsound-ith/left s 13) 13/100 1e-4)
-  (check-= (rsound-ith/right s 89) 11/100 1e-4))
+  (check-= (rs-ith/left s 13) 13/100 1e-4)
+  (check-= (rs-ith/right s 89) 11/100 1e-4))
 
-;; test rsound-ith/left & right
+;; test rs-ith/left & right
 (let ([t (mono-signal->rsound 100 (lambda (i) (sin (* twopi 13/44100 i))))])
-  (check-= (rsound-ith/left t 0) 0 1e-4)
-  (check-= (rsound-ith/right t 1) (sin (* twopi 13/44100)) 1e-4))
+  (check-= (rs-ith/left t 0) 0 1e-4)
+  (check-= (rs-ith/right t 1) (sin (* twopi 13/44100)) 1e-4))
 
 ;; test of rsound-equal?
 (let ([v1 (mono-signal->rsound 100 (lambda (i) (/ i 100)))]
@@ -81,8 +81,8 @@
 ;; silence:
 (let ([s (silence 100)])
   (for ([i (in-range 100)])
-    (check-equal? (rsound-ith/left/s16 s i) 0)
-    (check-equal? (rsound-ith/right/s16 s i) 0)))
+    (check-equal? (rs-ith/left/s16 s i) 0)
+    (check-equal? (rs-ith/right/s16 s i) 0)))
 (check-equal? (rsound-frames (silence 22050)) 22050)
 (check-equal? (rsound-sample-rate (silence 22050)) (default-sample-rate))
 
@@ -107,34 +107,34 @@
        [overlaid (assemble (list (list sample-sound 0) (list sample-sound 0)))]
        [doublevol (make-tone 400 0.3 6)])
   (for ([i (in-range 6)])
-    (check-= (rsound-ith/left/s16 overlaid i) (rsound-ith/left/s16 doublevol i) 1.0)
-    (check-= (rsound-ith/right/s16 overlaid i) (rsound-ith/right/s16 doublevol i) 1.0))
+    (check-= (rs-ith/left/s16 overlaid i) (rs-ith/left/s16 doublevol i) 1.0)
+    (check-= (rs-ith/right/s16 overlaid i) (rs-ith/right/s16 doublevol i) 1.0))
   
   (define s2 (assemble (list (list sample-sound 0) (list sample-sound 3.5))))
-  (check-equal? (rsound-ith/left/s16 s2 5)
-                (+ (rsound-ith/left/s16 sample-sound 5)
-                   (rsound-ith/left/s16 sample-sound 1))))
+  (check-equal? (rs-ith/left/s16 s2 5)
+                (+ (rs-ith/left/s16 sample-sound 5)
+                   (rs-ith/left/s16 sample-sound 1))))
   
   (let* ([sample-sound (mono-signal->rsound 100 (lambda (x) (* 0.2 (random))))]
          [overlaid (assemble (list (list sample-sound 25) 
                                           (list sample-sound 0)
                                           (list sample-sound 75)))])
     (for ([i (in-range 25)])
-      (check-equal? (rsound-ith/left/s16 overlaid i)
-                    (rsound-ith/left/s16 sample-sound i)))
+      (check-equal? (rs-ith/left/s16 overlaid i)
+                    (rs-ith/left/s16 sample-sound i)))
     (for ([i (in-range 25 75)])
-      (check-equal? (rsound-ith/right/s16 overlaid i)
-                    (+ (rsound-ith/right/s16 sample-sound i)
-                       (rsound-ith/right/s16 sample-sound (- i 25)))))
+      (check-equal? (rs-ith/right/s16 overlaid i)
+                    (+ (rs-ith/right/s16 sample-sound i)
+                       (rs-ith/right/s16 sample-sound (- i 25)))))
     (for ([i (in-range 75 100)])
-      (check-equal? (rsound-ith/right/s16 overlaid i)
-                    (+ (rsound-ith/right/s16 sample-sound i)
-                       (rsound-ith/right/s16 sample-sound (- i 25))
-                       (rsound-ith/right/s16 sample-sound (- i 75)))))
+      (check-equal? (rs-ith/right/s16 overlaid i)
+                    (+ (rs-ith/right/s16 sample-sound i)
+                       (rs-ith/right/s16 sample-sound (- i 25))
+                       (rs-ith/right/s16 sample-sound (- i 75)))))
     (for ([i (in-range 100 125)])
-      (check-equal? (rsound-ith/left/s16 overlaid i)
-                    (+ (rsound-ith/left/s16 sample-sound (- i 25))
-                       (rsound-ith/left/s16 sample-sound (- i 75))))))
+      (check-equal? (rs-ith/left/s16 overlaid i)
+                    (+ (rs-ith/left/s16 sample-sound (- i 25))
+                       (rs-ith/left/s16 sample-sound (- i 75))))))
 
 
 ;; rsound-read
@@ -155,11 +155,11 @@
 (define thirtieth-sample (desired-nth-sample 30))
 (define fiftieth-sample (desired-nth-sample 50))
 
-(check-= (rsound-ith/left/s16 test-rsound 0) 0.0 1e-4)
-(check-= (rsound-ith/left/s16 test-rsound 1) first-sample 1e-4)
-(check-= (rsound-ith/right/s16 test-rsound 2) second-sample 1e-4)
+(check-= (rs-ith/left/s16 test-rsound 0) 0.0 1e-4)
+(check-= (rs-ith/left/s16 test-rsound 1) first-sample 1e-4)
+(check-= (rs-ith/right/s16 test-rsound 2) second-sample 1e-4)
 ;; why is this one not exact? Something to do with negative numbers... still can't quite figure it out.
-(check-= (rsound-ith/right/s16 test-rsound 50) fiftieth-sample 1)
+(check-= (rs-ith/right/s16 test-rsound 50) fiftieth-sample 1)
 
 
 (define test-sub-rsound (rs-read/clip short-test-wav 30 40))
@@ -167,37 +167,37 @@
 (check-not-exn (lambda () (rs-read/clip short-test-wav 30 40.0)))
 
 (check-equal? (rsound-frames test-sub-rsound) 10)
-(check-= (rsound-ith/left/s16 test-sub-rsound 0) (desired-nth-sample 30) 1e-4)
-(check-= (rsound-ith/right/s16 test-sub-rsound 1) (desired-nth-sample 31) 1e-4)
+(check-= (rs-ith/left/s16 test-sub-rsound 0) (desired-nth-sample 30) 1e-4)
+(check-= (rs-ith/right/s16 test-sub-rsound 1) (desired-nth-sample 31) 1e-4)
 
 ;; round-trip using rsound-write
 
 (let ([temp (make-temporary-file)])
-  (rsound-write test-rsound temp)
+  (rs-write test-rsound temp)
   (check rsound-equal? (rs-read temp) test-rsound))
 
 ;;rsound-append (*)
 (let ([short-test2 (rs-append test-rsound test-rsound)])
-  (check-equal? (rsound-ith/left/s16 short-test2 150) 
-                (rsound-ith/left/s16 short-test2 50))
-  (check-equal? (rsound-ith/right/s16 short-test2 153) 
-                (rsound-ith/right/s16 short-test2 53)))
+  (check-equal? (rs-ith/left/s16 short-test2 150) 
+                (rs-ith/left/s16 short-test2 50))
+  (check-equal? (rs-ith/right/s16 short-test2 153) 
+                (rs-ith/right/s16 short-test2 53)))
 
 (let ([short-test2 (rs-append* (list (silence 50)
                                          test-rsound
                                          test-rsound))])
-  (check-equal? (rsound-ith/left/s16 short-test2 200)
-                (rsound-ith/left/s16 test-rsound 50))
-  (check-equal? (rsound-ith/right/s16 short-test2 203) 
-                (rsound-ith/right/s16 test-rsound 53)))
+  (check-equal? (rs-ith/left/s16 short-test2 200)
+                (rs-ith/left/s16 test-rsound 50))
+  (check-equal? (rs-ith/right/s16 short-test2 203) 
+                (rs-ith/right/s16 test-rsound 53)))
 
 ;; rsound-clip
 
 (let ([shorter-test (clip test-rsound 30 60)])
   (check-equal? (rsound-frames shorter-test) 30)
   (check-equal? (rsound-sample-rate shorter-test) 44100)
-  (check-equal? (rsound-ith/left/s16 shorter-test 6)
-                (rsound-ith/left/s16 test-rsound 36)))
+  (check-equal? (rs-ith/left/s16 shorter-test 6)
+                (rs-ith/left/s16 test-rsound 36)))
 
 
 
@@ -205,15 +205,15 @@
 
 ;; purely regression testing:
 (check-equal? (rsound-frames kick-rsound) 4410)
-(check-equal? (rsound-ith/left/s16 kick-rsound 1803) 27532)
-(check-equal? (rsound-ith/right/s16 kick-rsound 1803) 27532)
+(check-equal? (rs-ith/left/s16 kick-rsound 1803) 27532)
+(check-equal? (rs-ith/right/s16 kick-rsound 1803) 27532)
 
 ;; test with PAD
 
 (define short-with-pad (rs-read short-with-pad-wav))
 (check-equal? (rsound-frames short-with-pad) #x21)
-(check-equal? (rsound-ith/left/s16 short-with-pad 5) #x892)
-(check-equal? (rsound-ith/right/s16 short-with-pad 6) #x478)
+(check-equal? (rs-ith/left/s16 short-with-pad 5) #x892)
+(check-equal? (rs-ith/right/s16 short-with-pad 6) #x478)
 
 
 ;; check that you can't loop with an rsound of length 0
@@ -222,7 +222,7 @@
 
 ;; clipping isn't happening right.
 
-(check-= (/ (rsound-ith/left/s16 (mono-signal->rsound 300
+(check-= (/ (rs-ith/left/s16 (mono-signal->rsound 300
                                                  (lambda (i) (* 1.5 (sin (* twopi 147/44100 i)))))
                                  73)
             #x7fff)
@@ -230,14 +230,14 @@
          1e-4)
 
 
-;; set-rsound-ith/left! and right!
+;; set-rs-ith/left! and right!
 (let ([s (silence 100)])
-  (set-rsound-ith/left! s 34 0.7)
-  (set-rsound-ith/right! s 87 0.3)
-  (check-= (rsound-ith/left s 34) 0.7 1e-5)
-  (check-= (rsound-ith/right s 34) 0.0 1e-5)
-  (check-= (rsound-ith/left s 87) 0.0 1e-5)
-  (check-= (rsound-ith/right s 87) 0.3 1e-5))
+  (set-rs-ith/left! s 34 0.7)
+  (set-rs-ith/right! s 87 0.3)
+  (check-= (rs-ith/left s 34) 0.7 1e-5)
+  (check-= (rs-ith/right s 34) 0.0 1e-5)
+  (check-= (rs-ith/left s 87) 0.0 1e-5)
+  (check-= (rs-ith/right s 87) 0.3 1e-5))
 
 #|(time (rsound-draw (make-tone 400 0.15 10) 400 100))
 (time (rsound-draw (make-tone 400 0.15 100) 400 100))
