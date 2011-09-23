@@ -12,7 +12,7 @@
 
 (provide (all-defined-out))
 
-(define channels 2)
+
 (define s16-size 2)
 
 ;; 
@@ -150,14 +150,14 @@
 ;; test of queue
 (let ()
   (define h (make-unplayed-heap))
-  (queue-for-playing! h (rsound-clip ding 0 10000) 20000)
+  (queue-for-playing! h (clip ding 0 10000) 20000)
   (queue-for-playing! h ding 18000)
   (check-equal? (heap-count h) 2)
   (check-equal? (heap-min h) (entry ding 18000 (+ 18000 44100)))
   (heap-remove-min! h)
   (check rsound-equal?
          (entry-sound (heap-min h))
-         (rsound-clip ding 0 10000))
+         (clip ding 0 10000))
   (check-equal? (entry-start (heap-min h)) 20000)
   (check-equal? (entry-finish (heap-min h)) 30000))
 

@@ -1,6 +1,6 @@
 #lang racket
 
-(require (planet clements/portaudio)
+(require (planet clements/portaudio:1:2)
          (only-in ffi/unsafe cpointer?)
          ffi/vector
          racket/async-channel)

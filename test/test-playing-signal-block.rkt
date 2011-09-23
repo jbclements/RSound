@@ -11,14 +11,13 @@
 (define simple-tone
   (make-tone 440 0.2 src-buf-len 44100))
 
-(define channels 2)
 (define s16-size 2)
 
 (define data-ptr (s16vector->cpointer (rsound-data simple-tone)))
 ;; it comes out even on this many samples:
 (define sine-wave-len 8820)
-(check-= (rsound-ith/left simple-tone 4410) 0.0 0.01)
-(check-= (rsound-ith/right simple-tone 4410) 0.0 0.01)
+(check-= (rs-ith/left simple-tone 4410) 0.0 0.01)
+(check-= (rs-ith/right simple-tone 4410) 0.0 0.01)
 
 (define ts empty)
 (define lens empty)
@@ -40,4 +39,4 @@
 
 (signal/block-play simple-signal/block/s16 44100)
 (sleep 2)
-(stop-playing)
+(stop)
