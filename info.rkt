@@ -9,8 +9,8 @@
 
 (define scribblings '(("rsound.scrbl" () (tool))))
 (define categories '(media))
-(define version "2011-09-23-00:06")
-(define release-notes '((p "added 64-bit dlls, fixed small compile errors")))
+(define version "2011-09-25-11:20")
+(define release-notes '((p "added 64-bit add-buffer linux binary")))
 
 ;; don't compile the stuff in the contrib subdirectory.
 (define compile-omit-paths '("contrib"))
