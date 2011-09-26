@@ -9,8 +9,8 @@
 
 (define scribblings '(("rsound.scrbl" () (tool))))
 (define categories '(media))
-(define version "2011-09-25-11:20")
-(define release-notes '((p "added 64-bit add-buffer linux binary")))
+(define version "2011-09-25-22:57")
+(define release-notes '((p "fix portaudio ref again, sigh")))
 
 ;; don't compile the stuff in the contrib subdirectory.
 (define compile-omit-paths '("contrib"))
