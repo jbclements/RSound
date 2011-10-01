@@ -5,8 +5,11 @@
 
 (require ffi/vector)
 
-(provide read-sound/s16vector
-         read-sound/formatting)
+(provide/contract
+ [read-sound/s16vector (-> path-string? integer? (or/c integer? false?) 
+                           (list/c s16vector? integer?))]
+ [read-sound/formatting (-> path-string? 
+                            (list/c integer? integer?))])
 
 
 ;; read-sound/s16vector : file-string nat (or/c #f nat) -> (list/c s16vector nat nat)
@@ -34,10 +37,10 @@
 
 ;; parse the file to obtain the number of frames and the sample rate
 (define (parse-main-chunk/info port)
-  (match-let* ([(list next-chunk-offset channels samplerate) (read-formatting-info port 0)]
-               [(list data-chunk-len data-offset) (scan-for-data-chunk port next-chunk-offset)]
-               [frames-in-file (/ data-chunk-len (* channels global-bitspersample 1/8))])
-    (list frames-in-file samplerate)))
+  (match-define (list next-chunk-offset channels samplerate) (read-formatting-info port 0))
+  (match-define (list data-chunk-len data-offset) (scan-for-data-chunk port next-chunk-offset))
+  (define frames-in-file (/ data-chunk-len (* channels global-bitspersample 1/8)))
+  (list frames-in-file samplerate))
 
 ;; port nat nat (or/c nat #f) -> (list/c s16vector? nat nat)
 (define (parse-main-chunk port begin-frame end-frame)

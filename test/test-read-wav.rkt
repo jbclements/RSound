@@ -2,7 +2,6 @@
 
 (require "../read-wav.rkt"
          "../write-wav.rkt"
-         "../rsound.rkt"
          racket/runtime-path
          racket/math
          rackunit
@@ -17,9 +16,10 @@
 (define-runtime-path short-with-pad-wav "./short-with-pad.wav")
 (define-runtime-path non-integral-frames-wav "./test-non-integer-frames.wav")
 (define-runtime-path short-with-LIST-wav "./test-with-list.wav")
+(define-runtime-path short-with-FLLR-wav "./short-with-FLLR.wav")
 
-
-(define test-rsound (apply rsound (read-sound/s16vector short-test-wav 0 #f)))
+(match-define 
+ (list s16vec sample-rate) (read-sound/s16vector short-test-wav 0 #f))
 
 (define (desired-nth-sample n)
   (round (* #x8000 (sin (* 2 pi (/ n 44100) 700)))))
@@ -36,43 +36,51 @@
   (let ()
     
     
-    (check-= (rs-ith/left/s16 test-rsound 0) 0.0 1e-4)
-    (check-= (rs-ith/left/s16 test-rsound 1) first-sample 1e-4)
-    (check-= (rs-ith/right/s16 test-rsound 2) second-sample 1e-4)
+    (check-= (s16vector-ref s16vec 0) 0.0 1e-4)
+    (check-= (s16vector-ref s16vec 2) first-sample 1e-4)
+    (check-= (s16vector-ref s16vec 5) second-sample 1e-4)
     ;; why is this one not exact? Something to do with negative numbers... still can't quite figure it out.
-    (check-= (rs-ith/right/s16 test-rsound 50) fiftieth-sample 1)
+    (check-= (s16vector-ref s16vec 101) fiftieth-sample 1.0)
+    
+    (match-define (list short-s16vec short-sr)
+                  (read-sound/s16vector short-test-wav 30 40))
+    
+    (check-equal? (s16vector-length short-s16vec) 20)
+    (check-= (s16vector-ref short-s16vec 0) (desired-nth-sample 30) 1e-4)
+    (check-= (s16vector-ref short-s16vec 3) (desired-nth-sample 31) 1e-4)
     
     
-    (define test-sub-rsound (apply rsound (read-sound/s16vector short-test-wav 30 40)))
-    
-    (check-equal? (rsound-frames test-sub-rsound) 10)
-    (check-= (rs-ith/left/s16 test-sub-rsound 0) (desired-nth-sample 30) 1e-4)
-    (check-= (rs-ith/right/s16 test-sub-rsound 1) (desired-nth-sample 31) 1e-4)
-    
-    
-    (define kick-rsound (apply rsound (read-sound/s16vector kick-wav 0 #f)))
+    (match-define (list kick-s16vec sr)
+                  (read-sound/s16vector kick-wav 0 #f))
     
     ;; purely regression testing:
-    (check-equal? (rsound-frames kick-rsound) 4410)
-    (check-equal? (rs-ith/left/s16 kick-rsound 4310) -4195)
-    (check-equal? (rs-ith/right/s16 kick-rsound 4310) -4195)
+    (check-equal? (s16vector-length kick-s16vec) (* 2 4410))
+    (check-equal? (s16vector-ref kick-s16vec (* 2 4310)) -4195)
+    (check-equal? (s16vector-ref kick-s16vec (add1 (* 2 4310)))
+                  -4195)
     
     ;; I want a short example with a PAD chunk...
     
-    (define short-with-pad (apply rsound (read-sound/s16vector short-with-pad-wav 0 #f)))
-    (check-equal? (rsound-frames short-with-pad) #x21)
-    (check-equal? (rs-ith/left/s16 short-with-pad 5) #x892)
-    (check-equal? (rs-ith/right/s16 short-with-pad 6) #x478)
+    (match-define (list short-with-pad swp-sr) 
+                  (read-sound/s16vector short-with-pad-wav 0 #f))
+    (check-equal? (s16vector-length short-with-pad) (* 2 #x21))
+    (check-equal? (s16vector-ref short-with-pad 10) #x892)
+    (check-equal? (s16vector-ref short-with-pad 13) #x478)
     
     ;; a test with a non-integer number of frames:
     (check-exn exn:fail? (lambda () (read-sound/s16vector non-integral-frames-wav 0 #f)))
     
     ;; a short example with a #"LIST" chunk:
     
-    (define short-with-LIST (apply rsound (read-sound/s16vector short-with-LIST-wav 0 #f)))
-    (check-equal? (rsound-frames short-with-LIST) (/ #x78 4))
-    (check-equal? (rs-ith/right/s16 short-with-LIST 2) -4416)
+    (match-define (list short-with-LIST swl-sr)
+                  (read-sound/s16vector short-with-LIST-wav 0 #f))
+    (check-equal? (s16vector-length short-with-LIST) (* 2 (/ #x78 4)))
+    (check-equal? (s16vector-ref short-with-LIST 5) -4416)
     
+    ;; short example with #"FLLR" chunk:
+    ;; ... not worth fixing this, right now.
+    #;(match-define (list foo bar)
+                  (read-sound/s16vector short-with-FLLR-wav 0 #f))
     
-    
+    3
     )))
