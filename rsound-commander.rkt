@@ -1,6 +1,6 @@
 #lang racket
 
-(require (planet clements/portaudio:1:3)
+(require (planet clements/portaudio:1:4)
          (only-in ffi/unsafe cpointer?)
          ffi/vector
          racket/async-channel)
@@ -26,9 +26,8 @@
                   (signal-play (-> any/c ;; don't want to slow down calls to the signal
                                    sample-rate?
                                    void?))
-                  #;(signal/block-play (-> any/c
-                                         sample-rate?
-                                         void?))
+                  (signal/block-play (-> any/c sample-rate? void?))
+                  (signal/block-play/unsafe (-> any/c sample-rate? void?))
                   (stop-playing (-> void?))
                   [channels positive-integer?])
 
@@ -46,10 +45,7 @@
   (pa-start-stream stream)
   (async-channel-put 
    live-stream-channel
-   (lambda () (stop-sound sndinfo-record)
-     #;(thread (lambda ()
-                 (sleep 0.5)
-                 ())))))
+   (lambda () (stop-sound sndinfo-record))))
 
 ;; channels... don't change this, unless 
 ;; you also change the copying-callback.
@@ -90,5 +86,20 @@
     [thunk (thunk)
            (call-all-stop-thunks)]))
 
+;;
+(define (signal/block-play block-filler sample-rate)
+  (match-define (list stream-time stop-sound)
+    (stream-play block-filler default-buffer-frames sample-rate))
+  (async-channel-put 
+   live-stream-channel
+   (lambda () (stop-sound))))
+
+(define (signal/block-play/unsafe block-filler sample-rate)
+  (match-define (list stream-time stop-sound)
+    (stream-play/unsafe block-filler default-buffer-frames sample-rate))
+  (async-channel-put 
+   live-stream-channel
+   (lambda () (stop-sound))))
 
 
+(define default-buffer-frames 1024)

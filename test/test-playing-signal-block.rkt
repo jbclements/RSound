@@ -1,15 +1,15 @@
 #lang racket
 
-(require (planet clements/rsound)
-         (planet clements/rsound/private/s16vector-add)
+(require "../main.rkt"
+         "../private/s16vector-add.rkt"
          ffi/vector
          ffi/unsafe
          rackunit
          )
 
-(define src-buf-len (* 44100 3))
+(define src-buf-len 10000)
 (define simple-tone
-  (make-tone 440 0.2 src-buf-len 44100))
+  (make-tone 440 0.2 src-buf-len))
 
 (define s16-size 2)
 
@@ -22,21 +22,22 @@
 (define ts empty)
 (define lens empty)
 
-(define (simple-signal/block/s16 pointer t len)
+(define (simple-signal/block/s16 pointer frames idx)
+  (define t (* idx frames))
   (define sample (* t channels))
-  (define sample-len (* len channels))
-  (define copy-source sample #;(modulo sample sine-wave-len))
-  (if (< (* channels src-buf-len) (+ copy-source sample-len))
+  (define samples (* frames channels))
+  (define copy-source (modulo sample sine-wave-len))
+  (if (< (* channels src-buf-len) (+ copy-source samples))
       (error "sample buffer only goes to ~s, needed ~s"
-             src-buf-len (+ copy-source sample-len))
+             src-buf-len (+ copy-source samples))
       (begin
-        (memset pointer 0 (* s16-size sample-len))
+        (memset pointer 0 (* s16-size samples))
         (s16buffer-add!/c pointer
                           (ptr-add data-ptr (* s16-size copy-source))
-                          sample-len))))
+                          samples))))
 
 
 
-(signal/block-play simple-signal/block/s16 44100)
-(sleep 2)
+(signal/block-play/unsafe simple-signal/block/s16 44100)
+(sleep 22)
 (stop)

@@ -49,22 +49,23 @@
 ;; call it with monotonically non-decreasing time values, it's going to 
 ;; behave badly. It returns a thunk that knows the most recent value of t
 
-(define (heap->signal/block unplayed)
+(define (heap->signal/block/unsafe unplayed)
   ;; the "playing" heap is ordered by end time, to facilitate removal
   (define playing (make-heap (lambda (a b) (<= (entry-finish a) (entry-finish b)))))
   ;; invariant: playing-vec contains the same elements as the "playing" heap.
   (define playing-vec (vector))
   (define last-t #f)
   (define (get-last-t) last-t)
-  (define (signal/block cpointer t len)
-    (set! last-t (+ t len))
+  (define (signal/block cpointer frames idx)
+    (define t (* frames idx))
+    (set! last-t (* (add1 idx) frames))
     ;; remove sounds that end before the start
     (define sounds-removed? (clear-ended-sounds playing t))
     ;; add sounds that start before the end
-    (define sounds-added? (add-new-sounds unplayed playing (+ t len)))
+    (define sounds-added? (add-new-sounds unplayed playing (+ t frames)))
     (when (or sounds-removed? sounds-added?)
       (set! playing-vec (heap->vector playing)))
-    (combine-onto! cpointer t len playing-vec))
+    (combine-onto! cpointer t frames playing-vec))
   (values 
    signal/block
    get-last-t))
@@ -133,10 +134,17 @@
                 (loop #t)]
                [else added?])])))
 
+
+
+;; these tests refer to a number of internals, and it's hard
+;; to peel them out.
+
+(define-test-suite
+  sequencer-internals
 (let ()
   
   (define tgt (make-s16vector (* channels 10) 15))
-  (define src1 (rsound (make-s16vector (* channels 200) 1) 200 44100))
+  (define src1 (rsound (make-s16vector (* channels 200) 1) 44100))
   (define entry1 (entry src1 50 250))
   (define entry2 (entry src1 65 265))
   (combine-onto! (s16vector->cpointer tgt)
@@ -211,7 +219,7 @@
 
 
 (let ()
-  (define src1 (rsound (make-s16vector (* channels 200) 1) 200 44100))
+  (define src1 (rsound (make-s16vector (* channels 200) 1) 44100))
   (define entry1 (entry src1 50 250))
   (define entry2 (entry src1 65 265))
   (define dst1 (make-s16vector (* channels 10) 0))
@@ -228,7 +236,7 @@
                                              2 2 2 2 2 2 2 2 2 2))
   
   (define dst3 (make-s16vector 20 0))
-  (define src3 (rsound (make-s16vector 10 2) 5 44100))
+  (define src3 (rsound (make-s16vector 10 2) 44100))
   (define entry3 (entry src3 70 75))
   (add-from-buf! (s16vector->cpointer dst3) 68 10 entry1)
   (add-from-buf! (s16vector->cpointer dst3) 68 10 entry3)
@@ -240,9 +248,9 @@
   )
 
 (let ()
-  (define s1 (rsound (make-s16vector 20 2) 10 44100))
-  (define s2 (rsound (make-s16vector 4 3) 2 44100))
-  (define s3 (rsound (make-s16vector 30 4) 15 44100))
+  (define s1 (rsound (make-s16vector 20 2) 44100))
+  (define s2 (rsound (make-s16vector 4 3) 44100))
+  (define s3 (rsound (make-s16vector 30 4) 44100))
   (define unplayed-heap (make-unplayed-heap))
   (queue-for-playing! unplayed-heap s1 15)
   (queue-for-playing! unplayed-heap s1 17)
@@ -250,26 +258,26 @@
   (queue-for-playing! unplayed-heap s2 41)
   (define tgt (make-s16vector 20 123))
   (define tgt-ptr (s16vector->cpointer tgt))
-  (define-values (test-signal/block last-time) (heap->signal/block unplayed-heap))
-  (test-signal/block tgt-ptr 0 10)
+  (define-values (test-signal/block last-time) (heap->signal/block/unsafe unplayed-heap))
+  (test-signal/block tgt-ptr 10 0)
   (check-equal? (s16vector->list tgt)
                 (list 0 0 0 0 0 0 0 0 0 0
                       0 0 0 0 0 0 0 0 0 0))
   (check-equal? (last-time) 10)
-  (test-signal/block tgt-ptr 10 10)
+  (test-signal/block tgt-ptr 10 1)
   (check-equal? (s16vector->list tgt)
                 (list 0 0 0 0 0 0 0 0 0 0
                       2 2 2 2 4 4 4 4 4 4))
-  (test-signal/block tgt-ptr 20 10)
+  (test-signal/block tgt-ptr 10 2)
   (check-equal? (s16vector->list tgt)
                 (list 4 4 4 4 4 4 4 4 4 4
                       2 2 2 2 0 0 0 0 0 0))
-  (test-signal/block tgt-ptr 30 10)
+  (test-signal/block tgt-ptr 10 3)
   (check-equal? (s16vector->list tgt)
                 (list 0 0 0 0 0 0 0 0 0 0
                       0 0 0 0 4 4 4 4 4 4))
-  (test-signal/block tgt-ptr 40 10)
+  (test-signal/block tgt-ptr 10 4)
   (check-equal? (s16vector->list tgt)
                 (list 4 4 7 7 7 7 4 4 4 4
                       4 4 4 4 4 4 4 4 4 4))
-  (check-equal? (last-time) 50))
+  (check-equal? (last-time) 50)))

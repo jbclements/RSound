@@ -6,3 +6,5 @@
          "test-playing.rkt"
          ;; just load it:
          "../drum-samples.rkt")
+
+;; try manually: test-sequencer-playing.rkt

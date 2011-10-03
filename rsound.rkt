@@ -44,6 +44,7 @@
          signal-play
          signal/block?
          signal/block-play
+         signal/block-play/unsafe
          rsound-loop
          stop
          #;change-loop
@@ -190,15 +191,11 @@
 
 ;; play a signal/block using portaudio:
 (define (signal/block-play signal/block sample-rate)
-  (error 'signal/block-play "not implemented")
-  #;(unless (and (procedure? signal/block)
-               (procedure-arity-includes? signal/block 3))
-    (raise-type-error 'signal-play "signal/block" 0 signal/block sample-rate))
-  #;(unless (positive-integer? sample-rate)
-    (raise-type-error 'signal-play 
-                      "sample rate (nonnegative exact integer)"
-                      1 signal/block sample-rate))
-  #;(rsignal/block-play signal/block sample-rate))
+  (rc:signal/block-play signal/block sample-rate))
+
+;; play a signal/block using portaudio:
+(define (signal/block-play/unsafe signal/block sample-rate)
+  (rc:signal/block-play/unsafe signal/block sample-rate))
 
 ;; play a sound using portaudio:
 (define ((rsound-play/helper loop?) sound)
