@@ -26,7 +26,7 @@ advantages (speed, mostly) and disadvantages (clipping).
 Does it work on your machine? Try this example (and accept my 
 apologies if I forget to update the version number):
 @racketblock[
- (require (planet "main.rkt" ("clements" "rsound.plt" 1 11)))
+ (require (planet "main.rkt" ("clements" "rsound.plt" 2 6)))
   
  (play ding)
  ]
@@ -107,6 +107,9 @@ These procedures allow the creation, analysis, and manipulation of rsounds.
 
 @defstruct[rsound ([data s16vector?] [sample-rate nonnegative-number?])]{
  Represents a sound.}
+
+@defproc[(rsound-frames [sound rsound?]) nonnegative-integer?]{
+ Returns the length of a sound, in frames.}
 
 @defproc[(rsound-equal? [sound1 rsound?] [sound2 rsound?]) boolean?]{
  Returns @racket[#true] when the two sounds are (extensionally) equal.
