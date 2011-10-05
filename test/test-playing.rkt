@@ -46,13 +46,13 @@
 (printf "...stop\n")
 (sleep 1)
 
-#|(printf "\nplaying a signal\n")
+(printf "\nplaying a signal\n")
 (signal-play (sine-wave 440 44100) 44100)
 (sleep 1)
-(stop-playing)
+(stop)
 (sleep 1)
 
-|#
+
 
 ;; test errors during signal execution
 

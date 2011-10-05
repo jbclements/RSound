@@ -187,7 +187,7 @@
     (raise-type-error 'signal-play "signal" 0 signal sample-rate))
   (unless (positive-integer? sample-rate)
     (raise-type-error 'signal-play "sample rate (nonnegative exact integer)" 1 signal sample-rate))
-  (rc:signal/block-play/unsafe (rc:signal->signal/block/unsafe) sample-rate))
+  (rc:signal/block-play/unsafe (rc:signal->signal/block/unsafe signal) sample-rate))
 
 ;; play a signal/block using portaudio:
 (define (signal/block-play signal/block sample-rate)

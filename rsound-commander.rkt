@@ -102,10 +102,12 @@
 (define (signal->signal/block/unsafe signal)
   (define (signal/block/unsafe ptr frames idx)
     (define base-t (* frames idx))
-    (for ([t (in-range base-t (+ base-t frames))])
+    (for ([frame (in-range 0 frames)]
+          [t (in-range base-t (+ base-t frames))])
       (define sample (real->s16 (signal t)))
-      (ptr-set! ptr _sint16 (* t channels) sample)
-      (ptr-set! ptr _sint16 (add1 (* t channels)) sample)))
+      (define sample-num (* frame channels))
+      (ptr-set! ptr _sint16 sample-num sample)
+      (ptr-set! ptr _sint16 (add1 sample-num) sample)))
   signal/block/unsafe)
 
 
