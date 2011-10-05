@@ -1,7 +1,7 @@
 #lang racket
 
 (require (planet clements/portaudio:1:4)
-         (only-in ffi/unsafe cpointer?)
+         (only-in ffi/unsafe cpointer? ptr-set! _sint16)
          ffi/vector
          racket/async-channel)
 
@@ -23,16 +23,13 @@
                                    frames?
                                    sample-rate?
                                    void?))
-                  (signal-play (-> any/c ;; don't want to slow down calls to the signal
-                                   sample-rate?
-                                   void?))
+                  [signal->signal/block/unsafe
+                   (-> procedure? procedure?)]
                   (signal/block-play (-> any/c sample-rate? void?))
                   (signal/block-play/unsafe (-> any/c sample-rate? void?))
                   (stop-playing (-> void?))
                   [channels positive-integer?])
 
-(define (signal-play fun sample-rate)
-  (error 'signal-play "not working now"))
 
 ;; given an s16-vector containing interlaced 2-channel samples,
 ;; play it back at the current sample rate.
@@ -42,10 +39,11 @@
   (define stream (open-rsound-stream copying-callback
                                      sndinfo-record
                                      sample-rate))
+  (pa-set-stream-finished-callback stream copying-info-free)
   (pa-start-stream stream)
-  (async-channel-put 
+  (async-channel-put
    live-stream-channel
-   (lambda () (stop-sound sndinfo-record))))
+   (lambda () (pa-stop-stream stream))))
 
 ;; channels... don't change this, unless 
 ;; you also change the copying-callback.
@@ -86,7 +84,7 @@
     [thunk (thunk)
            (call-all-stop-thunks)]))
 
-;;
+
 (define (signal/block-play block-filler sample-rate)
   (match-define (list stream-time stop-sound)
     (stream-play block-filler default-buffer-frames sample-rate))
@@ -101,5 +99,26 @@
    live-stream-channel
    (lambda () (stop-sound))))
 
+(define (signal->signal/block/unsafe signal)
+  (define (signal/block/unsafe ptr frames idx)
+    (define base-t (* frames idx))
+    (for ([t (in-range base-t (+ base-t frames))])
+      (define sample (real->s16 (signal t)))
+      (ptr-set! ptr _sint16 (* t channels) sample)
+      (ptr-set! ptr _sint16 (add1 (* t channels)) sample)))
+  signal/block/unsafe)
+
 
 (define default-buffer-frames 1024)
+
+;; CONVERSIONS
+
+(define s16max 32767)
+(define -s16max (- s16max))
+(define s16max/i (exact->inexact 32767))
+
+(define (s16->real x)
+  (/ (exact->inexact x) s16max/i))
+
+(define (real->s16 x)
+  (min s16max (max -s16max (inexact->exact (round (* s16max/i x))))))
