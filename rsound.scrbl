@@ -331,6 +331,10 @@ overhead.
  Produces an rsound containing a semi-percussive tone of the given frequency, frames, and volume.  The tone contains the first
  three harmonics of the specified frequency.  This function is memoized, so that subsequent calls with the same parameters 
  will return existing values, rather than recomputing them each time.}
+                                                                    
+@defproc[(make-tone (pitch nonnegative-number?) (volume nonnegative-number?) (duration nonnegative-exact-integer?)) rsound?]{
+ given a pitch in Hz, a volume between 0.0 and 1.0, and a duration in frames, return the
+ rsound consisting of a pure sine wave tone using the specified parameters.}
 
 @defproc[(rsound-fft/left [rsound rsound?]) (vectorof complex?)]{
  Produces the complex-valued vector that represents the fourier transform of the rsound's left channel.

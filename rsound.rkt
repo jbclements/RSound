@@ -31,14 +31,14 @@
 
 (define s&t-list? (listof (list/c rsound? number?)))
 
-(provide/contract [rsound-frames (-> rsound? nonnegative-integer?)]
-                  [channels positive-integer?]
-                  [assemble (-> s&t-list? rsound?)]
+(provide/contract 
                   ;; for testing...
                   [sound-list-total-frames (-> s&t-list? number?)]
 )
 
 (provide (struct-out rsound)
+         rsound-frames
+         channels
          play
          signal?
          signal-play
@@ -61,6 +61,7 @@
          clip
          rs-append
          rs-append*
+         assemble
          default-sample-rate
          mono-signal->rsound
          signals->rsound
