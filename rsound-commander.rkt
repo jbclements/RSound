@@ -35,7 +35,7 @@
 ;; play it back at the current sample rate.
 (define (buffer-play s16vec sample-rate)
   (pa-maybe-initialize)
-  (define sndinfo-record (make-sndplay-record s16vec))
+  (define sndinfo-record (make-copying-info s16vec))
   (define stream (open-rsound-stream copying-callback
                                      sndinfo-record
                                      sample-rate))
