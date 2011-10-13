@@ -17,6 +17,8 @@
 (define sample-rate? positive-integer?)
 
 (provide/contract (buffer-play (-> s16vector?
+                                   exact-integer?
+                                   (or/c false? exact-integer?)
                                    sample-rate?
                                    void?))
                   #;(buffer-loop (-> cpointer?
@@ -25,50 +27,17 @@
                                    void?))
                   [signal->signal/block/unsafe
                    (-> procedure? procedure?)]
-                  (signal/block-play (-> any/c sample-rate? void?))
-                  (signal/block-play/unsafe (-> any/c sample-rate? void?))
-                  (stop-playing (-> void?))
+                  [signal/block-play (-> any/c sample-rate? void?)]
+                  [signal/block-play/unsafe (-> any/c sample-rate? void?)]
+                  [stop-playing (-> void?)]
                   [channels positive-integer?])
 
 
-;; given an s16-vector containing interlaced 2-channel samples,
-;; play it back at the current sample rate.
-(define (buffer-play s16vec sample-rate)
-  (pa-maybe-initialize)
-  (define sndinfo-record (make-copying-info s16vec))
-  (define stream (open-rsound-stream copying-callback
-                                     sndinfo-record
-                                     sample-rate))
-  (pa-set-stream-finished-callback stream copying-info-free)
-  (pa-start-stream stream)
-  (async-channel-put
-   live-stream-channel
-   (lambda () (pa-stop-stream stream))))
 
 ;; channels... don't change this, unless 
 ;; you also change the copying-callback.
 (define channels 2)
 
-(define (open-rsound-stream callback closure-info-ptr sample-rate)
-  (define sample-rate/i (exact->inexact sample-rate))
-  (pa-open-default-stream
-   0             ;; input channels
-   channels      ;; output channels
-   'paInt16      ;; sample format
-   sample-rate/i ;; sample rate
-   256           ;;frames-per-buffer
-   callback      ;; callback (NULL means just wait for data)
-   closure-info-ptr))
-
-
-;; check-below-threshold : rsound threshhold -> (void)
-;; signals an error if any sample is above the threshold
-;; IRRELEVANT IN THE S16INT WORLD
-#;(define (check-below-threshold buffer frames threshold)
-  (for ([i (in-range (* channels frames))])
-    (when (> (ptr-ref buffer _float i) threshold)
-      (error 'check-below-threshold "sound contains samples above threshold ~s."
-             threshold))))
 
 ;; STOPPING PLAYBACK
 (define (stop-playing)
@@ -84,7 +53,18 @@
     [thunk (thunk)
            (call-all-stop-thunks)]))
 
+;; a wrapper for portaudio's s16vec-play, that
+;; saves a stopper in the global channel
+(define (buffer-play s16vec start stop sample-rate)
+  (match-define (list stream-time stop-sound)
+    (s16vec-play s16vec start stop sample-rate))
+  (async-channel-put 
+   live-stream-channel
+   (lambda () (stop-sound))))
 
+;; a wrapper for portaudio's signal/block-play, that
+;; uses the default buffer size and saves a stopper
+;; in the global channel
 (define (signal/block-play block-filler sample-rate)
   (match-define (list stream-time stop-sound)
     (stream-play block-filler default-buffer-frames sample-rate))
@@ -92,6 +72,9 @@
    live-stream-channel
    (lambda () (stop-sound))))
 
+;; a wrapper for portaudio's signal/block-play/unsafe, that
+;; uses the default buffer size and saves a stopper
+;; in the global channel
 (define (signal/block-play/unsafe block-filler sample-rate)
   (match-define (list stream-time stop-sound)
     (stream-play/unsafe block-filler default-buffer-frames sample-rate))
@@ -99,6 +82,11 @@
    live-stream-channel
    (lambda () (stop-sound))))
 
+;; given a signal, produces a signal/block/unsafe;
+;; that is, a function that can fill a full buffer on
+;; each call. Note that this is pretty inefficient, 
+;; because it makes a call to the signal function for
+;; every sample; you can do a lot better....
 (define (signal->signal/block/unsafe signal)
   (define (signal/block/unsafe ptr frames idx)
     (define base-t (* frames idx))

@@ -23,7 +23,7 @@
 
 ;; a rsound is (rsound rdata positive-integer)
 (provide (struct-out rsound))
-(struct rsound (data sample-rate) 
+(struct rsound (data start stop sample-rate) 
   #:transparent
   ;#:property prop:equal+hash
   ;(list rsound=? rsound-hash-1 rsound-hash-2)
@@ -99,7 +99,7 @@
 
 
 (define (rsound-frames rsound)
-  (/ (s16vector-length (rsound-data rsound)) 2))
+  (- (rsound-stop rsound) (rsound-start rsound)))
 
 ;; an rdata is either
 ;; an s16vector, 
@@ -111,7 +111,9 @@
           (rsound-frames r2))
        (= (rsound-sample-rate r1)
           (rsound-sample-rate r2))
-       (s16vector-equal? (rsound-data r1) (rsound-data r2))))
+       (for/and ([i (in-range (rsound-frames r1))])
+         (and (= (rsound-ith/left/s16 r1) (rsound-ith/left/s16 r2))
+              (= (rsound-ith/right/s16 r1) (rsound-ith/right/s16 r2))))))
 
 (define (s16vector-equal? v1 v2)
   (and (= (s16vector-length v1)
