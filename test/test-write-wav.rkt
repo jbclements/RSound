@@ -14,23 +14,51 @@
 (define sound-len 32114)
 (define test-samplerate 30022)
 (define r (parameterize ([default-sample-rate test-samplerate])
-            (make-tone 882 0.20 sound-len)))
+            (noise sound-len)))
 
-(check-equal? (rs-ith/left/s16 r 0) 0)
-(check-= (rs-ith/left/s16 r 27) (round (* 0.2 s16max (sin (* twopi 882 (/ 27 test-samplerate))))) 5.0)
-(check-= (rs-ith/right/s16 r 27) (round (* 0.2 s16max (sin (* twopi 882 (/ 27 test-samplerate))))) 5.0)
-
-(define temp-filename (make-temporary-file))
-(write-sound/s16vector (rsound-data r) (rsound-sample-rate r) (path->string temp-filename))
+(let ()
+  (define temp-filename (make-temporary-file))
+(write-sound/s16vector (rsound-data r) (rsound-start r) 
+                       (rsound-stop r) (rsound-sample-rate r) (path->string temp-filename))
 
 (check-equal? (rs-read-frames temp-filename) sound-len)
 (check-equal? (rs-read-sample-rate temp-filename) test-samplerate)
 
-(define s (apply rsound (read-sound/s16vector (path->string temp-filename) 0 #f)))
+(define s 
+  (apply rsound/all 
+         (read-sound/s16vector (path->string temp-filename) 0 #f)))
 
 (check-true
  (for/and ([i (in-range sound-len)])
    (and (= (rs-ith/left/s16 r i) (rs-ith/left/s16 s i))
-        (= (rs-ith/right/s16 r i) (rs-ith/right/s16 s i))))))))
+        (= (rs-ith/right/s16 r i) (rs-ith/right/s16 s i))))))
+  
+(let ()
+  (define start 10001)
+  (define stop  19934)
+  (define temp-filename (make-temporary-file))
+  (write-sound/s16vector (rsound-data r)  start stop
+                         (rsound-sample-rate r)
+                         (path->string temp-filename))
+
+(check-equal? (rs-read-frames temp-filename) (- stop start))
+(check-equal? (rs-read-sample-rate temp-filename) test-samplerate)
+
+(define s 
+  (apply rsound/all 
+         (read-sound/s16vector (path->string temp-filename) 0 #f)))
+
+(check-true
+ (for/and ([i (in-range (- stop start))])
+   (and (= (rs-ith/left/s16 r (+ start i)) (rs-ith/left/s16 s i))
+        (= (rs-ith/right/s16 r (+ start i)) (rs-ith/right/s16 s i))))))
+  
+  ;; test case for partial write:
+  
+  
+  
+  
+  
+  )))
 
 

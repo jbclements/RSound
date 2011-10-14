@@ -1,6 +1,12 @@
 #lang racket
+;;#lang typed/racket
 
 (require ffi/vector)
+#;(require/typed ffi/vector
+               [s16vector? (Any -> Bool)]
+               [s16vector-length (S16Vector -> Nat)]
+               [s16vector-ref (S16Vector Nat -> Nat)]
+               [opaque ])
 
 ;; write-wav
 
@@ -8,13 +14,20 @@
 
 (provide write-sound/s16vector)
 
+#;(define-type ChunkContent 
+  (U (List Bytes (Listof Chunk))
+     Bytes
+     S16Vector))
+
 ;; a chunk is (chunk 4-byte-string chunk-content)
 (struct chunk (id content))
+(struct vector-chunk (vec start stop))
+#;(struct: Chunk ([id : String] [content : ChunkContent]))
 
 ;; a chunk-content is either 
 ;; - (list/c byte-string (listof chunk)), or 
 ;; - a byte-string, or
-;; - an s16vector
+;; - an (list/c s16vector number number)
 
 ;; constants shared with read-wav:
 
@@ -25,10 +38,10 @@
 (define global-samplemax (exact->inexact #x8000))
 
 ;; write-sound/s16vector
-(define (write-sound/s16vector data sample-rate path)
+(define (write-sound/s16vector data start stop sample-rate path)
   (call-with-output-file* path
     (lambda (port)
-      (write-chunk (make-chunk data sample-rate) port))
+      (write-chunk (make-chunk (vector-chunk data start stop) sample-rate) port))
     #:exists 'truncate))
 
 ;; turn an rsound into a writable chunk
@@ -62,9 +75,12 @@
     [(list fmt-bytes (? list? elts)) (display fmt-bytes port)
                                      (for-each (lambda (chunk) (write-chunk chunk port)) elts)]
     [(? bytes? bs) (display bs port)]
-    ;; this one could be much faster...:
-    [(? s16vector? vec) (for ([i (in-range (s16vector-length vec))])
-                          (display (integer->integer-bytes (s16vector-ref vec i) 2 #t #f) port))]))
+    ;; this one could be much faster I think....
+    [(vector-chunk vec start stop) 
+     (for ([i (in-range start stop)])
+       (define sample (* i global-numchannels))
+       (display (integer->integer-bytes (s16vector-ref vec sample) 2 #t #f) port)
+       (display (integer->integer-bytes (s16vector-ref vec (add1 sample)) 2 #t #f) port))]))
 
 ;; figure out how long a chunk will be in bytes
 (define (chunk-display-len chunk)
@@ -75,4 +91,6 @@
   (match content
     [(list fmt-bytes (? list? elts)) (+ (bytes-length fmt-bytes) (apply + (map chunk-display-len elts)))]
     [(? bytes? bs) (bytes-length bs)]
-    [(? s16vector? vec) (* 2 (s16vector-length vec))]))
+    [(vector-chunk vec start stop) (* global-bytespersample
+                                      (* global-numchannels
+                                         (- stop start)))]))

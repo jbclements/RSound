@@ -11,8 +11,6 @@
 (define simple-tone
   (make-tone 440 0.2 src-buf-len))
 
-(define s16-size 2)
-
 (define data-ptr (s16vector->cpointer (rsound-data simple-tone)))
 ;; it comes out even on this many samples:
 (define sine-wave-len 8820)
@@ -38,6 +36,7 @@
 
 
 
+(printf "playing signal for 7 seconds\n")
 (signal/block-play/unsafe simple-signal/block/s16 44100)
-(sleep 22)
+(sleep 7)
 (stop)

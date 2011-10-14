@@ -58,6 +58,7 @@
            (second l) (third l) (rsound-frames (first l))))
   l)
 
+#|
 (define well (rs-read/clip "/tmp/higher-ground.wav" 0 (* 20 44100)))
 
 (define b (box (list well (* 1 44100) (* 3 44100))))
@@ -65,6 +66,7 @@
 (match-define (list timer stopper)
   (signal/block-play/unsafe (loop->signal/block/unsafe b) 44100))
 
-(define (updatest))
+#;(define (updatest))
  
 
+|#

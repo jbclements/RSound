@@ -12,9 +12,6 @@
 
 (provide (all-defined-out))
 
-
-(define s16-size 2)
-
 ;; 
 #;(define (rsound-play-at-intervals rsound interval)
   (define rsound-len (rsound-frames rsound))

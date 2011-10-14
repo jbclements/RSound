@@ -4,6 +4,7 @@
          "test-draw.rkt"
          "test-frequency-response.rkt"
          "test-playing.rkt"
+         "test-playing-signal-block.rkt"
          ;; just load it:
          "../drum-samples.rkt")
 

@@ -19,8 +19,6 @@
          abs-max-from
          phase)
 
-(define s16max #x7fff)
-
 ;; make-sound-drawing-callback 
 ;;  : (nat -> real) (nat->real) nat nat nat -> canvas dc -> void
 (define (make-sound-drawing-callback left-getter right-getter vec-len data-left

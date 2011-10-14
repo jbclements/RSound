@@ -10,7 +10,6 @@
 
 
 (define twopi (* 2 pi))
-(define s16max #x7fff)
 
 (define (sine-wave pitch sample-rate volume)
   (let ([scalar (* twopi pitch)])
@@ -193,7 +192,12 @@
 
 ;; rsound-clip
 
+  (check-equal? (rsound-start test-rsound) 0)
+  (check-equal? (rsound-stop test-rsound) 100)
 (let ([shorter-test (clip test-rsound 30 60)])
+  (printf "s: ~s\n" shorter-test)
+  (check-equal? (rsound-start shorter-test) 30)
+  (check-equal? (rsound-stop shorter-test) 60)
   (check-equal? (rsound-frames shorter-test) 30)
   (check-equal? (rsound-sample-rate shorter-test) 44100)
   (check-equal? (rs-ith/left/s16 shorter-test 6)

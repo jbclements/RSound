@@ -55,9 +55,8 @@
 
 ;; a wrapper for portaudio's s16vec-play, that
 ;; saves a stopper in the global channel
-(define (buffer-play s16vec start stop sample-rate)
-  (match-define (list stream-time stop-sound)
-    (s16vec-play s16vec start stop sample-rate))
+(define (buffer-play s16vec start finish sample-rate)
+  (define stop-sound (s16vec-play s16vec start finish sample-rate))
   (async-channel-put 
    live-stream-channel
    (lambda () (stop-sound))))

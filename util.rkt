@@ -16,24 +16,21 @@ rsound-max-volume
 (require "rsound.rkt"
          "fft.rkt"
          racket/flonum
-         racket/runtime-path
          ffi/vector
-         racket/unsafe/ops
          (for-syntax syntax/parse))
 
 (define twopi (* 2 pi))
 
-(define s16max #x7fff)
 
 (provide/contract [scale (-> number? rsound? rsound?)])
 
-(provide twopi 
-         s16max
+(provide twopi
          sine-wave
          sawtooth-wave
          approx-sawtooth-wave
          square-wave
          harm3-wave
+         noise
          ;; functions on numbers
          thresh
          ;; envelope-funs
@@ -95,10 +92,6 @@ rsound-max-volume
 ;; rsound-scale : number rsound -> rsound
 (define (scale scalar rsound)
   (rsound-map (lambda (x) (* x scalar)) rsound))
-
-
-
-
 
 
 ;; given a length and a function, build the corresponding flvector
@@ -247,11 +240,10 @@ rsound-max-volume
       (match (hash-ref tone-table key #f)
         ;; 
         [#f (compute-and-store)]
-        [(and s (struct rsound (data sample-rate)))
+        [(and s (struct rsound (data start stop sample-rate)))
          (let ()
-           (define stored-frames (/ (s16vector-length data) channels))
+           (define stored-frames (rsound-frames s))
            (cond [(= frames stored-frames) s]
-                 ;; opportunity for real laziness here:
                  [(< frames stored-frames) (clip s 0 frames)]
                  [else (compute-and-store)]))]))))
 
@@ -350,7 +342,7 @@ rsound-max-volume
     (for ([i (in-range len)])
       (s16vector-set! newvec (* 2 i)        (inexact->exact (round (* scaling (real-part (vector-ref leftvec i))))))
       (s16vector-set! newvec (add1 (* 2 i)) (inexact->exact (round (* scaling (real-part (vector-ref rightvec i)))))))
-    (rsound newvec sample-rate)))
+    (rsound newvec 0 len sample-rate)))
 
 
 ;; ADSR envelope (actually more of an ADS envelope)
@@ -555,3 +547,12 @@ rsound-max-volume
     [(_ frames:expr timevar:id body:expr ...)
      #'(mono-signal->rsound frames 
                             (lambda (timevar) body ...))]))
+
+
+;; noise
+(define (noise duration)
+  (define samples (* duration channels))
+  (define vec (make-s16vector samples))
+  (for ([i (in-range samples)])
+    (s16vector-set! vec i (- (random (* 2 s16max)) s16max)))
+  (rsound vec 0 duration (default-sample-rate)))

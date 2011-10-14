@@ -26,12 +26,18 @@
 ;; these don't really lend themselves to testing; I suppose if I separated
 ;; the rendering from the drawing...
 
-(define rsound-4samp (rsound (s16vector 0 0 50 50 -50 -50 0 0) 44100))
+(define rsound-4samp (rsound 
+                      (s16vector 0 0 50 50 -50 -50 0 0)
+                      0
+                      4
+                      44100))
 
 (rsound-draw rsound-4samp #:title "4 samples")
 
 (define rsound-800samp (rsound
                         (apply s16vector (build-list 1600 (lambda (i) (inexact->exact (round (* s16max (sin (* 2 pi 3/800 i))))))))
+                        0
+                        800
                         44100))
 
 (rsound-draw rsound-800samp #:width 800 #:title "800 samples")
