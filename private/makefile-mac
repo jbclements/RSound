@@ -1,0 +1,7 @@
+all : buffer-add.dylib
+
+buffer-add.dylib : buffer-add.o
+	raco ctool --ld buffer-add.dylib ++ldf -mmacosx-version-min=10.5 buffer-add.o
+
+buffer-add.o : buffer-add.c
+	raco ctool --cc ++ccf -mmacosx-version-min=10.5 buffer-add.c
