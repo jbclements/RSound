@@ -208,7 +208,14 @@
   (check-= (vf 0) 0 1e-4)
   (check-= (vf 3) 0.5 1e-4)
   (check-= (sf 3) 8.0 1e-4))
-
+  
+  
+(let ()
+  (define s (noise 100))
+  (define t (rearrange 100 (lambda (x) (- 99 x)) s))
+  (for/and ([i (in-range 100)])
+    (and (equal? (rs-ith/left/s16 s i) (rs-ith/left/s16 t (- 99 i)))
+         (equal? (rs-ith/right/s16 s i) (rs-ith/right/s16 t (- 99 i))))))
 
 ;; how much slower is signal?
 ;; answer: negligible; only about 2% slower

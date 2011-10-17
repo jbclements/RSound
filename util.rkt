@@ -31,6 +31,7 @@ rsound-max-volume
          square-wave
          harm3-wave
          noise
+         rearrange
          ;; functions on numbers
          thresh
          ;; envelope-funs
@@ -54,6 +55,8 @@ rsound-max-volume
          make-zugtone
          make-harm3tone
          make-pulse-tone
+         make-square-fade-tone
+         make-sawtooth-fade-tone
          wavefun->tone-maker
          ding
          make-ding
@@ -266,6 +269,11 @@ rsound-max-volume
    (lambda (pitch volume sample-rate)
      (signal-*s (list (dc-signal volume) (square-wave pitch sample-rate))))))
 
+(define make-square-fade-tone
+  (wavefun->tone-maker
+   (lambda (pitch volume sample-rate)
+     (signal-*s (list (dc-signal volume) (fader 88200) (square-wave pitch sample-rate))))))
+
 (define make-zugtone
   (wavefun->tone-maker
    (lambda (pitch volume sample-rate)
@@ -280,6 +288,13 @@ rsound-max-volume
      (signal-*s (list (dc-signal volume)
                       (sawtooth-wave pitch sample-rate))))))
 
+(define make-sawtooth-fade-tone
+  (wavefun->tone-maker 
+   (lambda (pitch volume sample-rate)
+     (signal-*s (list (dc-signal volume)
+                      (fader 88200)
+                      (sawtooth-wave pitch sample-rate))))))
+
 (define (make-pulse-tone duty-cycle)
   (when (not (< 0.0 duty-cycle 1.0))
     (raise-type-error 'make-pulse-tone
@@ -291,7 +306,7 @@ rsound-max-volume
      (define wavelength (/ sample-rate pitch))
      (define on-samples (round (* duty-cycle wavelength)))
      (define total-samples (round wavelength))
-     (define up (* volume 0.5))
+     (define up volume)
      (define down (- up))
      (lambda (i)
        (cond [(< (modulo i total-samples) on-samples) up]
@@ -556,3 +571,15 @@ rsound-max-volume
   (for ([i (in-range samples)])
     (s16vector-set! vec i (- (random (* 2 s16max)) s16max)))
   (rsound vec 0 duration (default-sample-rate)))
+
+;; rearrange
+(define (rearrange frames fun orig)
+  (define samples (* frames channels))
+  (define vec (make-s16vector samples))
+  (for ([i (in-range frames)])
+    (define source (fun i))
+    (s16vector-set! vec (* channels i) 
+                    (rs-ith/left/s16 orig source))
+    (s16vector-set! vec (add1 (* channels i)) 
+                    (rs-ith/right/s16 orig source)))
+  (rsound vec 0 frames (default-sample-rate)))
