@@ -12,19 +12,7 @@
 
 (provide (all-defined-out))
 
-;; 
-#;(define (rsound-play-at-intervals rsound interval)
-  (define rsound-len (rsound-frames rsound))
-  (define the-signal
-    (lambda (t)
-      (define t-rel (modulo t interval))
-      (cond [(< t-rel (rsound-frames rsound)) (rsound-ith/left rsound t-rel)]
-            [else 0])))
-  (signal-play the-signal (rsound-sample-rate rsound)))
 
-#;(signal-play (sine-wave 440 44100) 4100)
-
-#;(rsound-play-at-intervals ding 4100)
 
 ;; an entry is a vector of an rsound, a start frame, and an end frame.
 (struct entry (sound start finish) #:transparent)
@@ -91,7 +79,7 @@
   (define copy-len (- copy-finish copy-start))
   (define copy-len-samples (* copy-len channels))
   ;; relative to source buffer:
-  (define src-start (- copy-start start))
+  (define src-start (+ (rsound-start sound) (- copy-start start)))
   (define src-start-ptr (ptr-add (s16vector->cpointer (rsound-data sound))
                                  (* channels src-start)
                                  _sint16))
@@ -141,7 +129,7 @@
 (let ()
   
   (define tgt (make-s16vector (* channels 10) 15))
-  (define src1 (rsound (make-s16vector (* channels 200) 1) 44100))
+  (define src1 (rsound (make-s16vector (* channels 200) 1) 0 200 44100))
   (define entry1 (entry src1 50 250))
   (define entry2 (entry src1 65 265))
   (combine-onto! (s16vector->cpointer tgt)
@@ -216,7 +204,7 @@
 
 
 (let ()
-  (define src1 (rsound (make-s16vector (* channels 200) 1) 44100))
+  (define src1 (rsound (make-s16vector (* channels 200) 1) 0 200 44100))
   (define entry1 (entry src1 50 250))
   (define entry2 (entry src1 65 265))
   (define dst1 (make-s16vector (* channels 10) 0))
@@ -233,21 +221,21 @@
                                              2 2 2 2 2 2 2 2 2 2))
   
   (define dst3 (make-s16vector 20 0))
-  (define src3 (rsound (make-s16vector 10 2) 44100))
+  (define src3 (rsound (make-s16vector 10 2) 1 5 44100))
   (define entry3 (entry src3 70 75))
   (add-from-buf! (s16vector->cpointer dst3) 68 10 entry1)
-  (add-from-buf! (s16vector->cpointer dst3) 68 10 entry3)
+  (add-from-buf! (s16vector->cpointer dst3) 68 9 entry3)
   (check-equal? (s16vector->list dst3) (list 1 1 1 1 
-                                             3 3 3 3 3 3 3 3 3 3
-                                             1 1 1 1 1 1))
+                                             3 3 3 3 3 3 3 3
+                                             1 1 1 1 1 1 1 1))
 
   
   )
 
 (let ()
-  (define s1 (rsound (make-s16vector 20 2) 44100))
-  (define s2 (rsound (make-s16vector 4 3) 44100))
-  (define s3 (rsound (make-s16vector 30 4) 44100))
+  (define s1 (rsound (make-s16vector 20 2) 0 10 44100))
+  (define s2 (rsound (make-s16vector 4 3) 0 2 44100))
+  (define s3 (rsound (make-s16vector 30 4) 0 15 44100))
   (define unplayed-heap (make-unplayed-heap))
   (queue-for-playing! unplayed-heap s1 15)
   (queue-for-playing! unplayed-heap s1 17)
