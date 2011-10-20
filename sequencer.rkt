@@ -222,9 +222,9 @@
   
   (define dst3 (make-s16vector 20 0))
   (define src3 (rsound (make-s16vector 10 2) 1 5 44100))
-  (define entry3 (entry src3 70 75))
+  (define entry3 (entry src3 70 74))
   (add-from-buf! (s16vector->cpointer dst3) 68 10 entry1)
-  (add-from-buf! (s16vector->cpointer dst3) 68 9 entry3)
+  (add-from-buf! (s16vector->cpointer dst3) 68 10 entry3)
   (check-equal? (s16vector->list dst3) (list 1 1 1 1 
                                              3 3 3 3 3 3 3 3
                                              1 1 1 1 1 1 1 1))

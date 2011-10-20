@@ -39,9 +39,9 @@
   
   (define pulse-12.5 (make-pulse-tone 0.125))
   (define short-pulse  (pulse-12.5 441 0.2 50))
-  (check-= (rs-ith/left short-pulse 0) 0.1 1e-4)
-  (check-= (rs-ith/left short-pulse 11) 0.1 1e-4)
-  (check-= (rs-ith/left short-pulse 13) -0.1 1e-4)
+  (check-= (rs-ith/left short-pulse 0) 0.2 1e-4)
+  (check-= (rs-ith/left short-pulse 11) 0.2 1e-4)
+  (check-= (rs-ith/left short-pulse 13) -0.2 1e-4)
 
 
 ;; overlay*
@@ -216,6 +216,16 @@
   (for/and ([i (in-range 100)])
     (and (equal? (rs-ith/left/s16 s i) (rs-ith/left/s16 t (- 99 i)))
          (equal? (rs-ith/right/s16 s i) (rs-ith/right/s16 t (- 99 i))))))
+  
+  ;; RS-MAP
+  (let ()
+    (define s (noise 50))
+    (define t (rs-map/idx (lambda (s i)
+                            (* s (/ i 50)))
+                          s))
+    (for/and ([i (in-range 50)])
+      (and (equal? (* (/ i 50) (rs-ith/left s i)) (rs-ith/left t i))
+           (equal? (* (/ i 50) (rs-ith/right s i)) (rs-ith/right t i)))))
 
 ;; how much slower is signal?
 ;; answer: negligible; only about 2% slower

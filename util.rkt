@@ -22,9 +22,10 @@ rsound-max-volume
 (define twopi (* 2 pi))
 
 
-(provide/contract [scale (-> number? rsound? rsound?)])
-
-(provide twopi
+(provide rs-map
+         rs-map/idx
+         scale
+         twopi
          sine-wave
          sawtooth-wave
          approx-sawtooth-wave
@@ -83,10 +84,16 @@ rsound-max-volume
 
 ;; given a function from numbers to numbers and an rsound, 
 ;; produce a new rsound where every sample is modified 
-;; by applying the given sound.
-(define (rsound-map fun sound)
-  (define (left i) (fun (rs-ith/left sound i)))
-  (define (right i) (fun (rs-ith/right sound i)))
+;; by applying the given function.
+(define (rs-map fun sound)
+  (rs-map/idx (lambda (s i) (fun s)) sound))
+
+;; given a function from sample and index to sample and an rsound,
+;; produce a new rsound where every sample is modified 
+;; by applying the given function
+(define (rs-map/idx fun sound)
+  (define (left i) (fun (rs-ith/left sound i) i))
+  (define (right i) (fun (rs-ith/right sound i) i))
   (parameterize ([default-sample-rate (rsound-sample-rate sound)])
   (signals->rsound (rsound-frames sound)
                    left
@@ -94,7 +101,7 @@ rsound-max-volume
 
 ;; rsound-scale : number rsound -> rsound
 (define (scale scalar rsound)
-  (rsound-map (lambda (x) (* x scalar)) rsound))
+  (rs-map (lambda (x) (* x scalar)) rsound))
 
 
 ;; given a length and a function, build the corresponding flvector
