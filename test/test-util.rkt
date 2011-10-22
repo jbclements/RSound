@@ -218,14 +218,34 @@
          (equal? (rs-ith/right/s16 s i) (rs-ith/right/s16 t (- 99 i))))))
   
   ;; RS-MAP
+  (define (within a b tol)
+    (< (abs (- a b)) tol))
+
   (let ()
     (define s (noise 50))
     (define t (rs-map/idx (lambda (s i)
                             (* s (/ i 50)))
                           s))
-    (for/and ([i (in-range 50)])
-      (and (equal? (* (/ i 50) (rs-ith/left s i)) (rs-ith/left t i))
-           (equal? (* (/ i 50) (rs-ith/right s i)) (rs-ith/right t i)))))
+    (check-true
+     (for/and ([i (in-range 50)])
+       (and (within (* (/ i 50) (rs-ith/left s i)) 
+                    (rs-ith/left t i)
+                    1e-2)
+            (within (* (/ i 50) (rs-ith/right s i))
+                    (rs-ith/right t i)
+                    1e-2)))))
+  
+  (let ()
+    (define s (noise 50))
+    (define t (noise 50))
+    (define u (rs-mult s t))
+    (for/and ([i (in-range 1)])
+      (check-= (rs-ith/left u i) (* (rs-ith/left s i) (rs-ith/left t i)) 1e-2)
+      (check-= (rs-ith/right u i) 
+               (* (rs-ith/right s i) 
+                  (rs-ith/right t i)) 1e-2)))
+  
+
 
 ;; how much slower is signal?
 ;; answer: negligible; only about 2% slower

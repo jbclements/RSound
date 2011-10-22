@@ -25,6 +25,7 @@ rsound-max-volume
 (provide rs-map
          rs-map/idx
          scale
+         rs-mult
          twopi
          sine-wave
          sawtooth-wave
@@ -102,6 +103,33 @@ rsound-max-volume
 ;; rsound-scale : number rsound -> rsound
 (define (scale scalar rsound)
   (rs-map (lambda (x) (* x scalar)) rsound))
+
+
+;; produce a new rsound by multiplying each sample in the
+;; first by each sample in the second. The length and sample
+;; rate are determined by the first, and nonexistent samples
+;; in the second are taken to be zeros.
+(define (rs-mult a b)
+  (define len1 (rsound-frames a))
+  (define len2 (rsound-frames b))
+  (define new-snd
+    (parameterize ([default-sample-rate 
+                     (rsound-sample-rate a)])
+    (silence len1)))
+  (for ([i (in-range (min len1 len2))])
+    (set-rs-ith/left/s16! new-snd
+                          i
+                          (inexact->exact
+                           (floor
+                            (* (rs-ith/left/s16 a i)
+                               (rs-ith/left b i)))))
+    (set-rs-ith/right/s16! new-snd
+                           i
+                           (inexact->exact
+                            (floor
+                             (* (rs-ith/right/s16 a i)
+                                (rs-ith/right b i))))))
+  new-snd)
 
 
 ;; given a length and a function, build the corresponding flvector

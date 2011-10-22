@@ -219,25 +219,35 @@
 
 ;; set the ith frame of the left channel to be new-val
 (define (set-rs-ith/left! sound frame new-val)
-  (rsound-mutator sound frame #t new-val))
+  (rsound-mutator sound frame #t new-val) real->s16)
 
 ;; set the ith frame of the right channel to be new-val
 (define (set-rs-ith/right! sound frame new-val)
-  (rsound-mutator sound frame #f new-val))
+  (rsound-mutator sound frame #f new-val) real->s16)
+
+;; set the ith frame of the left channel to be new-val
+(define (set-rs-ith/left/s16! sound frame new-val)
+  (rsound-mutator sound frame #t new-val  (lambda (x) x)))
+
+;; set the ith frame of the right channel to be new-val
+(define (set-rs-ith/right/s16! sound frame new-val)
+  (rsound-mutator sound frame #f new-val (lambda (x) x)))
+
+
 
 ;; a mutation abstraction:
-(define (rsound-mutator rsound frame left? new-val)
-  (unless (rsound? rsound)
+(define (rsound-mutator rsound frame left? new-val scale-fun)
+  #;(unless (rsound? rsound)
     (raise-type-error 'rsound-mutator "rsound" 0 rsound frame new-val))
-  (unless (nonnegative-integer? frame)
+  #;(unless (nonnegative-integer? frame)
     (raise-type-error 'rsound-mutator "nonnegative integer" 1 rsound frame new-val))
-  (unless (< frame (rsound-frames rsound))
+  #;(unless (< frame (rsound-frames rsound))
     (raise-type-error 'rsound-mutator (format "frame index less than available # of frames ~s" (rsound-frames rsound)) 1 rsound frame new-val))
-  (unless (real? new-val)
+  #;(unless (real? new-val)
     (raise-type-error 'rsound-mutator "real number" 2 rsound frame new-val))
   (s16vector-set! (rsound-data rsound)
                   (frame->sample (+ (rsound-start rsound) frame) left?)
-                  (real->s16 new-val)))
+                  (scale-fun new-val)))
 
 ;; translate a frame number and a channel into a sample number
 (define (frame->sample f left?)
@@ -324,21 +334,24 @@
 ;; N.B.: currently, summing to larger amplitudes will just wrap.
 (define (assemble sound&times)
   (same-sample-rate-check (map car sound&times))
-  (let* ([total-frames (inexact->exact (round (sound-list-total-frames sound&times)))]
+  (let* ([total-frames (inexact->exact (ceiling (sound-list-total-frames sound&times)))]
          [cblock (make-s16vector (* total-frames rc:channels))])
     (memset (s16vector->cpointer cblock) 0 #x00 (* total-frames rc:channels) _sint16)
     (for ([s&t (in-list sound&times)])
       (match-define (list sound offset) s&t)
       (match-define (rsound s16vec start stop sample-rate) sound)
       (define frames (rsound-frames sound))
-      (define dst-offset (* rc:channels (inexact->exact (round offset))))
+      (when (< (inexact->exact (floor offset)) 0)
+        (error 'assemble "given target offset less than zero: ~s" 
+               offset))
+      (define dst-offset (* rc:channels (inexact->exact (floor offset))))
       (define src-offset (* rc:channels start))
       (define num-samples (* rc:channels frames))
-      (s16buffer-add!/c (ptr-add (s16vector->cpointer cblock)
-                                 (* s16-size dst-offset))
-                        (ptr-add (s16vector->cpointer s16vec)
-                                 (* s16-size src-offset))
-                        num-samples))
+      (define p1 (ptr-add (s16vector->cpointer cblock)
+                          (* s16-size dst-offset)))
+      (define p2 (ptr-add (s16vector->cpointer s16vec)
+                          (* s16-size src-offset)))
+      (s16buffer-add!/c p1 p2 num-samples))
     (rsound cblock 0 total-frames (rsound-sample-rate (caar sound&times)))))
 
 
