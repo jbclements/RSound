@@ -219,11 +219,11 @@
 
 ;; set the ith frame of the left channel to be new-val
 (define (set-rs-ith/left! sound frame new-val)
-  (rsound-mutator sound frame #t new-val) real->s16)
+  (rsound-mutator sound frame #t new-val real->s16))
 
 ;; set the ith frame of the right channel to be new-val
 (define (set-rs-ith/right! sound frame new-val)
-  (rsound-mutator sound frame #f new-val) real->s16)
+  (rsound-mutator sound frame #f new-val real->s16))
 
 ;; set the ith frame of the left channel to be new-val
 (define (set-rs-ith/left/s16! sound frame new-val)
