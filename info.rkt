@@ -9,8 +9,8 @@
 
 (define scribblings '(("rsound.scrbl" () (tool))))
 (define categories '(media))
-(define version "2011-09-25-22:57")
-(define release-notes '((p "fix portaudio ref again, sigh")))
+(define version "2011-11-04-14:51")
+(define release-notes '((p "add waveforms from AdventureKid")))
 
 ;; don't compile the stuff in the contrib subdirectory.
 (define compile-omit-paths '("contrib"))

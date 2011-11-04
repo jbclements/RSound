@@ -5,23 +5,53 @@
          "envelope.rkt"
          racket/match
          (for-syntax racket/base)
-         (for-syntax syntax/parse))
+         (for-syntax syntax/parse)
+         racket/runtime-path
+         rackunit)
 
 (provide synth-note)
 
+(define-runtime-path main-wave-path "./contrib/AKWF_0001/")
+(define-runtime-path vgame-wave-path "./contrib/AKWF_vgame/")
 ;; single-cycle-sounds with envelope
 
-(define wave (rs-read "/tmp/AKWF/AKWF_0001/AKWF_0066.wav"))
-(define native-len (rsound-frames wave))
-(define native-pitch (/ 44100 300))
+
+
 
 (define single-cycle-table (make-hash))
 
-;; TWO-ARG MEMOIZATION
+;; 1-4-ARG MEMOIZATION
 ;; (I would use Dave Herman's planet package, but the dependencies
 ;; are deadly)
+;; no time right now to abstract this over # of args
 (define-syntax (define/memo stx)
   (syntax-parse stx
+    [(_ (name:id arg1:id arg2:id arg3:id arg4:id)
+        body:expr ...)
+     #`(define name
+         (let ()
+           (define the-hash (make-hash))
+           (lambda (arg1 arg2 arg3 arg4)
+             (define hash-key (list arg1 arg2 arg3 arg4))
+             (define hash-lookup (hash-ref the-hash hash-key #f))
+             (cond [(not hash-lookup)
+                    (define result (let () body ...))
+                    (hash-set! the-hash hash-key result)
+                    result]
+                   [else hash-lookup]))))]
+    [(_ (name:id arg1:id arg2:id arg3:id)
+        body:expr ...)
+     #`(define name
+         (let ()
+           (define the-hash (make-hash))
+           (lambda (arg1 arg2 arg3)
+             (define hash-key (list arg1 arg2 arg3))
+             (define hash-lookup (hash-ref the-hash hash-key #f))
+             (cond [(not hash-lookup)
+                    (define result (let () body ...))
+                    (hash-set! the-hash hash-key result)
+                    result]
+                   [else hash-lookup]))))]
     [(_ (name:id arg1:id arg2:id)
         body:expr ...)
      #`(define name
@@ -34,7 +64,52 @@
                     (define result (let () body ...))
                     (hash-set! the-hash hash-key result)
                     result]
+                   [else hash-lookup]))))]
+    [(_ (name:id arg1:id)
+        body:expr ...)
+     #`(define name
+         (let ()
+           (define the-hash (make-hash))
+           (lambda (arg1)
+             (define hash-key arg1)
+             (define hash-lookup (hash-ref the-hash hash-key #f))
+             (cond [(not hash-lookup)
+                    (define result (let () body ...))
+                    (hash-set! the-hash hash-key result)
+                    result]
                    [else hash-lookup]))))]))
+
+(define/memo (sc i)
+  (rs-read
+   (build-path
+    main-wave-path 
+    (format "AKWF_~a.wav"
+            (pad-to-4 i)))))
+
+(define/memo (sc/vgame i)
+  (rs-read
+   (build-path
+    vgame-wave-path 
+    (format "AKWF_vgame_~a.wav"
+            (pad-to-4 i)))))
+
+(define/memo (sc/path path)
+  (rs-read path))
+
+(define (wave-lookup family spec)
+  (match family
+    ["main" (sc spec)]
+    ["vgame" (sc/vgame spec)]
+    ["path" (sc/path spec)]))
+
+(define (pad-to-4 n)
+  (define s (number->string n))
+  (define spaces
+    (for/list ([i (in-range (-  4 (string-length s)))])
+      #\0))
+  (string-append (apply string spaces) s))
+
+(check-equal? (pad-to-4 3) "0003")
 
 
 ;; given a factor and a sound, resample the sound (using simple rounding)
@@ -74,12 +149,16 @@
 
 (define my-env (adsr/exp 200 0.5 2000 0.25 1000))
 
-(define/memo (synth-note note-num duration)
+(define/memo (synth-note family wave-spec note-num duration)
+  (define wave (wave-lookup family wave-spec))
+  (define native-pitch (/ 44100.0 (rsound-frames wave)))
   (define env (my-env (floor duration)))
   (define pitch (midi-note-num->pitch note-num))
-  (define single-cycle (resample/memo (/ pitch native-pitch) wave))
+  (define single-cycle 
+    (resample/memo (/ pitch native-pitch) wave))
   (define longer (single-cycle->dur single-cycle duration))
   (define result
     (rs-mult env longer))
   result)
 
+#;(play (synth-note "vgame" 89 47 22050))
