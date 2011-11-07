@@ -80,6 +80,7 @@ rsound-max-volume
          raw-square-wave
          raw-sawtooth-wave
          binary-logn
+         up-to-power-of-two
          )
 
 
@@ -515,13 +516,13 @@ rsound-max-volume
 (define (fir-filter params)
   (match params
     [`((,delays ,amplitudes) ...)
-     (unless (andmap (lambda (d) (and (exact-integer? d) (< 0 d))) delays)
+     (unless (andmap (lambda (d) (and (exact-integer? d) (<= 0 d))) delays)
        (raise-type-error 'fir-filter "exact integer delays greater than zero" 0 params))
      (unless (andmap real? amplitudes)
        (raise-type-error 'fir-filter "real number amplitudes" 0 params))
      (lambda (signal)
-       ;; use a minimum vector length of 1:
-       (let* ([max-delay (apply max (cons 1 delays))]
+       ;; enough to hold delayed and current, rounded up to next power of 2:
+       (let* ([max-delay (up-to-power-of-two (+ 1 (apply max delays)))]
               ;; set up buffer to delay the signal
               [delay-buf (make-vector max-delay 0.0)]
               [next-idx 0]
@@ -533,15 +534,20 @@ rsound-max-volume
                     t
                     (add1 last-t)))
            (let ([this-val (signal t)])
-             (begin0
-               (for/fold ([sum this-val])
-                         ([d (in-list delays)]
-                          [a (in-list amplitudes)])
-                         (+ sum (* a (vector-ref delay-buf (modulo (- next-idx d) max-delay)))))
+             (begin
                (vector-set! delay-buf next-idx this-val)
+               (define result
+                 (for/fold ([sum 0])
+                   ([d (in-list delays)]
+                    [a (in-list amplitudes)])
+                   (+ sum (* a (vector-ref delay-buf (modulo (- next-idx d) max-delay))))))
                (set! last-t (add1 last-t))
-               (set! next-idx (modulo (add1 next-idx) max-delay)))))))]
+               (set! next-idx (modulo (add1 next-idx) max-delay))
+               result)))))]
     [other (raise-type-error 'fir-filter "(listof (list number number))" 0 params)]))
+
+(define (up-to-power-of-two n)
+  (inexact->exact (expt 2 (ceiling (/ (log (max n 1)) (log 2))))))
 
 ;; IIR filters
 

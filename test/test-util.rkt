@@ -166,7 +166,7 @@
 
 (define (mush x) (/ (round (* x s16max)) s16max))
 
-(let* ([my-filter (fir-filter '((13 0.2) (5 0.1)))]
+(let* ([my-filter (fir-filter '((0 1.0) (13 0.2) (5 0.1)))]
        [test-sound (mono-signal->rsound 100 (my-filter (lambda (x) (/ x 500))))])
   (check-= (rs-ith/right test-sound 0) 0 1e-7)
   (check-= (rs-ith/right test-sound 1) (mush 1/500) 1e-7)
@@ -245,6 +245,10 @@
                (* (rs-ith/right s i) 
                   (rs-ith/right t i)) 1e-2)))
   
+  
+  
+(check-equal? (up-to-power-of-two 34) 64)
+(check-equal? (up-to-power-of-two 0) 1)
 
 
 ;; how much slower is signal?
