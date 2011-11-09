@@ -70,6 +70,7 @@ rsound-max-volume
          vectors->rsound
          fir-filter
          iir-filter
+         lti-filter
          rsound-fft/left
          rsound-fft/right
          rsound-max-volume
@@ -563,8 +564,7 @@ rsound-max-volume
      (unless (andmap real? amplitudes)
        (raise-type-error 'iir-filter "real number amplitudes" 0 params))
      (lambda (signal)
-       ;; use a minimum vector length of 1:
-       (let* ([max-delay (apply max (cons 1 delays))]
+       (let* ([max-delay (up-to-power-of-two (+ 1 (apply max delays)))]
               ;; set up buffer to delay the signal
               [delay-buf (make-vector max-delay 0.0)]
               [next-idx 0]
@@ -586,6 +586,34 @@ rsound-max-volume
                (set! last-t (add1 last-t))
                (set! next-idx (modulo (add1 next-idx) max-delay)))))))]
     [other (raise-type-error 'iir-filter "(listof (list number number))" 0 params)]))
+
+;; lti-filter : rsound (listof (list/c number? number?)) (listof (list/c number? number?)) -> rsound
+;; given coefficients for an FIR and an IIR filter, apply
+;; the given filter to the sound.
+(define (lti-filter snd fir-coefficients iir-coefficients)
+  (unless (rsound? snd)
+    (raise-type-error 'lti-filter "rsound" 0 snd fir-coefficients iir-coefficients))
+  (unless (and (list? fir-coefficients)
+               (andmap (lambda (x) (and (list? x)
+                                        (= (length x) 2)
+                                        (nonnegative-integer? (first x))
+                                        (real? (second x))))
+                       fir-coefficients))
+    (raise-type-error 'lti-filter "list of delays and coefficients" 1 
+                      snd fir-coefficients iir-coefficients))
+  (unless (and (list? iir-coefficients)
+               (andmap (lambda (x) (and (list? x)
+                                        (= (length x) 2)
+                                        (nonnegative-integer? (first x))
+                                        (real? (second x))))
+                       iir-coefficients))
+    (raise-type-error 'lti-filter "list of delays and coefficients" 2
+                      snd fir-coefficients iir-coefficients))
+  (define the-fir (fir-filter fir-coefficients))
+  (define the-iir (iir-filter iir-coefficients))
+  (signals->rsound (rsound-frames snd)
+                   (the-iir (the-fir (rsound->signal/left snd)))
+                   (the-iir (the-fir (rsound->signal/right snd)))))
 
 ;; overlay a list of sounds on top of each other
 (define (overlay* los)

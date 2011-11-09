@@ -3,11 +3,11 @@
 (require "rsound.rkt"
          "util.rkt"
          "envelope.rkt"
+         "contrib/adventure-kid-waveforms.rkt"
          racket/match
          (for-syntax racket/base)
          (for-syntax syntax/parse)
-         racket/runtime-path
-         rackunit)
+         racket/runtime-path)
 
 (provide synth-note)
 
@@ -79,37 +79,12 @@
                     result]
                    [else hash-lookup]))))]))
 
-(define/memo (sc i)
-  (rs-read
-   (build-path
-    main-wave-path 
-    (format "AKWF_~a.wav"
-            (pad-to-4 i)))))
-
-(define/memo (sc/vgame i)
-  (rs-read
-   (build-path
-    vgame-wave-path 
-    (format "AKWF_vgame_~a.wav"
-            (pad-to-4 i)))))
-
-(define/memo (sc/path path)
-  (rs-read path))
-
-(define (wave-lookup family spec)
+(define/memo (wave-lookup family spec)
   (match family
-    ["main" (sc spec)]
-    ["vgame" (sc/vgame spec)]
-    ["path" (sc/path spec)]))
+    ["main" (adventure-kid-waveform #f spec)]
+    ["vgame" (adventure-kid-waveform "vgame" spec)]
+    ["path" (rs-read spec)]))
 
-(define (pad-to-4 n)
-  (define s (number->string n))
-  (define spaces
-    (for/list ([i (in-range (-  4 (string-length s)))])
-      #\0))
-  (string-append (apply string spaces) s))
-
-(check-equal? (pad-to-4 3) "0003")
 
 
 ;; given a factor and a sound, resample the sound (using simple rounding)
@@ -161,4 +136,24 @@
     (rs-mult env longer))
   result)
 
-#;(play (synth-note "vgame" 89 47 22050))
+(define (menu1)
+  (rs-append*
+   (for/list ([i (in-range 100)])
+     (define num (add1 i))
+     (rs-append
+      (synth-note "main" num 47 6000)
+      (cond [(= 0 (modulo num 5)) (silence 11025)]
+            [else (silence 0)])))))
+
+(rs-write (menu1) "/tmp/menu1.wav")
+
+(define (menu2)
+  (rs-append*
+   (for/list ([i (in-range 137)])
+     (define num (add1 i))
+     (rs-append
+      (synth-note "vgame" num 47 6000)
+      (cond [(= 0 (modulo num 5)) (silence 11025)]
+            [else (silence 0)])))))
+
+(rs-write (menu2) "/tmp/menu-vgame.wav")
