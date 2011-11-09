@@ -163,27 +163,24 @@ rsound-max-volume
 ;; (nat nat -> (nat -> fl)) -> (nat nat -> (nat -> fl))
 (define (make-checked-wave-fun raw-wave-fun)
   (let* ([table (build-wavetable raw-wave-fun)]
-         [table-based-fun (make-table-based-wavefun table)])
-    (lambda (pitch sample-rate)
+         [table-based-fun (make-table-based-wavefun table)]
+         [table-sr (default-sample-rate)])
+    (lambda (pitch)
       (when (= 0 pitch)
-        (raise-type-error 'wave-fun "nonzero number" 0 pitch sample-rate))
-      (when (= 0 sample-rate)
-        (raise-type-error 'wave-fun "nonzero number" 1 pitch sample-rate))
-      (cond [(and (= sample-rate (default-sample-rate))
-                  (integer? pitch))         
-             (table-based-fun (inexact->exact pitch) sample-rate)]
+        (raise-type-error 'wave-fun "nonzero number" 0 pitch))
+      (cond [(and (integer? pitch)
+                  (= (default-sample-rate) table-sr))
+             (table-based-fun (inexact->exact pitch) (default-sample-rate))]
             [else
-             (raw-wave-fun pitch sample-rate)]))))
+             (raw-wave-fun pitch (default-sample-rate))]))))
 
 ;; SYNTHESIS OF SINE WAVES
 
 ;; raw-sine-wave : number number -> signal
 ;; given a pitch and a sample rate, produce a sine wave signal
 (define (raw-sine-wave pitch sample-rate)
-  (let ([scalar (* twopi pitch)])
-    (lambda (i)
-      (let ([t (/ i sample-rate)])
-        (sin (* scalar t))))))
+  (define tpisrp (* 2 pi (/ 1 sample-rate) pitch))
+  (lambda (i) (sin (* tpisrp i))))
 
 (define sine-wave (make-checked-wave-fun raw-sine-wave))
 
@@ -293,28 +290,32 @@ rsound-max-volume
    (lambda (pitch volume sample-rate)
      (signal-*s (list (fader 88200)
                       (dc-signal volume)
-                      (harm3-wave pitch sample-rate))))))
+                      (harm3-wave pitch))))))
 
 ;; make a monaural pitch with the given number of frames
 (define make-tone
   (wavefun->tone-maker 
    (lambda (pitch volume sample-rate)
-     (signal-*s (list (dc-signal volume) (sine-wave pitch sample-rate))))))
+     (signal-*s (list (dc-signal volume)
+                      (sine-wave pitch))))))
 
 (define make-squaretone
   (wavefun->tone-maker
    (lambda (pitch volume sample-rate)
-     (signal-*s (list (dc-signal volume) (square-wave pitch sample-rate))))))
+     (signal-*s (list (dc-signal volume)
+                      (square-wave pitch))))))
 
 (define make-square-fade-tone
   (wavefun->tone-maker
    (lambda (pitch volume sample-rate)
-     (signal-*s (list (dc-signal volume) (fader 88200) (square-wave pitch sample-rate))))))
+     (signal-*s (list (dc-signal volume) 
+                      (fader 88200)
+                      (square-wave pitch))))))
 
 (define make-zugtone
   (wavefun->tone-maker
    (lambda (pitch volume sample-rate)
-     (signal-*s (list (frisellinator 8820) #;(fader 88200) (dc-signal volume) (approx-sawtooth-wave pitch sample-rate))))))
+     (signal-*s (list (frisellinator 8820) #;(fader 88200) (dc-signal volume) (approx-sawtooth-wave pitch))))))
 
 
 
@@ -323,14 +324,14 @@ rsound-max-volume
   (wavefun->tone-maker 
    (lambda (pitch volume sample-rate)
      (signal-*s (list (dc-signal volume)
-                      (sawtooth-wave pitch sample-rate))))))
+                      (sawtooth-wave pitch))))))
 
 (define make-sawtooth-fade-tone
   (wavefun->tone-maker 
    (lambda (pitch volume sample-rate)
      (signal-*s (list (dc-signal volume)
                       (fader 88200)
-                      (sawtooth-wave pitch sample-rate))))))
+                      (sawtooth-wave pitch))))))
 
 (define (make-pulse-tone duty-cycle)
   (when (not (< 0.0 duty-cycle 1.0))
@@ -356,7 +357,7 @@ rsound-max-volume
 (define (make-ding pitch)
   (define sample-rate (default-sample-rate))
   (mono-signal->rsound sample-rate
-                       (signal-*s (list (sine-wave pitch sample-rate)
+                       (signal-*s (list (sine-wave pitch)
                                         (dc-signal 0.35)
                                         (fader sample-rate)))))
 

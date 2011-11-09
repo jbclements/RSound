@@ -77,20 +77,22 @@
 
 #;(time 
  (for ([i (in-range 100)])
-   (mono-signal->rsound 44100 (sine-wave 440 44100))))
+   (mono-signal->rsound 44100 (sine-wave 440))))
 
 #;(time
  (for ([i (in-range 100)])
-   (mono-signal->rsound 44100 (sawtooth-wave 440 44100))))
+   (mono-signal->rsound 44100 (sawtooth-wave 440))))
 
-(let ([tr (sawtooth-wave 100 1000)])
+  (parameterize ([default-sample-rate 1000])
+(let ([tr (sawtooth-wave 100)])
   (check-= (tr 0) 0.0 1e-5)
   (check-= (tr 1) 0.2 1e-5)
-  (check-= (tr 5) -1.0 1e-5))
+  (check-= (tr 5) -1.0 1e-5)))
 
 ;; memoizing
 
-(let ([s1 (mono-signal->rsound 200 (signal-*s (list (dc-signal 0.5) (sine-wave 100 44100))))]
+(let ([s1 (mono-signal->rsound 200 (signal-*s (list (dc-signal 0.5) 
+                                                    (sine-wave 100))))]
       [s2 (time (make-tone 100 0.5 441000))]
       [s3 (time (make-tone 100 0.5 441000))])
   (check-= (rs-ith/right/s16 s1 73)
