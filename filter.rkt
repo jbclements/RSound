@@ -303,7 +303,7 @@
                                             perceptible-interval))) 
                                        #f))
 
-(define (dynamic-lpf scale-signal input-signal)
+(define (lpf/dynamic scale-signal input-signal)
   (dynamic-lti-signal
    (lambda (t)
      (define scale (scale-signal t))

@@ -42,11 +42,8 @@
                                      (lambda (t)
                                        (values (flvector) (flvector) 1.0))
                                      0 0 test-sig))))
-  
-  
-  (msr 20 (dynamic-lpf (lambda (x) 0.1) test-sig))
   (check-not-exn
-   (lambda () (msr 20 (dynamic-lpf (lambda (x) 0.1) test-sig))))
+   (lambda () (msr 20 (lpf/dynamic (lambda (x) 0.1) test-sig))))
   
   ;; should be the identity on a dc signal (after a while)
   (let ()
@@ -67,7 +64,7 @@
   
   ;; same test with lpf:
   (check-= (rs-ith/left
-            (msr 200 (dynamic-lpf (lambda (x) 0.34) (lambda (x) 0.5)))
+            (msr 200 (lpf/dynamic (lambda (x) 0.34) (lambda (x) 0.5)))
             199)
            0.5
            1e-3)
@@ -75,7 +72,7 @@
   
   ;; regression testing:
   (check-= (rs-ith/left
-            (msr 20 (dynamic-lpf (lambda (x) 0.1) (lambda (t)
+            (msr 20 (lpf/dynamic (lambda (x) 0.1) (lambda (t)
                                                     (/ t 20))))
             19)
            0.0218

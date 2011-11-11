@@ -16,17 +16,13 @@ write, play, and manipulate sounds. It depends on the @racket[clements/portaudio
 package to provide bindings to the cross-platform `PortAudio' library which appears
 to run on Linux, Mac, and Windows.
 
-Sound playing happens on a separate OS thread. This means that re-running
-the program or interrupting with a "Kill" will not halt the sound. (Use
-@racket[(stop)] for that.)
-
 It represents all sounds internally as stereo 16-bit PCM, with all the attendant
 advantages (speed, mostly) and disadvantages (clipping).
 
 Does it work on your machine? Try this example (and accept my 
 apologies if I forget to update the version number):
 @racketblock[
- (require (planet "main.rkt" ("clements" "rsound.plt" 2 6)))
+ (require (planet "main.rkt" ("clements" "rsound.plt" 2 9)))
   
  (play ding)
  ]
@@ -409,19 +405,26 @@ overhead.
                 22050)]
  }}
 
+@section{Filtering}
 
-not-yet-documented: @racket[(provide twopi 
-         make-tone
-         make-squaretone
-         ding
-         make-ding
-         split-in-4
-         times
-         vectors->rsound
-         echo1
-         fft-complex-forward
-         fft-complex-inverse
-         )]
+
+@defmodule[(planet clements/rsound/frequency-response)]{
+ This module provides a dynamic low-pass filter, among other things.
+ 
+@defproc[(lpf/dynamic [control signal?] [input signal?]) signal?]{
+ The control signal must produce real numbers in the range 0.01 to 3.0. A small
+ number produces a low cutoff frequency. The input signal is the audio signal
+ to be processed. For instance, here's a time-varying low-pass filtered sawtooth:
+ 
+@racketblock[
+ (define (control f) (+ 0.5 (* 0.2 (sin (* f 7.123792865282977e-05)))))
+ (define (sawtooth f) (/ (modulo f 220) 220))
+
+ (play (mono-signal->rsound 88200 (lpf/dynamic control sawtooth)))]
+ 
+ }
+}
+
 
 
 @section{Reporting Bugs}

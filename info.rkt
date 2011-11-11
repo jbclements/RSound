@@ -10,7 +10,7 @@
 (define scribblings '(("rsound.scrbl" () (tool))))
 (define categories '(media))
 (define version "2011-11-04-14:51")
-(define release-notes '((p "add waveforms from AdventureKid")))
+(define release-notes '((p "add low-pass filtering")))
 
 ;; don't compile the stuff in the contrib subdirectory.
 (define compile-omit-paths '("contrib"))
