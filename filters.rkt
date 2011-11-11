@@ -262,12 +262,12 @@
              "expected vector of length ~s for iir-terms, got ~s"
              output-tap-len iir-terms))
     (define fir-sum
-      (for/sum ([i (in-range input-buf-len)])
+      (for/sum ([i (in-range input-tap-len)])
        (fl* (flvector-ref fir-terms i)
             (flvector-ref saved-input-buf 
                           (modulo (- t i 1) input-buf-len)))))
     (define iir-sum
-      (for/sum ([i (in-range output-buf-len)])
+      (for/sum ([i (in-range output-tap-len)])
         (fl* (flvector-ref iir-terms i)
              (flvector-ref saved-output-buf 
                            (modulo (- t i 1) output-buf-len)))))
