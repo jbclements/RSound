@@ -232,6 +232,8 @@
                    (the-iir (the-fir (rsound->signal/left snd)))
                    (the-iir (the-fir (rsound->signal/right snd)))))
 
+(define filter-param-update-interval 32)
+
 ;; we want to be able to change the filter dynamically...
 (define (dynamic-lti-signal param-signal input-tap-len output-tap-len
                             input-signal)
@@ -243,39 +245,48 @@
   (define next-idx 0)
   ;; ugh... we must be called sequentially:
   (define last-t -1)
+  (define saved-fir-terms #f)
+  (define saved-iir-terms #f)
+  (define saved-gain #f)
   (lambda (t)
     (unless (= t (add1 last-t))
       (error 'fir-filter "called with t=~s, expecting t=~s. Sorry about that limitation." 
              t
              (add1 last-t)))
-    (define-values (fir-terms iir-terms gain) (param-signal t))
-    (unless (and (flvector? fir-terms)
-                 (= (flvector-length fir-terms)
-                    input-tap-len))
-      (error 'dynamic-lti-signal 
-             "expected vector of length ~s for fir-terms, got ~s"
-             input-tap-len fir-terms))
-    (unless (and (flvector? iir-terms)
-                 (= (flvector-length iir-terms)
-                    output-tap-len))
-      (error 'dynamic-lti-signal 
-             "expected vector of length ~s for iir-terms, got ~s"
-             output-tap-len iir-terms))
+    ;; only update the filter parameters every 32 samples
+    (when (= (modulo t filter-param-update-interval) 0)
+      (define-values (fir-terms iir-terms gain) (param-signal t))
+      (unless (and (flvector? fir-terms)
+                   (= (flvector-length fir-terms)
+                      input-tap-len))
+        (error 'dynamic-lti-signal 
+               "expected vector of length ~s for fir-terms, got ~s"
+               input-tap-len fir-terms))
+      (unless (and (flvector? iir-terms)
+                   (= (flvector-length iir-terms)
+                      output-tap-len))
+        (error 'dynamic-lti-signal 
+               "expected vector of length ~s for iir-terms, got ~s"
+               output-tap-len iir-terms))
+      (set! saved-fir-terms fir-terms)
+      (set! saved-iir-terms iir-terms)
+      (set! saved-gain gain))
+    
     (define fir-sum
       (for/fold ([sum 0.0])
         ([i (in-range input-tap-len)])
         (fl+ sum
-             (fl* (flvector-ref fir-terms i)
+             (fl* (flvector-ref saved-fir-terms i)
                   (flvector-ref saved-input-buf 
                                 (modulo (- t i 1) input-buf-len))))))
     (define iir-sum
       (for/fold ([sum 0.0])
         ([i (in-range output-tap-len)])
         (fl+ sum
-             (fl* (flvector-ref iir-terms i)
+             (fl* (flvector-ref saved-iir-terms i)
                   (flvector-ref saved-output-buf 
                                 (modulo (- t i 1) output-buf-len))))))
-    (define next-val (fl* gain (exact->inexact (input-signal t))))
+    (define next-val (fl* saved-gain (exact->inexact (input-signal t))))
     (flvector-set! saved-input-buf (modulo t input-buf-len) next-val)
     (define output-val (fl+ next-val (fl+ fir-sum iir-sum)))
     (flvector-set! saved-output-buf (modulo t output-buf-len) output-val)
@@ -324,6 +335,7 @@
 
 (define (flvector-sum vec)
   (for/fold ([sum 0.0]) ([f (in-flvector vec)]) (fl+ sum f)))
+
 
 ;; it looks like 1/100 is close enough not to notice. This
 ;; is totally a guess on my part
