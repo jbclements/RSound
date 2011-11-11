@@ -164,34 +164,6 @@
 
 (check-exn exn:fail? (lambda () (rsound->signal/right 14)))
 
-;; FIR-FILTER
-
-(define (mush x) (/ (round (* x s16max)) s16max))
-
-(let* ([my-filter (fir-filter '((0 1.0) (13 0.2) (5 0.1)))]
-       [test-sound (mono-signal->rsound 100 (my-filter (lambda (x) (/ x 500))))])
-  (check-= (rs-ith/right test-sound 0) 0 1e-7)
-  (check-= (rs-ith/right test-sound 1) (mush 1/500) 1e-7)
-  (check-= (rs-ith/right test-sound 4) (mush 4/500) 1e-7)
-  (check-= (rs-ith/right test-sound 5) (mush (+ 5/500 0/5000)) 1e-7)
-  (check-= (rs-ith/right test-sound 6) (mush (+ 6/500 1/5000)) 1e-7)
-  (check-= (rs-ith/right test-sound 12) (mush (+ 12/500 7/5000)) 1e-7)
-  (check-= (rs-ith/left test-sound 78) (mush (+ 78/500 73/5000 65/2500)) 1e-7))
-
-;; IIR-FILTER
-
-(let* ([my-filter (iir-filter '((13 0.2) (5 0.1)))]
-       [test-sound (mono-signal->rsound 100 (my-filter (lambda (x) (/ x 500))))])
-  (check-= (rs-ith/right test-sound 0) 0 1e-7)
-  (check-= (rs-ith/right test-sound 1) (mush 1/500) 1e-7)
-  (check-= (rs-ith/right test-sound 4) (mush 4/500) 1e-7)
-  (check-= (rs-ith/right test-sound 5) (mush (+ 5/500 0/5000)) 1e-7)
-  (check-= (rs-ith/right test-sound 6) (mush (+ 6/500 1/5000)) 1e-7)
-  (check-= (rs-ith/right test-sound 10) (mush (+ 10/500 5/5000)) 1e-7)
-  ;; now the IIR starts to behave differently:
-    (check-= (rs-ith/right test-sound 11) (mush (+ 11/500 (* 1/10 (+ 6/500 1/5000)))) 1e-7)
-  (check-= (rs-ith/right test-sound 12) (mush (+ 12/500 (* 1/10 (+ 7/500 2/5000)))) 1e-7))
-
 ;; CLIP&SCALE
 
 ;; reduce-volume 
@@ -248,10 +220,6 @@
                   (rs-ith/right t i)) 1e-2)))
   
   
-  
-(check-equal? (up-to-power-of-two 34) 64)
-(check-equal? (up-to-power-of-two 0) 1)
-
 
 ;; how much slower is signal?
 ;; answer: negligible; only about 2% slower

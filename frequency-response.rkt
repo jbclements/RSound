@@ -2,7 +2,7 @@
 
 (require rackunit
          plot
-         "filters.rkt")
+         "filter.rkt")
 
 (provide (except-out (all-defined-out)
                       twopi i))
@@ -12,8 +12,7 @@
 
 ;; draw a plot of the frequency response from min-freq to max-freq:
 (define (response-plot poly min-freq max-freq)
-  (plot (line (lambda (x)
-                (- ((response/mag poly) x) dbrel)))
+  (plot (line (lambda (x) ((response/mag poly) x)))
         #:x-min min-freq
         #:x-max max-freq
         #:width 600))
