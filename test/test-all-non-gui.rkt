@@ -4,6 +4,7 @@
          "test-write-wav.rkt"
          "test-rsound.rkt"
          "test-util.rkt"
+         "test-filter.rkt"
          "test-fft.rkt"
          "test-s16vector-add.rkt"
          "test-sequencer.rkt")

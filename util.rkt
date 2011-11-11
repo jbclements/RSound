@@ -68,9 +68,6 @@ rsound-max-volume
          overlay
          mono
          vectors->rsound
-         fir-filter
-         iir-filter
-         lti-filter
          rsound-fft/left
          rsound-fft/right
          rsound-max-volume
@@ -81,7 +78,6 @@ rsound-max-volume
          raw-square-wave
          raw-sawtooth-wave
          binary-logn
-         up-to-power-of-two
          )
 
 
@@ -511,110 +507,6 @@ rsound-max-volume
 (define (clip&volume volume signal)
   (signal-scale volume (thresh/signal 1.0 signal)))
 
-;; FIR filters
-
-;; fir-filter : (listof (list/c delay amplitude)) -> signal -> signal
-;; filter the input signal using the delay values and amplitudes given for an FIR filter
-(define (fir-filter params)
-  (match params
-    [`((,delays ,amplitudes) ...)
-     (unless (andmap (lambda (d) (and (exact-integer? d) (<= 0 d))) delays)
-       (raise-type-error 'fir-filter "exact integer delays greater than zero" 0 params))
-     (unless (andmap real? amplitudes)
-       (raise-type-error 'fir-filter "real number amplitudes" 0 params))
-     (lambda (signal)
-       ;; enough to hold delayed and current, rounded up to next power of 2:
-       (let* ([max-delay (up-to-power-of-two (+ 1 (apply max delays)))]
-              ;; set up buffer to delay the signal
-              [delay-buf (make-vector max-delay 0.0)]
-              [next-idx 0]
-              ;; ugh... we must be called sequentially:
-              [last-t -1])
-         (lambda (t)
-           (unless (= t (add1 last-t))
-             (error 'fir-filter "called with t=~s, expecting t=~s. Sorry about that limitation." 
-                    t
-                    (add1 last-t)))
-           (let ([this-val (signal t)])
-             (begin
-               (vector-set! delay-buf next-idx this-val)
-               (define result
-                 (for/fold ([sum 0])
-                   ([d (in-list delays)]
-                    [a (in-list amplitudes)])
-                   (+ sum (* a (vector-ref delay-buf (modulo (- next-idx d) max-delay))))))
-               (set! last-t (add1 last-t))
-               (set! next-idx (modulo (add1 next-idx) max-delay))
-               result)))))]
-    [other (raise-type-error 'fir-filter "(listof (list number number))" 0 params)]))
-
-(define (up-to-power-of-two n)
-  (inexact->exact (expt 2 (ceiling (/ (log (max n 1)) (log 2))))))
-
-;; IIR filters
-
-;; iir-filter : (listof (list/c delay amplitude)) -> signal -> signal
-;; filter the input signal using the delay values and amplitudes given for an IIR filter
-;; the only difference here is that we put the final result in the delay line, rather than
-;; the input signal.
-(define (iir-filter params)
-  (match params
-    [`((,delays ,amplitudes) ...)
-     (unless (andmap (lambda (d) (and (exact-integer? d) (< 0 d))) delays)
-       (raise-type-error 'iir-filter "exact integer delays greater than zero" 0 params))
-     (unless (andmap real? amplitudes)
-       (raise-type-error 'iir-filter "real number amplitudes" 0 params))
-     (lambda (signal)
-       (let* ([max-delay (up-to-power-of-two (+ 1 (apply max delays)))]
-              ;; set up buffer to delay the signal
-              [delay-buf (make-vector max-delay 0.0)]
-              [next-idx 0]
-              ;; ugh... we must be called sequentially:
-              [last-t -1])
-         (lambda (t)
-           (unless (= t (add1 last-t))
-             (error 'fir-filter "called with t=~s, expecting t=~s. Sorry about that limitation." 
-                    t
-                    (add1 last-t)))
-           (let* ([this-val (signal t)]
-                  [new-val (for/fold ([sum this-val])
-                                     ([d (in-list delays)]
-                                      [a (in-list amplitudes)])
-                                     (+ sum (* a (vector-ref delay-buf (modulo (- next-idx d) max-delay)))))])
-             (begin0
-               new-val
-               (vector-set! delay-buf next-idx new-val)
-               (set! last-t (add1 last-t))
-               (set! next-idx (modulo (add1 next-idx) max-delay)))))))]
-    [other (raise-type-error 'iir-filter "(listof (list number number))" 0 params)]))
-
-;; lti-filter : rsound (listof (list/c number? number?)) (listof (list/c number? number?)) -> rsound
-;; given coefficients for an FIR and an IIR filter, apply
-;; the given filter to the sound.
-(define (lti-filter snd fir-coefficients iir-coefficients)
-  (unless (rsound? snd)
-    (raise-type-error 'lti-filter "rsound" 0 snd fir-coefficients iir-coefficients))
-  (unless (and (list? fir-coefficients)
-               (andmap (lambda (x) (and (list? x)
-                                        (= (length x) 2)
-                                        (nonnegative-integer? (first x))
-                                        (real? (second x))))
-                       fir-coefficients))
-    (raise-type-error 'lti-filter "list of delays and coefficients" 1 
-                      snd fir-coefficients iir-coefficients))
-  (unless (and (list? iir-coefficients)
-               (andmap (lambda (x) (and (list? x)
-                                        (= (length x) 2)
-                                        (nonnegative-integer? (first x))
-                                        (real? (second x))))
-                       iir-coefficients))
-    (raise-type-error 'lti-filter "list of delays and coefficients" 2
-                      snd fir-coefficients iir-coefficients))
-  (define the-fir (fir-filter fir-coefficients))
-  (define the-iir (iir-filter iir-coefficients))
-  (signals->rsound (rsound-frames snd)
-                   (the-iir (the-fir (rsound->signal/left snd)))
-                   (the-iir (the-fir (rsound->signal/right snd)))))
 
 ;; overlay a list of sounds on top of each other
 (define (overlay* los)
