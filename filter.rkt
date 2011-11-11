@@ -239,7 +239,7 @@
   (define output-buf-len (max 1 output-tap-len))
   ;; enough to hold delayed and current, rounded up to next power of 2:
   (define saved-input-buf (make-flvector input-buf-len))
-  (define saved-output-buf (make-flvector input-buf-len))
+  (define saved-output-buf (make-flvector output-buf-len))
   (define next-idx 0)
   ;; ugh... we must be called sequentially:
   (define last-t -1)
@@ -262,33 +262,70 @@
              "expected vector of length ~s for iir-terms, got ~s"
              output-tap-len iir-terms))
     (define fir-sum
-      (for/sum ([i (in-range input-tap-len)])
-       (fl* (flvector-ref fir-terms i)
-            (flvector-ref saved-input-buf 
-                          (modulo (- t i 1) input-buf-len)))))
+      (for/fold ([sum 0.0])
+        ([i (in-range input-tap-len)])
+        (fl+ sum
+             (fl* (flvector-ref fir-terms i)
+                  (flvector-ref saved-input-buf 
+                                (modulo (- t i 1) input-buf-len))))))
     (define iir-sum
-      (for/sum ([i (in-range output-tap-len)])
-        (fl* (flvector-ref iir-terms i)
-             (flvector-ref saved-output-buf 
-                           (modulo (- t i 1) output-buf-len)))))
-    (define next-val (exact->inexact (input-signal t)))
+      (for/fold ([sum 0.0])
+        ([i (in-range output-tap-len)])
+        (fl+ sum
+             (fl* (flvector-ref iir-terms i)
+                  (flvector-ref saved-output-buf 
+                                (modulo (- t i 1) output-buf-len))))))
+    (define next-val (fl* gain (exact->inexact (input-signal t))))
     (flvector-set! saved-input-buf (modulo t input-buf-len) next-val)
-    (define output-val (fl* gain (fl+ next-val (fl+ fir-sum iir-sum))))
+    (define output-val (fl+ next-val (fl+ fir-sum iir-sum)))
     (flvector-set! saved-output-buf (modulo t output-buf-len) output-val)
     (set! last-t (add1 last-t))
     output-val))
 
+(define max-scale-val 3.0)
+(define min-scale-val 0.00)
+(define perceptible-interval 0.01)
+(define coefficient-table (make-vector (inexact->exact
+                                        (floor 
+                                         (/ (- max-scale-val
+                                               min-scale-val) 
+                                            perceptible-interval))) 
+                                       #f))
 
 (define (dynamic-lpf scale-signal input-signal)
   (dynamic-lti-signal
    (lambda (t)
      (define scale (scale-signal t))
-     (define coefficients (lpf-coefficients scale))
-     (define gain (apply + (cons 1.0 coefficients)))
+     (when (not (<= min-scale-val scale max-scale-val))
+       (error 'dynamic-lpf "scale value ~s not between ~s and ~s"
+              scale
+              min-scale-val
+              max-scale-val))
+     (define table-index (inexact->exact
+                          (round
+                           (/ (- scale min-scale-val)
+                              perceptible-interval))))
+     (define tap-mults
+       (match (vector-ref coefficient-table table-index)
+         [#f (define coefficients (lpf-coefficients scale))
+             (define new-table-entry 
+               (apply flvector 
+                      (map (lambda (x) (* x -1.0))
+                           coefficients)))
+             (vector-set! coefficient-table table-index new-table-entry)
+             new-table-entry]
+         [other other]))
+     (define gain (+ 1.0 (fl- 0.0 (flvector-sum tap-mults))))
      (values (flvector)
-             ;; shame we do this every time....
-             (apply flvector coefficients)
+             tap-mults
              gain))
    0 4
    input-signal))
+
+(define (flvector-sum vec)
+  (for/fold ([sum 0.0]) ([f (in-flvector vec)]) (fl+ sum f)))
+
+;; it looks like 1/100 is close enough not to notice. This
+;; is totally a guess on my part
+
 
