@@ -408,7 +408,7 @@ overhead.
 @section{Filtering}
 
 
-@defmodule[(planet clements/rsound/frequency-response)]{
+@defmodule[(planet clements/rsound/filter)]{
  This module provides a dynamic low-pass filter, among other things.
  
 @defproc[(lpf/dynamic [control signal?] [input signal?]) signal?]{
