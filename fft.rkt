@@ -1,4 +1,7 @@
-#lang racket
+#lang racket/base
+
+(require (only-in racket pi)
+         racket/contract)
 
 ;; This code written by Douglas Williams, based on the Gnu Scientific Library.
 ;; Personal communication suggests that it will be released under the LGPL
