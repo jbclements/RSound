@@ -1,6 +1,6 @@
 #lang racket
 
-;; untested:
+;; untested as of 2011-09:
 #|make-squaretone
 make-zugtone
 make-sawtooth-tone
@@ -15,6 +15,7 @@ rsound-max-volume
 
 (require "rsound.rkt"
          "fft.rkt"
+         "integral-cycles.rkt"
          racket/flonum
          ffi/vector
          (for-syntax syntax/parse))
@@ -68,9 +69,6 @@ rsound-max-volume
          overlay
          mono
          vectors->rsound
-         fir-filter
-         iir-filter
-         lti-filter
          rsound-fft/left
          rsound-fft/right
          rsound-max-volume
@@ -81,7 +79,6 @@ rsound-max-volume
          raw-square-wave
          raw-sawtooth-wave
          binary-logn
-         up-to-power-of-two
          )
 
 
@@ -262,18 +259,36 @@ rsound-max-volume
 (define (signal-+s lof)
   (lambda (i) (apply + (map (lambda (x) (x i)) lof))))
 
+;; given a number and a signal, scale the number by the signal
+;; this can be done using signal-* and dc-signal, but this
+;; turns out to be a lot faster
+(define (sig-scale volume signal)
+  (lambda (i) (* volume (signal i))))
+
 ;; convert a wavefun into a tone-maker; basically just keep a hash table
 ;; of previously generated sounds.
+;; OPTIMIZATION: don't generate everything, stop when the wave comes out "even"
+;; on a frame. WARNING! Assumes that the sound is periodic. Don't use
+;; this for sounds that aren't periodic on the given frequency.
+
+;; NB: cache depends on volume, too; for some applications, caching a single
+;; full-volume copy of the waveform could be a big win. It depends on how 
+;; many different volumes you use.
 (define (wavefun->tone-maker wavefun)
   (let ([tone-table (make-hash)])
     (lambda (pitch volume frames)
       (define sample-rate (default-sample-rate))
       (define key (list pitch volume sample-rate))
       (define (compute-and-store)
-        (let ([s (mono-signal->rsound frames 
-                                      (wavefun pitch volume sample-rate))])
-          (hash-set! tone-table key s)
-          s))
+        (define num-cycles (cycles-to-use pitch sample-rate))
+        (define generated-frames (round (* num-cycles (/ sample-rate pitch))))
+        (log-debug (format "generated ~s frames" generated-frames))
+        (define core (mono-signal->rsound generated-frames
+                                          (wavefun pitch volume sample-rate)))
+        (define snd (duplicate-to-frames core frames))
+        (when (< generated-frames too-long-to-cache)
+          (hash-set! tone-table key snd))
+        snd)
       (match (hash-ref tone-table key #f)
         ;; 
         [#f (compute-and-store)]
@@ -284,54 +299,62 @@ rsound-max-volume
                  [(< frames stored-frames) (clip s 0 frames)]
                  [else (compute-and-store)]))]))))
 
+(define too-long-to-cache (* 44100 10))
+
+;; generate a sound containing repeated copies of the sound out to the
+;; given number of frames
+(define (duplicate-to-frames snd frames)
+  (define copies (/ frames (rsound-frames snd)))
+  (define integral-copies (floor copies))
+  (define leftover-frames (- frames (* (rsound-frames snd) integral-copies)))
+  (log-debug (format "produced ~s frames" frames))
+  (rs-append*
+   (append (for/list ([i (in-range integral-copies)]) snd)
+           (list (clip snd 0 leftover-frames)))))
+
 ;; a memoized harm3 tone
 (define make-harm3tone
   (wavefun->tone-maker
    (lambda (pitch volume sample-rate)
-     (signal-*s (list (fader 88200)
-                      (dc-signal volume)
-                      (harm3-wave pitch))))))
+     (sig-scale volume
+                (signal-*s (list (fader 88200)
+                                 (harm3-wave pitch)))))))
 
 ;; make a monaural pitch with the given number of frames
 (define make-tone
   (wavefun->tone-maker 
    (lambda (pitch volume sample-rate)
-     (signal-*s (list (dc-signal volume)
-                      (sine-wave pitch))))))
+     (sig-scale volume (sine-wave pitch)))))
 
 (define make-squaretone
   (wavefun->tone-maker
    (lambda (pitch volume sample-rate)
-     (signal-*s (list (dc-signal volume)
-                      (square-wave pitch))))))
+     (sig-scale volume (square-wave pitch)))))
 
 (define make-square-fade-tone
   (wavefun->tone-maker
    (lambda (pitch volume sample-rate)
-     (signal-*s (list (dc-signal volume) 
-                      (fader 88200)
-                      (square-wave pitch))))))
+     (sig-scale volume
+                (signal-*s (list (fader 88200)
+                                 (square-wave pitch)))))))
 
 (define make-zugtone
   (wavefun->tone-maker
    (lambda (pitch volume sample-rate)
-     (signal-*s (list (frisellinator 8820) #;(fader 88200) (dc-signal volume) (approx-sawtooth-wave pitch))))))
-
-
-
+     (sig-scale volume
+                (signal-*s (list (frisellinator 8820) #;(fader 88200) (approx-sawtooth-wave pitch)))))))
 
 (define make-sawtooth-tone
   (wavefun->tone-maker 
    (lambda (pitch volume sample-rate)
-     (signal-*s (list (dc-signal volume)
-                      (sawtooth-wave pitch))))))
+     (sig-scale volume (sawtooth-wave pitch)))))
 
 (define make-sawtooth-fade-tone
   (wavefun->tone-maker 
    (lambda (pitch volume sample-rate)
-     (signal-*s (list (dc-signal volume)
-                      (fader 88200)
-                      (sawtooth-wave pitch))))))
+     (sig-scale volume
+                (signal-*s (list (fader 88200)
+                                 (sawtooth-wave pitch)))))))
 
 (define (make-pulse-tone duty-cycle)
   (when (not (< 0.0 duty-cycle 1.0))
@@ -511,110 +534,6 @@ rsound-max-volume
 (define (clip&volume volume signal)
   (signal-scale volume (thresh/signal 1.0 signal)))
 
-;; FIR filters
-
-;; fir-filter : (listof (list/c delay amplitude)) -> signal -> signal
-;; filter the input signal using the delay values and amplitudes given for an FIR filter
-(define (fir-filter params)
-  (match params
-    [`((,delays ,amplitudes) ...)
-     (unless (andmap (lambda (d) (and (exact-integer? d) (<= 0 d))) delays)
-       (raise-type-error 'fir-filter "exact integer delays greater than zero" 0 params))
-     (unless (andmap real? amplitudes)
-       (raise-type-error 'fir-filter "real number amplitudes" 0 params))
-     (lambda (signal)
-       ;; enough to hold delayed and current, rounded up to next power of 2:
-       (let* ([max-delay (up-to-power-of-two (+ 1 (apply max delays)))]
-              ;; set up buffer to delay the signal
-              [delay-buf (make-vector max-delay 0.0)]
-              [next-idx 0]
-              ;; ugh... we must be called sequentially:
-              [last-t -1])
-         (lambda (t)
-           (unless (= t (add1 last-t))
-             (error 'fir-filter "called with t=~s, expecting t=~s. Sorry about that limitation." 
-                    t
-                    (add1 last-t)))
-           (let ([this-val (signal t)])
-             (begin
-               (vector-set! delay-buf next-idx this-val)
-               (define result
-                 (for/fold ([sum 0])
-                   ([d (in-list delays)]
-                    [a (in-list amplitudes)])
-                   (+ sum (* a (vector-ref delay-buf (modulo (- next-idx d) max-delay))))))
-               (set! last-t (add1 last-t))
-               (set! next-idx (modulo (add1 next-idx) max-delay))
-               result)))))]
-    [other (raise-type-error 'fir-filter "(listof (list number number))" 0 params)]))
-
-(define (up-to-power-of-two n)
-  (inexact->exact (expt 2 (ceiling (/ (log (max n 1)) (log 2))))))
-
-;; IIR filters
-
-;; iir-filter : (listof (list/c delay amplitude)) -> signal -> signal
-;; filter the input signal using the delay values and amplitudes given for an IIR filter
-;; the only difference here is that we put the final result in the delay line, rather than
-;; the input signal.
-(define (iir-filter params)
-  (match params
-    [`((,delays ,amplitudes) ...)
-     (unless (andmap (lambda (d) (and (exact-integer? d) (< 0 d))) delays)
-       (raise-type-error 'iir-filter "exact integer delays greater than zero" 0 params))
-     (unless (andmap real? amplitudes)
-       (raise-type-error 'iir-filter "real number amplitudes" 0 params))
-     (lambda (signal)
-       (let* ([max-delay (up-to-power-of-two (+ 1 (apply max delays)))]
-              ;; set up buffer to delay the signal
-              [delay-buf (make-vector max-delay 0.0)]
-              [next-idx 0]
-              ;; ugh... we must be called sequentially:
-              [last-t -1])
-         (lambda (t)
-           (unless (= t (add1 last-t))
-             (error 'fir-filter "called with t=~s, expecting t=~s. Sorry about that limitation." 
-                    t
-                    (add1 last-t)))
-           (let* ([this-val (signal t)]
-                  [new-val (for/fold ([sum this-val])
-                                     ([d (in-list delays)]
-                                      [a (in-list amplitudes)])
-                                     (+ sum (* a (vector-ref delay-buf (modulo (- next-idx d) max-delay)))))])
-             (begin0
-               new-val
-               (vector-set! delay-buf next-idx new-val)
-               (set! last-t (add1 last-t))
-               (set! next-idx (modulo (add1 next-idx) max-delay)))))))]
-    [other (raise-type-error 'iir-filter "(listof (list number number))" 0 params)]))
-
-;; lti-filter : rsound (listof (list/c number? number?)) (listof (list/c number? number?)) -> rsound
-;; given coefficients for an FIR and an IIR filter, apply
-;; the given filter to the sound.
-(define (lti-filter snd fir-coefficients iir-coefficients)
-  (unless (rsound? snd)
-    (raise-type-error 'lti-filter "rsound" 0 snd fir-coefficients iir-coefficients))
-  (unless (and (list? fir-coefficients)
-               (andmap (lambda (x) (and (list? x)
-                                        (= (length x) 2)
-                                        (nonnegative-integer? (first x))
-                                        (real? (second x))))
-                       fir-coefficients))
-    (raise-type-error 'lti-filter "list of delays and coefficients" 1 
-                      snd fir-coefficients iir-coefficients))
-  (unless (and (list? iir-coefficients)
-               (andmap (lambda (x) (and (list? x)
-                                        (= (length x) 2)
-                                        (nonnegative-integer? (first x))
-                                        (real? (second x))))
-                       iir-coefficients))
-    (raise-type-error 'lti-filter "list of delays and coefficients" 2
-                      snd fir-coefficients iir-coefficients))
-  (define the-fir (fir-filter fir-coefficients))
-  (define the-iir (iir-filter iir-coefficients))
-  (signals->rsound (rsound-frames snd)
-                   (the-iir (the-fir (rsound->signal/left snd)))
-                   (the-iir (the-fir (rsound->signal/right snd)))))
 
 ;; overlay a list of sounds on top of each other
 (define (overlay* los)
