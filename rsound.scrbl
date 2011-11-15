@@ -11,7 +11,7 @@
                      (this-package-in main)
                      (this-package-in frequency-response)))
 
-@defmodule[(planet clements/rsound)]{This collection provides a means to represent, read,
+@defmodule/this-package[main]{This collection provides a means to represent, read,
 write, play, and manipulate sounds. It depends on the @racket[clements/portaudio] 
 package to provide bindings to the cross-platform `PortAudio' library which appears
 to run on Linux, Mac, and Windows.

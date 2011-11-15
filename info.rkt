@@ -7,7 +7,7 @@
                    "library. It runs on Windows, Mac OS X, and "
                    "linux.")))
 
-(define scribblings '(("rsound.scrbl" () (tool))))
+(define scribblings '(("rsound.scrbl" () (gui-library))))
 (define categories '(media))
 (define version "2011-11-04-14:51")
 (define release-notes '((p "add waveforms from AdventureKid")))
