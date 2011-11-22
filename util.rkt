@@ -486,8 +486,8 @@ rsound-max-volume
 ;; midi-note-num->pitch : number -> number
 ;; produces the pitch that corresponds to a midi note number
 (define (midi-note-num->pitch note-num)
-  (unless (exact-integer? note-num)
-    (raise-type-error 'midi-note-num->pitch "exact integer" 0 note-num))
+  (unless (real? note-num)
+    (raise-type-error 'midi-note-num->pitch "real" 0 note-num))
   (* 440 (expt 2 (/ (- note-num 69) 12))))
 
 
