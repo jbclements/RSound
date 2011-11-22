@@ -7,4 +7,5 @@
          "test-filter.rkt"
          "test-fft.rkt"
          "test-s16vector-add.rkt"
-         "test-sequencer.rkt")
+         "test-sequencer.rkt"
+         "test-make-tone.rkt")

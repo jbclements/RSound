@@ -283,7 +283,7 @@ overhead.
 
 @section{Visualizing Rsounds}
 
-@defmodule[(planet clements/rsound/draw)]
+@defmodule/this-package[draw]
 
 @defproc[(rsound-draw [rsound rsound?]
                       [#:title title string?]
@@ -372,7 +372,7 @@ overhead.
 
 @section{Frequency Response}
 
-@defmodule[(planet clements/rsound/frequency-response)]{
+@defmodule/this-package[frequency-response]{
  This module provides functions to allow the analysis of frequency response on filters specified
  either as transfer functions or as lists of poles and zeros. It assumes a sample rate of 44.1 Khz.
 
@@ -408,7 +408,7 @@ overhead.
 @section{Filtering}
 
 
-@defmodule[(planet clements/rsound/filter)]{
+@defmodule/this-package[filter]{
  This module provides a dynamic low-pass filter, among other things.
  
 @defproc[(lpf/dynamic [control signal?] [input signal?]) signal?]{
@@ -425,6 +425,33 @@ overhead.
  }
 }
 
+@section{Single-cycle sounds}
+
+@defmodule/this-package[single-cycle]{
+ This module provides support for generating tones from single-cycle waveforms.
+ 
+ In particular, it comes with a library of 247 such waveforms, courtesy of 
+ @link["http://www.adventurekid.se"]{Adventure Kid's website}. Used with
+ permission. Thanks!
+ 
+@defproc[(synth-note [family string?] [spec number-or-path?] [midi-note-number natural?] [duration natural?])
+         rsound]{
+ Given a family (currently either "main", "vgame", or "path"), a spec (a number in the first two cases),
+ a midi note number and a duration in frames, produces an rsound. There's a (non-configurable) 
+ envelope applied, too.
+ 
+ Example, playing sound #49 from the vgame package for a half-second at middle C:
+ 
+@racketblock[
+ (synth-note "vgame" 49 60 22010)]
+ }
+ 
+@defproc[(synth-note/raw [family string?] [spec number-or-path?] [midi-note-number natural?] [duration natural?])
+         rsound]{
+ Same as above, but no envelope is applied.}
+ 
+ 
+ }
 
 
 @section{Reporting Bugs}

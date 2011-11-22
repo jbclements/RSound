@@ -69,6 +69,8 @@ rsound-max-volume
          overlay
          mono
          vectors->rsound
+         tile-to-len
+         
          rsound-fft/left
          rsound-fft/right
          rsound-max-volume
@@ -285,7 +287,7 @@ rsound-max-volume
         (log-debug (format "generated ~s frames" generated-frames))
         (define core (mono-signal->rsound generated-frames
                                           (wavefun pitch volume sample-rate)))
-        (define snd (duplicate-to-frames core frames))
+        (define snd (tile-to-len core frames))
         (when (< generated-frames too-long-to-cache)
           (hash-set! tone-table key snd))
         snd)
@@ -303,11 +305,10 @@ rsound-max-volume
 
 ;; generate a sound containing repeated copies of the sound out to the
 ;; given number of frames
-(define (duplicate-to-frames snd frames)
+(define (tile-to-len snd frames)
   (define copies (/ frames (rsound-frames snd)))
   (define integral-copies (floor copies))
   (define leftover-frames (- frames (* (rsound-frames snd) integral-copies)))
-  (log-debug (format "produced ~s frames" frames))
   (rs-append*
    (append (for/list ([i (in-range integral-copies)]) snd)
            (list (clip snd 0 leftover-frames)))))
@@ -572,3 +573,4 @@ rsound-max-volume
     (s16vector-set! vec (add1 (* channels i)) 
                     (rs-ith/right/s16 orig source)))
   (rsound vec 0 frames (default-sample-rate)))
+

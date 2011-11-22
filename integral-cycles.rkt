@@ -12,10 +12,6 @@
 ;; this fraction of a cycle.
 (define thresh 4e-5)
 
-;; also, we arbitrarily decide that we don't want to store more than
-;; 1 second's worth of data. This makes this useless for frequencies
-;; below 
-
 (define/memo (cycles-to-use freq sample-rate)
   (when (not (and (real? freq) (< 0 freq)))
     (raise-type-error 'cycles-to-use "positive real number" 0

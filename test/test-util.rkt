@@ -219,7 +219,16 @@
                (* (rs-ith/right s i) 
                   (rs-ith/right t i)) 1e-2)))
   
+  ;; TILE-TO-LEN
   
+  (let ()
+    (define s (noise 12))
+    (define t (tile-to-len s 41))
+    (for/and ([i (in-range 41)])
+      (check-equal? (rs-ith/left/s16 t i)
+                    (rs-ith/left/s16 s (modulo i 12)))
+      (check-equal? (rs-ith/right/s16 t i)
+                    (rs-ith/right/s16 s (modulo i 12)))))
 
 ;; how much slower is signal?
 ;; answer: negligible; only about 2% slower

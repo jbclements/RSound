@@ -39,11 +39,16 @@
   (define playing (make-heap (lambda (a b) (<= (entry-finish a) (entry-finish b)))))
   ;; invariant: playing-vec contains the same elements as the "playing" heap.
   (define playing-vec (vector))
-  (define last-t #f)
+  (define last-t 0)
   (define (get-last-t) last-t)
   (define (signal/block cpointer frames idx)
     (define t (* frames idx))
-    (set! last-t (* (add1 idx) frames))
+    (define new-last-t (+ frames t))
+    (when (< new-last-t last-t)
+      (error 'sequencer "new value of last-t ~s is less than old value ~s."
+             new-last-t
+             last-t))
+    (set! last-t new-last-t)
     ;; remove sounds that end before the start
     (define sounds-removed? (clear-ended-sounds playing t))
     ;; add sounds that start before the end
@@ -62,10 +67,6 @@
     (memset cpointer 0 (* channels s16-size len))
     (for ([e (in-vector playing-vec)])
       (add-from-buf! cpointer t len e)))
-
-
-
-
 
 ;; given a buffer in which to assemble the sounds, a frame number t,
 ;; a number of frames len, and a playing entry e, add the appropriate
