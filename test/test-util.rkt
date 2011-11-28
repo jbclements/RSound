@@ -229,6 +229,13 @@
                     (rs-ith/left/s16 s (modulo i 12)))
       (check-equal? (rs-ith/right/s16 t i)
                     (rs-ith/right/s16 s (modulo i 12)))))
+  
+  
+(let ()
+  (define s1 (fader-snd 11025 150))
+  (check-= (rs-ith/left s1 149)
+           (expt (expt 0.001 (/ 1 11025)) 149)
+           1e-3))
 
 ;; how much slower is signal?
 ;; answer: negligible; only about 2% slower

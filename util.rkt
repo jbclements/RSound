@@ -70,6 +70,7 @@ rsound-max-volume
          mono
          vectors->rsound
          tile-to-len
+         fader-snd
          
          rsound-fft/left
          rsound-fft/right
@@ -235,8 +236,6 @@ rsound-max-volume
 
 (define square-wave (make-checked-wave-fun raw-square-wave))
 
-
-
 ;;fader : frames -> signal
 (define (fader fade-frames)
   (let ([p (expt 0.001 (/ 1 fade-frames))])
@@ -269,6 +268,26 @@ rsound-max-volume
 
 ;; convert a wavefun into a tone-maker; basically just keep a hash table
 ;; of previously generated sounds.
+(define (wavefun->tone-maker wavefun)
+  (let ([tone-table (make-hash)])
+    (lambda (pitch volume frames)
+      (define sample-rate (default-sample-rate))
+      (define key (list pitch volume sample-rate))
+      (define (compute-and-store)
+        (define snd (mono-signal->rsound frames 
+                             (wavefun pitch volume sample-rate)))
+        (hash-set! tone-table key snd)
+        snd)
+      (match (hash-ref tone-table key #f)
+        ;; 
+        [#f (compute-and-store)]
+        [(and s (struct rsound (data start stop sample-rate)))
+         (let ()
+           (define stored-frames (rsound-frames s))
+           (cond [(= frames stored-frames) s]
+                 [(< frames stored-frames) (clip s 0 frames)]
+                 [else (compute-and-store)]))]))))
+
 ;; OPTIMIZATION: don't generate everything, stop when the wave comes out "even"
 ;; on a frame. WARNING! Assumes that the sound is periodic. Don't use
 ;; this for sounds that aren't periodic on the given frequency.
@@ -276,7 +295,7 @@ rsound-max-volume
 ;; NB: cache depends on volume, too; for some applications, caching a single
 ;; full-volume copy of the waveform could be a big win. It depends on how 
 ;; many different volumes you use.
-(define (wavefun->tone-maker wavefun)
+(define (wavefun->tone-maker/periodic wavefun)
   (let ([tone-table (make-hash)])
     (lambda (pitch volume frames)
       (define sample-rate (default-sample-rate))
@@ -303,6 +322,22 @@ rsound-max-volume
 
 (define too-long-to-cache (* 44100 10))
 
+;; we want to re-use the wavefun->tone-maker for the fader. It doesn't
+;; have the right parameters, so we just re-purpose them.
+
+(define (fader-as-wavefun fade-frames dc1 dc2)
+  (let ([p (expt 0.001 (/ 1 fade-frames))])
+    (lambda (i)
+      (expt p i))))
+
+(define fader-proxy (wavefun->tone-maker fader-as-wavefun))
+
+(define (fader-snd fade-frames frames)
+  (fader-proxy fade-frames #f frames))
+
+
+
+
 ;; generate a sound containing repeated copies of the sound out to the
 ;; given number of frames
 (define (tile-to-len snd frames)
@@ -313,31 +348,31 @@ rsound-max-volume
    (append (for/list ([i (in-range integral-copies)]) snd)
            (list (clip snd 0 leftover-frames)))))
 
-;; a memoized harm3 tone
-(define make-harm3tone
-  (wavefun->tone-maker
+(define make-harm3tone/unfaded
+  (wavefun->tone-maker/periodic
    (lambda (pitch volume sample-rate)
      (sig-scale volume
-                (signal-*s (list (fader 88200)
-                                 (harm3-wave pitch)))))))
+                (harm3-wave pitch)))))
+
+;; a memoized harm3 tone
+(define (make-harm3tone pitch volume frames)
+  (rs-mult (fader-snd 88200 frames)
+           (make-harm3tone/unfaded pitch volume frames)))
 
 ;; make a monaural pitch with the given number of frames
 (define make-tone
-  (wavefun->tone-maker 
+  (wavefun->tone-maker/periodic 
    (lambda (pitch volume sample-rate)
      (sig-scale volume (sine-wave pitch)))))
 
 (define make-squaretone
-  (wavefun->tone-maker
+  (wavefun->tone-maker/periodic
    (lambda (pitch volume sample-rate)
      (sig-scale volume (square-wave pitch)))))
 
-(define make-square-fade-tone
-  (wavefun->tone-maker
-   (lambda (pitch volume sample-rate)
-     (sig-scale volume
-                (signal-*s (list (fader 88200)
-                                 (square-wave pitch)))))))
+(define (make-square-fade-tone pitch volume frames)
+  (rs-mult (fader-snd 88200 frames)
+           (make-squaretone pitch volume frames)))
 
 (define make-zugtone
   (wavefun->tone-maker
@@ -346,16 +381,13 @@ rsound-max-volume
                 (signal-*s (list (frisellinator 8820) #;(fader 88200) (approx-sawtooth-wave pitch)))))))
 
 (define make-sawtooth-tone
-  (wavefun->tone-maker 
+  (wavefun->tone-maker/periodic
    (lambda (pitch volume sample-rate)
      (sig-scale volume (sawtooth-wave pitch)))))
 
-(define make-sawtooth-fade-tone
-  (wavefun->tone-maker 
-   (lambda (pitch volume sample-rate)
-     (sig-scale volume
-                (signal-*s (list (fader 88200)
-                                 (sawtooth-wave pitch)))))))
+(define (make-sawtooth-fade-tone pitch volume frames)
+  (rs-mult (fader-snd 88200 frames)
+           (make-sawtooth-tone pitch volume frames)))
 
 (define (make-pulse-tone duty-cycle)
   (when (not (< 0.0 duty-cycle 1.0))
@@ -363,7 +395,7 @@ rsound-max-volume
                       "number between 0 and 1"
                       0
                       duty-cycle))
-  (wavefun->tone-maker
+  (wavefun->tone-maker/periodic
    (lambda (pitch volume sample-rate)
      (define wavelength (/ sample-rate pitch))
      (define on-samples (round (* duty-cycle wavelength)))
@@ -373,10 +405,6 @@ rsound-max-volume
      (lambda (i)
        (cond [(< (modulo i total-samples) on-samples) up]
              [else down])))))
-
-
-
-
 
 (define (make-ding pitch)
   (define sample-rate (default-sample-rate))
