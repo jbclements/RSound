@@ -101,7 +101,7 @@
 ;; about 120 ms.
 (define default-buffer-time 
   (case (system-type)
-    [(windows) 0.12]
+    [(windows) 0.25]
     [(macosx unix) 0.05]))
 
 ;; CONVERSIONS
