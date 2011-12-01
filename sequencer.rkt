@@ -41,8 +41,7 @@
   (define playing-vec (vector))
   (define last-t 0)
   (define (get-last-t) last-t)
-  (define (signal/block cpointer frames idx)
-    (define t (* frames idx))
+  (define (signal/block cpointer frames t)
     (define new-last-t (+ frames t))
     (when (< new-last-t last-t)
       (error 'sequencer "new value of last-t ~s is less than old value ~s."
@@ -250,19 +249,19 @@
                 (list 0 0 0 0 0 0 0 0 0 0
                       0 0 0 0 0 0 0 0 0 0))
   (check-equal? (last-time) 10)
-  (test-signal/block tgt-ptr 10 1)
+  (test-signal/block tgt-ptr 10 10)
   (check-equal? (s16vector->list tgt)
                 (list 0 0 0 0 0 0 0 0 0 0
                       2 2 2 2 4 4 4 4 4 4))
-  (test-signal/block tgt-ptr 10 2)
+  (test-signal/block tgt-ptr 10 20)
   (check-equal? (s16vector->list tgt)
                 (list 4 4 4 4 4 4 4 4 4 4
                       2 2 2 2 0 0 0 0 0 0))
-  (test-signal/block tgt-ptr 10 3)
+  (test-signal/block tgt-ptr 10 30)
   (check-equal? (s16vector->list tgt)
                 (list 0 0 0 0 0 0 0 0 0 0
                       0 0 0 0 4 4 4 4 4 4))
-  (test-signal/block tgt-ptr 10 4)
+  (test-signal/block tgt-ptr 10 40)
   (check-equal? (s16vector->list tgt)
                 (list 4 4 7 7 7 7 4 4 4 4
                       4 4 4 4 4 4 4 4 4 4))

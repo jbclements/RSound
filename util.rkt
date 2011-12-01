@@ -26,6 +26,7 @@ rsound-max-volume
 (provide rs-map
          rs-map/idx
          scale
+         resample
          rs-mult
          twopi
          sine-wave
@@ -105,6 +106,21 @@ rsound-max-volume
 ;; rsound-scale : number rsound -> rsound
 (define (scale scalar rsound)
   (rs-map (lambda (x) (* x scalar)) rsound))
+
+;; given a factor and a sound, resample the sound (using simple rounding)
+;; to obtain a new one. Using e.g. factor of 2 will make the sound one
+;; octave higher and half as long.
+(define (resample factor sound)
+  (define (left i) (rs-ith/left sound 
+                                (inexact->exact (floor (* factor i)))))
+  (define (right i) (rs-ith/right sound 
+                                  (inexact->exact (floor (* factor i)))))
+  (parameterize ([default-sample-rate 
+                   (rsound-sample-rate sound)])
+    (signals->rsound (inexact->exact
+                      (floor (/ (rsound-frames sound) factor)))
+                     left
+                     right)))
 
 
 ;; produce a new rsound by multiplying each sample in the

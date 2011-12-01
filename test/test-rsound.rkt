@@ -112,7 +112,7 @@
   (define s2 (assemble (list (list sample-sound 0) (list sample-sound 3.5))))
   (check-equal? (rs-ith/left/s16 s2 5)
                 (+ (rs-ith/left/s16 sample-sound 5)
-                   (rs-ith/left/s16 sample-sound 1))))
+                   (rs-ith/left/s16 sample-sound 2))))
   
   (let* ([sample-sound (mono-signal->rsound 100 (lambda (x) (* 0.2 (random))))]
          [overlaid (assemble (list (list sample-sound 25) 
@@ -195,7 +195,6 @@
   (check-equal? (rsound-start test-rsound) 0)
   (check-equal? (rsound-stop test-rsound) 100)
 (let ([shorter-test (clip test-rsound 30 60)])
-  (printf "s: ~s\n" shorter-test)
   (check-equal? (rsound-start shorter-test) 30)
   (check-equal? (rsound-stop shorter-test) 60)
   (check-equal? (rsound-frames shorter-test) 30)

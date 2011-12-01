@@ -9,8 +9,8 @@
 
 (define scribblings '(("rsound.scrbl" () (gui-library))))
 (define categories '(media))
-(define version "2011-11-04-14:51")
-(define release-notes '((p "add low-pass filtering")))
+(define version "2011-12-01-13:59")
+(define release-notes '((p "stream-based playing working on all platforms")))
 
 ;; don't compile the stuff in the contrib subdirectory.
 (define compile-omit-paths '("contrib"))

@@ -27,31 +27,9 @@
     ["vgame" (adventure-kid-waveform "vgame" spec)]
     ["path" (rs-read spec)]))
 
-
-
-;; given a factor and a sound, resample the sound (using simple rounding)
-;; to obtain a new one. Using e.g. factor of 2 will make the sound one
-;; octave higher and half as long.
-(define (resample factor sound)
-  (define (left i) (rs-ith/left sound 
-                                (inexact->exact (round (* factor i)))))
-  (define (right i) (rs-ith/right sound 
-                                  (inexact->exact (round (* factor i)))))
-  (parameterize ([default-sample-rate 
-                   (rsound-sample-rate sound)])
-    (signals->rsound (inexact->exact
-                      (floor (/ (rsound-frames sound) factor)))
-                     left
-                     right)))
-
-;; a memoized version of the above. 
-(define (resample/memo factor sound)
-  (match (hash-ref resample-hash (list factor sound) #f)
-    [#f (define result (resample factor sound))
-        (hash-set! resample-hash (list factor sound) result)
-        result]
-    [other other]))
-(define resample-hash (make-hash))
+;; a memoized version of resample.
+(define/memo (resample/memo factor sound)
+  (resample factor sound))
 
 (define my-env (adsr/exp 200 0.5 2000 0.25 1000))
 

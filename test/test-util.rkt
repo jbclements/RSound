@@ -237,6 +237,19 @@
            (expt (expt 0.001 (/ 1 11025)) 149)
            1e-3))
 
+  ;; RESAMPLE
+  (let ()
+    (define s1 (noise 50))
+    (define s2 (resample 0.25 s1))
+    (check-equal? (rsound-frames s2) 200)
+    (check-equal? (rs-ith/right s2 156)
+                  (rs-ith/right s1 39))
+    (check-equal? (rs-ith/left s2 157)
+                  (rs-ith/left s1 39))
+    (check-equal? (rs-ith/right s2 158)
+                  (rs-ith/right s1 39))
+    (check-equal? (rs-ith/left s2 159)
+                  (rs-ith/left s1 39)))
 ;; how much slower is signal?
 ;; answer: negligible; only about 2% slower
 #|(define (n-times-throwaway n x) 

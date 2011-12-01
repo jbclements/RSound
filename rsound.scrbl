@@ -453,6 +453,23 @@ overhead.
  
  }
 
+@section{Stream-based Playing}
+
+@defmodule/this-package[stream-play]{
+ RSound now provides functions whereby all played sounds use a single stream.
+ This has the advantage of lower latency and avoids problems on Windows, where
+ opening a new stream for each sound causes errors.
+ 
+ 
+@defproc[(play/s [sound rsound?]) void]{
+ Plays a given sound.}
+
+@defproc[(play/s/f [sound rsound?] [frame natural?]) void]{
+ Plays a given sound at a given (stream-relative) frame.}
+
+@defproc[(current-time/s) natural?]{
+ Returns the current stream-relative frame.}}
+
 
 @section{Reporting Bugs}
 

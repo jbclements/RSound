@@ -20,8 +20,7 @@
 (define ts empty)
 (define lens empty)
 
-(define (simple-signal/block/s16 pointer frames idx)
-  (define t (* idx frames))
+(define (simple-signal/block/s16 pointer frames t)
   (define sample (* t channels))
   (define samples (* frames channels))
   (define copy-source (modulo sample sine-wave-len))

@@ -1,6 +1,6 @@
 #lang racket
 
-(require (planet clements/portaudio:1:4)
+(require (planet clements/portaudio:2)
          (only-in ffi/unsafe cpointer? ptr-set! _sint16)
          ffi/vector
          racket/async-channel)
@@ -27,8 +27,8 @@
                                    void?))
                   [signal->signal/block/unsafe
                    (-> procedure? procedure?)]
-                  [signal/block-play (-> any/c sample-rate? void?)]
-                  [signal/block-play/unsafe (-> any/c sample-rate? void?)]
+                  [signal/block-play (-> procedure? sample-rate? void?)]
+                  [signal/block-play/unsafe (-> procedure? sample-rate? void?)]
                   [stop-playing (-> void?)]
                   [channels positive-integer?])
 
@@ -66,7 +66,7 @@
 ;; in the global channel
 (define (signal/block-play block-filler sample-rate)
   (match-define (list stream-time stop-sound)
-    (stream-play block-filler default-buffer-frames sample-rate))
+    (stream-play block-filler default-buffer-time sample-rate))
   (async-channel-put 
    live-stream-channel
    (lambda () (stop-sound))))
@@ -76,7 +76,7 @@
 ;; in the global channel
 (define (signal/block-play/unsafe block-filler sample-rate)
   (match-define (list stream-time stop-sound)
-    (stream-play/unsafe block-filler default-buffer-frames sample-rate))
+    (stream-play/unsafe block-filler default-buffer-time sample-rate))
   (async-channel-put 
    live-stream-channel
    (lambda () (stop-sound))))
@@ -87,8 +87,7 @@
 ;; because it makes a call to the signal function for
 ;; every sample; you can do a lot better....
 (define (signal->signal/block/unsafe signal)
-  (define (signal/block/unsafe ptr frames idx)
-    (define base-t (* frames idx))
+  (define (signal/block/unsafe ptr frames base-t)
     (for ([frame (in-range 0 frames)]
           [t (in-range base-t (+ base-t frames))])
       (define sample (real->s16 (signal t)))
@@ -98,7 +97,12 @@
   signal/block/unsafe)
 
 
-(define default-buffer-frames 1024)
+;; the default buffer time for windows has to be insanely large,
+;; about 120 ms.
+(define default-buffer-time 
+  (case (system-type)
+    [(windows) 0.12]
+    [(macosx unix) 0.05]))
 
 ;; CONVERSIONS
 
