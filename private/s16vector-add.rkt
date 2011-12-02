@@ -7,6 +7,7 @@
 
 ;; buffer-adding in C:
 
+;; accepts target pointer, source pointer, and copy length *in samples*
 (provide s16buffer-add!/c)
 
 (define-runtime-path here ".")

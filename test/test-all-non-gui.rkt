@@ -8,4 +8,6 @@
          "test-fft.rkt"
          "test-s16vector-add.rkt"
          "test-sequencer.rkt"
-         "test-make-tone.rkt")
+         "test-make-tone.rkt"
+         "test-paste-util.rkt"
+         "test-single-cycle.rkt")

@@ -1,15 +1,14 @@
 #lang racket
 
 ;; to-do:
-;; contracts everywhere?
+;; contracts everywhere? NO! can't be used with beginner
 ;; change "rsound-" to "rs-"
 ;; check okay for inputs to be inexact integers?
 ;; go to time instead of frames?
 ;; tighter sanity checks on sample rate?
 
-(require (only-in ffi/unsafe memcpy _sint16 memset ptr-add cpointer?)
+(require (only-in ffi/unsafe memcpy _sint16 memset ptr-add)
          ffi/vector
-         racket/unsafe/ops
          "read-wav.rkt"
          "write-wav.rkt"
          (prefix-in rc: "rsound-commander.rkt")
