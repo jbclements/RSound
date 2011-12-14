@@ -65,7 +65,7 @@
 ;; uses the default buffer size and saves a stopper
 ;; in the global channel
 (define (signal/block-play block-filler sample-rate)
-  (match-define (list stream-time stop-sound)
+  (match-define (list stream-time stats stop-sound)
     (stream-play block-filler default-buffer-time sample-rate))
   (async-channel-put 
    live-stream-channel
@@ -75,7 +75,7 @@
 ;; uses the default buffer size and saves a stopper
 ;; in the global channel
 (define (signal/block-play/unsafe block-filler sample-rate)
-  (match-define (list stream-time stop-sound)
+  (match-define (list stream-time stats stop-sound)
     (stream-play/unsafe block-filler default-buffer-time sample-rate))
   (async-channel-put 
    live-stream-channel
@@ -97,12 +97,10 @@
   signal/block/unsafe)
 
 
-;; the default buffer time for windows has to be insanely large,
-;; about 120 ms.
 (define default-buffer-time 
   (case (system-type)
-    [(windows) 0.25]
-    [(macosx unix) 0.05]))
+    [(windows) 0.06]
+    [(windows macosx unix) 0.05]))
 
 ;; CONVERSIONS
 
