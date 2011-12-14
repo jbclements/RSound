@@ -4,7 +4,9 @@
 
 ;; this is a manual test. Check the time gap between the 
 ;; printing of the text and the playing of the sound.
-(for ([i (in-range 10)])
+(stop)
+(printf "check for gap between printout and sound (7 dings).\n")
+(for ([i (in-range 7)])
   (printf "ding\n")
   (play/s ding)
   (sleep 1.5))
