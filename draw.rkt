@@ -8,7 +8,8 @@
 
 (provide rsound-draw
          vectors-draw
-         vector-draw/mag/phase
+         vector-draw/mag/phase ;; undocumented
+         vector-draw/log-mag/phase ;; undocumented
          vector-pair-draw/magnitude
          vector-draw/real/imag
          ffts-draw
@@ -237,6 +238,16 @@
 (define (vector-draw/mag/phase vec #:title [title "magnitude and phase"] #:width [width 800] #:height [height 200])
   (vectors-draw title
                 (lambda (i) (magnitude (vector-ref vec i)))
+                (lambda (i) (phase (vector-ref vec i)))
+                (vector-length vec)
+                width
+                height
+                0
+                (vector-length vec)))
+
+(define (vector-draw/log-mag/phase vec #:title [title "log magnitude and phase"] #:width [width 800] #:height [height 200])
+  (vectors-draw title
+                (lambda (i) (log (magnitude (vector-ref vec i))))
                 (lambda (i) (phase (vector-ref vec i)))
                 (vector-length vec)
                 width
