@@ -64,9 +64,10 @@
 ;; a wrapper for portaudio's signal/block-play, that
 ;; uses the default buffer size and saves a stopper
 ;; in the global channel
-(define (signal/block-play block-filler sample-rate)
+(define (signal/block-play block-filler sample-rate #:buffer-time [buffer-time #f])
+  (define actual-buffer-time (or buffer-time default-buffer-time))
   (match-define (list stream-time stats stop-sound)
-    (stream-play block-filler default-buffer-time sample-rate))
+    (stream-play block-filler actual-buffer-time sample-rate))
   (async-channel-put 
    live-stream-channel
    (lambda () (stop-sound))))
@@ -74,9 +75,10 @@
 ;; a wrapper for portaudio's signal/block-play/unsafe, that
 ;; uses the default buffer size and saves a stopper
 ;; in the global channel
-(define (signal/block-play/unsafe block-filler sample-rate)
+(define (signal/block-play/unsafe block-filler sample-rate #:buffer-time [buffer-time #f])
+  (define actual-buffer-time (or buffer-time default-buffer-time))
   (match-define (list stream-time stats stop-sound)
-    (stream-play/unsafe block-filler default-buffer-time sample-rate))
+    (stream-play/unsafe block-filler actual-buffer-time sample-rate))
   (async-channel-put 
    live-stream-channel
    (lambda () (stop-sound))))
@@ -100,7 +102,7 @@
 (define default-buffer-time 
   (case (system-type)
     [(windows) 0.06]
-    [(windows macosx unix) 0.05]))
+    [(macosx unix) 0.05]))
 
 ;; CONVERSIONS
 
