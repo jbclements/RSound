@@ -30,6 +30,10 @@
 (define (rs-copy-add! tgt tgt-offset 
                       src src-offset
                       copy-frames buf-frames)
+  (unless (cpointer? tgt)
+    (raise-type-error 'rs-copy-add! "cpointer" 0 tgt tgt-offset 
+                      src src-offset
+                      copy-frames buf-frames))
   (unless (<= 0 tgt-offset (+ tgt-offset copy-frames) buf-frames)
     (error 'rs-copy-add! "tgt bounds violation, must have (0 <= ~s <= ~s <= ~s)"
            tgt-offset (+ tgt-offset copy-frames) buf-frames))

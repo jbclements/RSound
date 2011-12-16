@@ -2,10 +2,9 @@
 
 (require "rsound.rkt"
          "util.rkt"
+         "paste-util.rkt"
          data/heap
-         ffi/unsafe
          ffi/vector
-         "private/s16vector-add.rkt"
          rackunit)
 
 ;; a simple rsound sequencer
@@ -62,35 +61,27 @@
 ;; zero the target, and copy the appropriate regions of the 
 ;; source sounds onto them.
 (define (combine-onto! cpointer t len playing-vec)
-    ;; this code needs to know how big frames are... _sint16
-    (memset cpointer 0 (* channels s16-size len))
-    (for ([e (in-vector playing-vec)])
-      (add-from-buf! cpointer t len e)))
+  (zero-buffer! cpointer len)
+  (for ([e (in-vector playing-vec)])
+    (add-from-buf! cpointer t len e)))
 
 ;; given a buffer in which to assemble the sounds, a frame number t,
 ;; a number of frames len, and a playing entry e, add the appropriate
 ;; section of the entry to the buffer.
 ;; required: entries have finish later than start, len > 0.
-(define (add-from-buf! cpointer t len e)
+(define (add-from-buf! ptr t len e)
   (match-define (entry sound start finish) e)
   ;; in global time:
   (define copy-start (max t start))
   (define copy-finish (min (+ t len) finish))
   (define copy-len (- copy-finish copy-start))
-  (define copy-len-samples (* copy-len channels))
   ;; relative to source buffer:
-  (define src-start (+ (rsound-start sound) (- copy-start start)))
-  (define src-start-ptr (ptr-add (s16vector->cpointer (rsound-data sound))
-                                 (* channels src-start)
-                                 _sint16))
+  (define src-start (- copy-start start))
   ;; relative to target buffer:
   (define tgt-start (- copy-start t))
-  (define tgt-start-ptr (ptr-add cpointer
-                                 (* channels tgt-start)
-                                 _sint16))
-  (s16buffer-add!/c tgt-start-ptr
-                    src-start-ptr
-                    copy-len-samples))
+  (rs-copy-add! ptr   tgt-start
+                sound src-start
+                copy-len len))
 
 ;; given a heap (ordered by ending time) and a current time, remove
 ;; those sounds whose ending times are <= the current time
@@ -126,19 +117,7 @@
 
 (define-test-suite
   sequencer-internals
-(let ()
-  
-  (define tgt (make-s16vector (* channels 10) 15))
-  (define src1 (rsound (make-s16vector (* channels 200) 1) 0 200 44100))
-  (define entry1 (entry src1 50 250))
-  (define entry2 (entry src1 65 265))
-  (combine-onto! (s16vector->cpointer tgt)
-                 60
-                 10
-                 (vector entry1 entry2))
-  (check-equal? (s16vector->list tgt)
-                (list 1 1 1 1 1 1 1 1 1 1 
-                      2 2 2 2 2 2 2 2 2 2)))
+
 
 ;; test of queue
 (let ()

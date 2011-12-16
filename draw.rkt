@@ -146,7 +146,10 @@
                (send frame-num-text end-edit-sequence)
                (send y-value-text begin-edit-sequence #f)
                (send y-value-text erase)
-               (send y-value-text insert (format "y value: ~a" (number->string y-val)))
+               (send y-value-text insert 
+                     (format "y value: ~a" 
+                             (format-sample
+                              y-val)))
                (send y-value-text end-edit-sequence))]))
     
     ;; given an x coordinate, return the corresponding frame
@@ -412,3 +415,9 @@
 
 (define imaginary-phase!?-msg
   "oh dear; phase should be a real number, got ~s for complex number ~s")
+
+
+(define (format-sample n)
+  (real->decimal-string (/ n s16max) digits-to-print))
+
+(define digits-to-print 4)
