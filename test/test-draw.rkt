@@ -32,7 +32,7 @@
                       4
                       44100))
 
-(rsound-draw rsound-4samp #:title "4 samples")
+(rs-draw rsound-4samp #:title "4 samples")
 
 (define rsound-800samp (rsound
                         (apply s16vector (build-list 1600 (lambda (i) (inexact->exact (round (* s16max (sin (* 2 pi 3/800 i))))))))
@@ -40,20 +40,20 @@
                         800
                         44100))
 
-(rsound-draw rsound-800samp #:width 800 #:title "800 samples")
+(rs-draw rsound-800samp #:width 800 #:title "800 samples")
 
-(rsound-draw rsound-800samp #:width 400 #:title "800 samples at width 400")
+(rs-draw rsound-800samp #:width 400 #:title "800 samples at width 400")
 
-(rsound-draw rsound-800samp #:width 20 #:title "800 samples at width 20")
+(rs-draw rsound-800samp #:width 20 #:title "800 samples at width 20")
 
 #;(define rsound-longer (read-rsound/clip "/tmp/gmafh.wav" (* 44100 60) (* 44100 70)))
 
 #;(play-rsound rsound-longer)
 
-#;(rsound-draw rsound-longer #:width 800)
+#;(rs-draw rsound-longer #:width 800)
 
 ;; there should be no gap in the waveform:
-(rsound-draw (mono-signal->rsound 300 (lambda (i) (* 1.5 (sin (* twopi 147/44100 i)))))
+(rs-draw (mono-signal->rsound 300 (lambda (i) (* 1.5 (sin (* twopi 147/44100 i)))))
                #:title "no gap in waveform")
 
 

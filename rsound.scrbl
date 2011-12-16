@@ -104,7 +104,7 @@ These procedures allow the creation, analysis, and manipulation of rsounds.
 @defstruct[rsound ([data s16vector?] [sample-rate nonnegative-number?])]{
  Represents a sound.}
 
-@defproc[(rsound-frames [sound rsound?]) nonnegative-integer?]{
+@defproc[(rs-frames [sound rsound?]) nonnegative-integer?]{
  Returns the length of a sound, in frames.}
 
 @defproc[(rsound-equal? [sound1 rsound?] [sound2 rsound?]) boolean?]{
@@ -285,7 +285,7 @@ overhead.
 
 @defmodule/this-package[draw]
 
-@defproc[(rsound-draw [rsound rsound?]
+@defproc[(rs-draw [rsound rsound?]
                       [#:title title string?]
                       [#:width width nonnegative-integer? 800]
                       [#:height height nonnegative-integer? 200])

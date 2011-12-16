@@ -52,10 +52,10 @@
   signal/block/unsafe)
 
 (define (check-sound-stop-start l)
-  (unless (<= 0 (second l) (third l) (rsound-frames (first l)))
+  (unless (<= 0 (second l) (third l) (rs-frames (first l)))
     (error 'check-sound-stop-start
            "expected 0 < start < finish < sound-len, given 0 < ~s < ~s < ~s"
-           (second l) (third l) (rsound-frames (first l))))
+           (second l) (third l) (rs-frames (first l))))
   l)
 
 #|

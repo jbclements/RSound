@@ -27,8 +27,8 @@
                                    void?))
                   [signal->signal/block/unsafe
                    (-> procedure? procedure?)]
-                  [signal/block-play (-> procedure? sample-rate? void?)]
-                  [signal/block-play/unsafe (-> procedure? sample-rate? void?)]
+                  [signal/block-play (-> procedure? sample-rate? (or/c real? false?) void?)]
+                  [signal/block-play/unsafe (-> procedure? sample-rate? (or/c real? false?) void?)]
                   [stop-playing (-> void?)]
                   [channels positive-integer?])
 
@@ -64,7 +64,7 @@
 ;; a wrapper for portaudio's signal/block-play, that
 ;; uses the default buffer size and saves a stopper
 ;; in the global channel
-(define (signal/block-play block-filler sample-rate #:buffer-time [buffer-time #f])
+(define (signal/block-play block-filler sample-rate buffer-time)
   (define actual-buffer-time (or buffer-time default-buffer-time))
   (match-define (list stream-time stats stop-sound)
     (stream-play block-filler actual-buffer-time sample-rate))
@@ -75,7 +75,7 @@
 ;; a wrapper for portaudio's signal/block-play/unsafe, that
 ;; uses the default buffer size and saves a stopper
 ;; in the global channel
-(define (signal/block-play/unsafe block-filler sample-rate #:buffer-time [buffer-time #f])
+(define (signal/block-play/unsafe block-filler sample-rate buffer-time)
   (define actual-buffer-time (or buffer-time default-buffer-time))
   (match-define (list stream-time stats stop-sound)
     (stream-play/unsafe block-filler actual-buffer-time sample-rate))

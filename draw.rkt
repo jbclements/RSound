@@ -6,7 +6,7 @@
          racket/class
          "fft.rkt")
 
-(provide rsound-draw
+(provide rs-draw
          vectors-draw
          vector-draw/mag/phase ;; undocumented
          vector-draw/log-mag/phase ;; undocumented
@@ -224,16 +224,16 @@
                 0
                 (vector-length vec)))
 
-(define (rsound-draw sound #:title [title "picture of sound"] 
+(define (rs-draw sound #:title [title "picture of sound"] 
                      #:width [width 800] #:height [height 200])
   (vectors-draw title
                 (lambda (i) (rs-ith/left/s16 sound i))
                 (lambda (i) (rs-ith/right/s16 sound i))
-                (rsound-frames sound)
+                (rs-frames sound)
                 width
                 height
                 0
-                (rsound-frames sound)))
+                (rs-frames sound)))
 
 (define (vector-draw/mag/phase vec #:title [title "magnitude and phase"] #:width [width 800] #:height [height 200])
   (vectors-draw title
@@ -372,10 +372,10 @@
                          #:window-size [window-size 2048])
   
   (define window-size 2048)
-  (define windows (floor (/ (rsound-frames rsound) window-size)))
+  (define windows (floor (/ (rs-frames rsound) window-size)))
   (when (= windows 0)
     (error 'rsound-fft-draw not-enough-frames-msg
-           (rsound-frames rsound)
+           (rs-frames rsound)
            window-size))
   (define (ffts-from-getter getter)
     (for/list ([i (in-range windows)])

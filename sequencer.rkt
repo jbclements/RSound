@@ -25,7 +25,7 @@
 ;; given a heap and a sound and a start, add the sound to the
 ;; heap with the given start and a computed end
 (define (queue-for-playing! heap sound start)
-  (heap-add! heap (entry sound start (+ start (rsound-frames sound)))))
+  (heap-add! heap (entry sound start (+ start (rs-frames sound)))))
 
 
 ;; this accepts a heap of input sound entries and produces a "sensitive"

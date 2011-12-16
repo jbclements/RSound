@@ -35,7 +35,12 @@
 
 
 
-(printf "playing signal for 7 seconds\n")
+(printf "playing signal for 3 seconds\n")
 (signal/block-play/unsafe simple-signal/block/s16 44100)
-(sleep 7)
+(sleep 3)
+(stop)
+
+(printf "playing signal for 3 seconds w/ explicit buffer-time\n")
+(signal/block-play/unsafe simple-signal/block/s16 44100 #:buffer-time 0.1)
+(sleep 3)
 (stop)

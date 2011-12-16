@@ -41,11 +41,11 @@
 ;; create a new rsound by overlaying the end of the first onto the beginning;
 ;; this allows creation of loops that overlap
 (define (loop-at rsound loop-len)
-  (let ([rlen (rsound-frames rsound)])
+  (let ([rlen (rs-frames rsound)])
     (unless (< 0 loop-len rlen)
       (error 'loop-at
              "expected a number of frames between 0 and the length of the rsound (~s)." 
-             (rsound-frames rsound)))
+             (rs-frames rsound)))
     (unless (<= (/ rlen 2) loop-len)
         (error 'loop-at
                (format

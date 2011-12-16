@@ -228,7 +228,7 @@
   ;; must normalize, include gain...
   (define the-fir (fir-filter fir-coefficients))
   (define the-iir (iir-filter iir-coefficients))
-  (signals->rsound (rsound-frames snd)
+  (signals->rsound (rs-frames snd)
                    (the-iir (the-fir (rsound->signal/left snd)))
                    (the-iir (the-fir (rsound->signal/right snd)))))
 

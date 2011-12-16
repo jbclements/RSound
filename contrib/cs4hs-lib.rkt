@@ -20,9 +20,9 @@
   (unless (= (rsound-sample-rate sound1) (rsound-sample-rate sound2))
     (error 'rsound-mix "expected two sounds with the same sample rate, got sounds with sample rates ~s and ~s"
            (rsound-sample-rate sound1) (rsound-sample-rate sound2)))
-  (define (left i) (+ (rsound-ith/left sound1 i) (rsound-ith/left sound2 i)))
-  (define (right i) (+ (rsound-ith/right sound1 i) (rsound-ith/right sound2 i)))
-  (signals->rsound/stereo (rsound-frames sound1)
+  (define (left i) (+ (rs-ith/left sound1 i) (rs-ith/left sound2 i)))
+  (define (right i) (+ (rs-ith/right sound1 i) (rs-ith/right sound2 i)))
+  (signals->rsound (rs-frames sound1)
                    (rsound-sample-rate sound1)
                    left
                    right))
@@ -48,25 +48,14 @@
 (define (rsound-overlay sound1 sound2)
   (rsound-overlay* (list (list sound1 0) (list sound2 0))))
 
-;; given a factor and a sound, resample the sound (using simple rounding)
-;; to obtain a new one. Using e.g. factor of 2 will make the sound one
-;; octave higher and half as long.
-(define (resample factor sound)
-  (define v (volume))
-  (define (left i) (* v (rsound-ith/left sound (round (* factor i)))))
-  (define (right i) (* v (rsound-ith/right sound (round (* factor i)))))
-  (signals->rsound/stereo (round (/ (rsound-frames sound) factor))
-                       (rsound-sample-rate sound)
-                       left
-                       right))
 
 ;; given an rsound and a duration in seconds, make enough copies of the rsound
 ;; (possibly less than 1) to make a sound of the given duration
 (define (single-cycle->dur rsound dur)
   (let ()
     (define num-frames (round (* (rsound-sample-rate rsound) dur)))
-    (define num-whole-copies (quotient num-frames (rsound-frames rsound)))
-    (define leftover-frames (remainder num-frames (rsound-frames rsound)))
+    (define num-whole-copies (quotient num-frames (rs-frames rsound)))
+    (define leftover-frames (remainder num-frames (rs-frames rsound)))
     (rsound-append* (append 
                      (for/list ([i (in-range num-whole-copies)])
                        rsound)
@@ -75,7 +64,7 @@
 ;; quick test case:
 (let* ([saw3 (mono-signal->rsound 4 44100 (lambda (x) (/ x 4)))]
        [extended-saw (single-cycle->dur saw3 0.01)])
-  (check-equal? (rsound-frames extended-saw) 441)
+  (check-equal? (rs-frames extended-saw) 441)
   (check-= (rsound-ith/left extended-saw 402) 0.5 0.001))
 
 (define (single-cycle->tone rsound native-pitch desired-pitch dur)
