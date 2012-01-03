@@ -59,15 +59,12 @@
 ;; tests of silence
 
 
-;; tests of rsound-largest-sample
-(let ([sample-sound (make-tone 2000 0.15 10)])
-  (check-= (/ (rs-largest-sample sample-sound) s16max) 0.15 1))
 
 ;; tests of check-below-threshold:
 #;(let ([sample-sound (rsound-append* (list (silence 10) 
                                           (make-tone 2000 0.15 10)))])
-  (check-not-exn (lambda () (check-below-threshold (rsound-data sample-sound) (rsound-frames sample-sound) 0.15)))
-  (check-exn exn:fail? (lambda () (check-below-threshold (rsound-data sample-sound) (rsound-frames sample-sound) 0.1))))
+  (check-not-exn (lambda () (check-below-threshold (rsound-data sample-sound) (rs-frames sample-sound) 0.15)))
+  (check-exn exn:fail? (lambda () (check-below-threshold (rsound-data sample-sound) (rs-frames sample-sound) 0.1))))
 
 (check-exn (lambda (exn)
              (regexp-match #px"^rsound-append\\*: " (exn-message exn)))
@@ -82,7 +79,7 @@
   (for ([i (in-range 100)])
     (check-equal? (rs-ith/left/s16 s i) 0)
     (check-equal? (rs-ith/right/s16 s i) 0)))
-(check-equal? (rsound-frames (silence 22050)) 22050)
+(check-equal? (rs-frames (silence 22050)) 22050)
 (check-equal? (rsound-sample-rate (silence 22050)) (default-sample-rate))
 
 ;; sound-list-total-frames:
@@ -109,7 +106,7 @@
     (check-= (rs-ith/left/s16 overlaid i) (rs-ith/left/s16 doublevol i) 1.0)
     (check-= (rs-ith/right/s16 overlaid i) (rs-ith/right/s16 doublevol i) 1.0))
   
-  (define s2 (assemble (list (list sample-sound 0) (list sample-sound 3.5))))
+  (define s2 (assemble (list (list sample-sound 0) (list sample-sound 3.0))))
   (check-equal? (rs-ith/left/s16 s2 5)
                 (+ (rs-ith/left/s16 sample-sound 5)
                    (rs-ith/left/s16 sample-sound 2))))
@@ -142,7 +139,7 @@
 
 (define test-rsound (rs-read short-test-wav))
 
-(check-equal? (rsound-frames test-rsound) 100)
+(check-equal? (rs-frames test-rsound) 100)
 (check-equal? (rs-read-sample-rate short-test-wav) 44100)
 (check-equal? (rs-read-frames short-test-wav) 100)
 
@@ -165,7 +162,7 @@
 
 (check-not-exn (lambda () (rs-read/clip short-test-wav 30 40.0)))
 
-(check-equal? (rsound-frames test-sub-rsound) 10)
+(check-equal? (rs-frames test-sub-rsound) 10)
 (check-= (rs-ith/left/s16 test-sub-rsound 0) (desired-nth-sample 30) 1e-4)
 (check-= (rs-ith/right/s16 test-sub-rsound 1) (desired-nth-sample 31) 1e-4)
 
@@ -190,31 +187,20 @@
   (check-equal? (rs-ith/right/s16 short-test2 203) 
                 (rs-ith/right/s16 test-rsound 53)))
 
-;; rsound-clip
-
-  (check-equal? (rsound-start test-rsound) 0)
-  (check-equal? (rsound-stop test-rsound) 100)
-(let ([shorter-test (clip test-rsound 30 60)])
-  (check-equal? (rsound-start shorter-test) 30)
-  (check-equal? (rsound-stop shorter-test) 60)
-  (check-equal? (rsound-frames shorter-test) 30)
-  (check-equal? (rsound-sample-rate shorter-test) 44100)
-  (check-equal? (rs-ith/left/s16 shorter-test 6)
-                (rs-ith/left/s16 test-rsound 36)))
 
 
 
 (define kick-rsound (rs-read kick-wav))
 
 ;; purely regression testing:
-(check-equal? (rsound-frames kick-rsound) 4410)
+(check-equal? (rs-frames kick-rsound) 4410)
 (check-equal? (rs-ith/left/s16 kick-rsound 1803) 27532)
 (check-equal? (rs-ith/right/s16 kick-rsound 1803) 27532)
 
 ;; test with PAD
 
 (define short-with-pad (rs-read short-with-pad-wav))
-(check-equal? (rsound-frames short-with-pad) #x21)
+(check-equal? (rs-frames short-with-pad) #x21)
 (check-equal? (rs-ith/left/s16 short-with-pad 5) #x892)
 (check-equal? (rs-ith/right/s16 short-with-pad 6) #x478)
 

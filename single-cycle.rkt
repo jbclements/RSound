@@ -43,7 +43,7 @@
 ;; same as above, but no envelope:
 (define (synth-note/raw family wave-spec note-num duration)
   (define wave (wave-lookup family wave-spec))
-  (define native-pitch (/ (default-sample-rate) (rsound-frames wave)))
+  (define native-pitch (/ (default-sample-rate) (rs-frames wave)))
   (define pitch (midi-note-num->pitch note-num))
   (define single-cycle 
     (resample/memo (/ pitch native-pitch) wave))

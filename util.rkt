@@ -27,6 +27,7 @@ rsound-max-volume
          rs-map/idx
          scale
          resample
+         clip
          rs-mult
          twopi
          sine-wave
@@ -52,6 +53,7 @@ rsound-max-volume
          clip&volume
          rsound->signal/left
          rsound->signal/right
+         rs-largest-sample
          ;; rsound makers
          make-tone
          make-squaretone
@@ -99,13 +101,37 @@ rsound-max-volume
   (define (left i) (fun (rs-ith/left sound i) i))
   (define (right i) (fun (rs-ith/right sound i) i))
   (parameterize ([default-sample-rate (rsound-sample-rate sound)])
-  (signals->rsound (rsound-frames sound)
+  (signals->rsound (rs-frames sound)
                    left
                    right)))
 
 ;; rsound-scale : number rsound -> rsound
 (define (scale scalar rsound)
   (rs-map (lambda (x) (* x scalar)) rsound))
+
+
+;; clip : rsound nat nat -> rsound
+;; extract a chunk of an rsound, beginning at frame 'start'
+;; and ending before frame 'end'. 
+(define (clip sound start finish)
+  (unless (rsound? sound)
+    (raise-type-error 'rsound-clip "rsound" 0 sound start finish))
+  (unless (nonnegative-integer? start)
+    (raise-type-error 'rsound-clip "non-negative integer" 1 sound start finish))
+  (unless (nonnegative-integer? finish)
+    (raise-type-error 'rsound-clip "non-negative integer" 2 sound start finish))
+  (unless (and (<= 0 start finish (rs-frames sound)))
+    (error 'clip 
+           frames-out-of-range-msg
+           start finish (rs-frames sound)))
+  (match-define (rsound data old-start old-stop sample-rate) sound)
+  (rsound data
+          (+ old-start (i2e start)) 
+          (+ old-start (i2e finish)) sample-rate))
+
+(define frames-out-of-range-msg
+  (string-append "must have 0 < start < end < frames.  "
+                 "You provided start ~s and end ~s for a sound with ~s frames."))
 
 ;; given a factor and a sound, resample the sound (using simple rounding)
 ;; to obtain a new one. Using e.g. factor of 2 will make the sound one
@@ -118,7 +144,7 @@ rsound-max-volume
   (parameterize ([default-sample-rate 
                    (rsound-sample-rate sound)])
     (signals->rsound (inexact->exact
-                      (floor (/ (rsound-frames sound) factor)))
+                      (floor (/ (rs-frames sound) factor)))
                      left
                      right)))
 
@@ -128,8 +154,8 @@ rsound-max-volume
 ;; rate are determined by the first, and nonexistent samples
 ;; in the second are taken to be zeros.
 (define (rs-mult a b)
-  (define len1 (rsound-frames a))
-  (define len2 (rsound-frames b))
+  (define len1 (rs-frames a))
+  (define len2 (rs-frames b))
   (define new-snd
     (parameterize ([default-sample-rate 
                      (rsound-sample-rate a)])
@@ -299,7 +325,7 @@ rsound-max-volume
         [#f (compute-and-store)]
         [(and s (struct rsound (data start stop sample-rate)))
          (let ()
-           (define stored-frames (rsound-frames s))
+           (define stored-frames (rs-frames s))
            (cond [(= frames stored-frames) s]
                  [(< frames stored-frames) (clip s 0 frames)]
                  [else (compute-and-store)]))]))))
@@ -331,7 +357,7 @@ rsound-max-volume
         [#f (compute-and-store)]
         [(and s (struct rsound (data start stop sample-rate)))
          (let ()
-           (define stored-frames (rsound-frames s))
+           (define stored-frames (rs-frames s))
            (cond [(= frames stored-frames) s]
                  [(< frames stored-frames) (clip s 0 frames)]
                  [else (compute-and-store)]))]))))
@@ -357,9 +383,9 @@ rsound-max-volume
 ;; generate a sound containing repeated copies of the sound out to the
 ;; given number of frames
 (define (tile-to-len snd frames)
-  (define copies (/ frames (rsound-frames snd)))
+  (define copies (/ frames (rs-frames snd)))
   (define integral-copies (floor copies))
-  (define leftover-frames (- frames (* (rsound-frames snd) integral-copies)))
+  (define leftover-frames (- frames (* (rs-frames snd) integral-copies)))
   (rs-append*
    (append (for/list ([i (in-range integral-copies)]) snd)
            (list (clip snd 0 leftover-frames)))))
@@ -433,7 +459,7 @@ rsound-max-volume
 (define ding (make-ding 600))
 
 (define (split-in-4 s)
-  (let ([len (floor (/ (rsound-frames s) 4))])
+  (let ([len (floor (/ (rs-frames s) 4))])
     (apply values (for/list ([i (in-range 4)])
                     (clip s (* i len) (* (+ 1 i) len))))))
 
@@ -502,11 +528,11 @@ rsound-max-volume
 
 ;; return the (complex) fft of the left channel
 (define (rsound-fft/left rsound)
-  (channel-fft (lambda (i) (rs-ith/left/s16 rsound i)) (rsound-frames rsound)))
+  (channel-fft (lambda (i) (rs-ith/left/s16 rsound i)) (rs-frames rsound)))
 
 ;; return the (complex) fft of the right channel
 (define (rsound-fft/right rsound)
-  (channel-fft (lambda (i) (rs-ith/right/s16 rsound i)) (rsound-frames rsound)))
+  (channel-fft (lambda (i) (rs-ith/right/s16 rsound i)) (rs-frames rsound)))
 
 ;; the common left-right abstraction
 (define (channel-fft accessor len)
@@ -521,7 +547,7 @@ rsound-max-volume
 ;; make the sound as lound as possible without distortion
 (define (rsound-max-volume rsound)
   (let* ([scalar (fl/ 1.0 (exact->inexact (rs-largest-sample rsound)))])
-    (signals->rsound (rsound-frames rsound)
+    (signals->rsound (rs-frames rsound)
                      (rsound-sample-rate rsound)
                      (lambda (i) (fl* scalar (exact->inexact (rs-ith/left/s16 rsound i))))
                      (lambda (i) (fl* scalar (exact->inexact (rs-ith/right/s16 rsound i)))))))
@@ -541,7 +567,7 @@ rsound-max-volume
 (define ((rsound->signal/either ith-fun) rsound)
   (unless (rsound? rsound)
     (raise-type-error 'rsound->signal "rsound" 0 rsound))
-  (let ([len (rsound-frames rsound)])
+  (let ([len (rs-frames rsound)])
     (lambda (t)
       (cond [(< t len) (ith-fun rsound t)]
             [else 0.0]))))
@@ -618,3 +644,58 @@ rsound-max-volume
                     (rs-ith/right/s16 orig source)))
   (rsound vec 0 frames (default-sample-rate)))
 
+(define i2e inexact->exact)
+
+
+
+;; this stuff is a bit of a mess... the frames don't need to be passed around, the 
+;; whole thing is just a bit wordy.
+
+(define (rs-largest-sample sound)
+  (buffer-largest-sample/range (rsound-data sound) (rsound-start sound) (rsound-stop sound)
+                               (rs-frames sound)))
+
+(define (rs-largest-frame/range/left sound min-frame max-frame)
+  (buffer-largest-sample/range/left (rsound-data sound) (rs-frames sound) min-frame max-frame))
+
+(define (rs-largest-frame/range/right sound min-frame max-frame)
+  (buffer-largest-sample/range/right (rsound-data sound) (rs-frames sound) min-frame max-frame))
+
+(define (buffer-largest-sample/range buffer start stop frames)
+  (buffer-largest-sample/range/helper buffer (* channels start) 
+                                      (* channels stop) 1))
+
+;; what's the largest sample from min to max-1 ?
+
+
+;; left-channel only
+(define (buffer-largest-sample/range/left buffer frames min-frame max-frame)
+  (frame-range-checks frames min-frame max-frame)
+  (buffer-largest-sample/range/helper buffer
+                                      (* channels min-frame)
+                                      (* channels max-frame)
+                                      2))
+
+;; right channel only
+(define (buffer-largest-sample/range/right buffer frames min-frame max-frame)
+  (frame-range-checks frames min-frame max-frame)
+  (buffer-largest-sample/range/helper buffer
+                                      (add1 (* channels min-frame))
+                                      (add1 (* channels max-frame))
+                                      2))
+
+;; sample-based, for internal use only:
+(define (buffer-largest-sample/range/helper buffer min-sample max-sample increment)
+  (for/fold ([max-so-far 0.0])
+            ([i (in-range min-sample max-sample increment)])
+     (max max-so-far (abs (s16vector-ref buffer i)))))
+
+
+
+;; frame-checks
+(define (frame-range-checks frames min-frame max-frame)
+  (when (not (and (<= 0 min-frame) (<= 0 max-frame)
+                  (<= min-frame frames) (<= max-frame frames)))
+    (error 'frame-range-checks "range limits ~v and ~v not in range 0 - ~v" min-frame max-frame frames))
+  (when (not (< min-frame max-frame))
+    (error 'frame-range-checks "range limits ~v and ~v not in order and separated by at least 1" min-frame max-frame)))

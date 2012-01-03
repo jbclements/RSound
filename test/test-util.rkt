@@ -241,7 +241,7 @@
   (let ()
     (define s1 (noise 50))
     (define s2 (resample 0.25 s1))
-    (check-equal? (rsound-frames s2) 200)
+    (check-equal? (rs-frames s2) 200)
     (check-equal? (rs-ith/right s2 156)
                   (rs-ith/right s1 39))
     (check-equal? (rs-ith/left s2 157)
@@ -250,6 +250,28 @@
                   (rs-ith/right s1 39))
     (check-equal? (rs-ith/left s2 159)
                   (rs-ith/left s1 39)))
+  
+  
+  
+;; tests of rsound-largest-sample
+(let ([sample-sound (make-tone 2000 0.15 10)])
+  (check-= (/ (rs-largest-sample sample-sound) s16max) 0.15 1))
+  
+  
+;; clip
+(define test-rsound (noise 200))
+  
+  (check-equal? (rsound-start test-rsound) 0)
+  (check-equal? (rsound-stop test-rsound) 200)
+  (let ([shorter-test (clip test-rsound 30 60)])
+    (check-equal? (rsound-start shorter-test) 30)
+    (check-equal? (rsound-stop shorter-test) 60)
+    (check-equal? (rs-frames shorter-test) 30)
+    (check-equal? (rsound-sample-rate shorter-test) 44100)
+    (check-equal? (rs-ith/left/s16 shorter-test 6)
+                  (rs-ith/left/s16 test-rsound 36)))
+  
+  
 ;; how much slower is signal?
 ;; answer: negligible; only about 2% slower
 #|(define (n-times-throwaway n x) 
@@ -276,3 +298,4 @@
    (mono-signal->rsound (default-sample-rate) (signal testfun 340))))
 |#
 )))
+

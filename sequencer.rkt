@@ -2,31 +2,47 @@
 
 (require "rsound.rkt"
          "util.rkt"
+         "paste-util.rkt"
          data/heap
-         ffi/unsafe
          ffi/vector
-         "private/s16vector-add.rkt"
          rackunit)
 
 ;; a simple rsound sequencer
 
-(provide (all-defined-out))
+
+
+(provide/contract
+ [make-unplayed-heap (-> heap?)]
+ [queue-for-playing! (-> heap? rsound? nonnegative-integer? void?)]
+ [heap->signal/block/unsafe 
+  (-> heap? (values procedure? procedure?))])
 
 
 
 ;; an entry is a vector of an rsound, a start frame, and an end frame.
-(struct entry (sound start finish) #:transparent)
+(define-struct entry (sound start finish) #:transparent)
 
 ;; a heap of entries, ordered by start time.
 (define (make-unplayed-heap)
   (make-heap (lambda (a b)
+               (unless (entry? a)
+                 (raise-type-error 'unplayed-heap
+                                   "entry" 0 a b))
+               (unless (entry? b)
+                 (raise-type-error 'unplayed-heap
+                                   "entry" 1 a b))
                (<= (entry-start a) (entry-start b)))))
 
 ;; given a heap and a sound and a start, add the sound to the
 ;; heap with the given start and a computed end
 (define (queue-for-playing! heap sound start)
-  (heap-add! heap (entry sound start (+ start (rsound-frames sound)))))
+  (when (heap-has-false? heap)
+    (error 'queue-for-playing "heap has false in it: ~s"
+           (heap->vector heap)))
+  (heap-add! heap (make-entry sound start (+ start (rs-frames sound)))))
 
+(define (heap-has-false? heap)
+  (not (for/and ([elt (heap->vector heap)]) elt)))
 
 ;; this accepts a heap of input sound entries and produces a "sensitive"
 ;; signal/block that plays them, and a thunk that can be used to determine the
@@ -42,16 +58,18 @@
   (define last-t 0)
   (define (get-last-t) last-t)
   (define (signal/block cpointer frames t)
+    (when (< frames 0)
+      (error 'sequencer "callback called with frames < 0: ~e\n" frames))
     (define new-last-t (+ frames t))
     (when (< new-last-t last-t)
-      (error 'sequencer "new value of last-t ~s is less than old value ~s."
+      (error 'sequencer "new value of last-t ~e is less than old value ~e."
              new-last-t
              last-t))
     (set! last-t new-last-t)
-    ;; remove sounds that end before the start
+    ;; remove sounds that end before the start:
     (define sounds-removed? (clear-ended-sounds playing t))
-    ;; add sounds that start before the end
-    (define sounds-added? (add-new-sounds unplayed playing (+ t frames)))
+    ;; add sounds that start before the end:
+    (define sounds-added? (add-new-sounds unplayed playing t (+ t frames)))
     (when (or sounds-removed? sounds-added?)
       (set! playing-vec (heap->vector playing)))
     (combine-onto! cpointer t frames playing-vec))
@@ -62,35 +80,28 @@
 ;; zero the target, and copy the appropriate regions of the 
 ;; source sounds onto them.
 (define (combine-onto! cpointer t len playing-vec)
-    ;; this code needs to know how big frames are... _sint16
-    (memset cpointer 0 (* channels s16-size len))
-    (for ([e (in-vector playing-vec)])
-      (add-from-buf! cpointer t len e)))
+  (zero-buffer! cpointer len)
+  (for ([e (in-vector playing-vec)])
+    (add-from-buf! cpointer t len e)))
 
 ;; given a buffer in which to assemble the sounds, a frame number t,
 ;; a number of frames len, and a playing entry e, add the appropriate
 ;; section of the entry to the buffer.
 ;; required: entries have finish later than start, len > 0.
-(define (add-from-buf! cpointer t len e)
+(define (add-from-buf! ptr t len e)
   (match-define (entry sound start finish) e)
   ;; in global time:
   (define copy-start (max t start))
   (define copy-finish (min (+ t len) finish))
+  ;; must have finish later than start:
   (define copy-len (- copy-finish copy-start))
-  (define copy-len-samples (* copy-len channels))
   ;; relative to source buffer:
-  (define src-start (+ (rsound-start sound) (- copy-start start)))
-  (define src-start-ptr (ptr-add (s16vector->cpointer (rsound-data sound))
-                                 (* channels src-start)
-                                 _sint16))
+  (define src-start (- copy-start start))
   ;; relative to target buffer:
   (define tgt-start (- copy-start t))
-  (define tgt-start-ptr (ptr-add cpointer
-                                 (* channels tgt-start)
-                                 _sint16))
-  (s16buffer-add!/c tgt-start-ptr
-                    src-start-ptr
-                    copy-len-samples))
+  (rs-copy-add! ptr   tgt-start
+                sound src-start
+                copy-len len))
 
 ;; given a heap (ordered by ending time) and a current time, remove
 ;; those sounds whose ending times are <= the current time
@@ -107,13 +118,22 @@
 
 ;; given a heap of queued sounds (ordered by starting time), 
 ;; a heap of playing sounds (ordered by ending time), and
-;; a time, add the sounds that begin before the given time.
-(define (add-new-sounds queued-heap playing-heap current-time)
+;; a time, add the sounds that begin before the given ending
+;; time, unless they end before the given starting time.
+(define (add-new-sounds queued-heap playing-heap start-time stop-time)
   (let loop ([added? #f])
   (cond [(= (heap-count queued-heap) 0) added?]
         [else
          (define earliest-to-play (heap-min queued-heap))
-         (cond [(<= (entry-start earliest-to-play) current-time)
+         #;(log-debug (format "earliest: ~s\n" earliest-to-play))
+         (cond [(<= (entry-finish earliest-to-play) start-time)
+                (log-warning 
+                 (format "missed a queued sound entirely, because ~e<=~e"
+                         (entry-finish earliest-to-play) 
+                         start-time))
+                (heap-remove-min! queued-heap)
+                (loop added?)]
+               [(<= (entry-start earliest-to-play) stop-time)
                 (heap-add! playing-heap earliest-to-play)
                 (heap-remove-min! queued-heap)
                 (loop #t)]
@@ -126,19 +146,7 @@
 
 (define-test-suite
   sequencer-internals
-(let ()
-  
-  (define tgt (make-s16vector (* channels 10) 15))
-  (define src1 (rsound (make-s16vector (* channels 200) 1) 0 200 44100))
-  (define entry1 (entry src1 50 250))
-  (define entry2 (entry src1 65 265))
-  (combine-onto! (s16vector->cpointer tgt)
-                 60
-                 10
-                 (vector entry1 entry2))
-  (check-equal? (s16vector->list tgt)
-                (list 1 1 1 1 1 1 1 1 1 1 
-                      2 2 2 2 2 2 2 2 2 2)))
+
 
 ;; test of queue
 (let ()

@@ -1,55 +1,15 @@
 #lang racket
 
-(require (prefix-in rs: "rsound.rkt"))
+(require (prefix-in r: "rsound.rkt"))
 ;; these versions of the functions should do lots of error-checking:
 
 ;; I'd love to use contracts for this, but they don't work with
 ;; beginner.
 
-;; okay, I'm stopping in the middle to work on other things...
-(provide (rename-out [rs:rsound-start rsound-start]
-                     [rs:rsound-stop rsound-stop]
-                     [rs:rsound-sample-rate rsound-sample-rate]
-                     [rs:rsound-frames rsound-frames]
-                     #;([channels]
-                     [play]
-                     [signal?]
-                     [signal-play]
-                     [signal/block?]
-                     [signal/block-play]
-                     [signal/block-play/unsafe]
-                     [rsound-loop]
-                     [stop]
-                     [rs-ith/left/s16]
-                     [rs-ith/right/s16])))
-
-#;(provide rsound-start
-         
-         rs-ith/left
-         rs-ith/right
-         set-rs-ith/left!
-         set-rs-ith/right!
-         #;rsound-scale
-         rsound-equal?
-         clip
-         rs-append
-         rs-append*
-         assemble
-         default-sample-rate
-         mono-signal->rsound
-         signals->rsound
-         signal->rsound/filtered
-         silence
-         rs-read
-         rs-read/clip
-         rs-read-frames
-         rs-read-sample-rate
-         rs-write
-         rs-largest-frame/range/left
-         rs-largest-frame/range/right
-         rs-largest-sample
-         ;; for testing...
-         same-sample-rate-check)
+;; I'm only including the functions that could plausibly be used in 
+;; inner loops; these are the ones that we don't want to check when 
+;; self-calls are made... though honestly, types provide a better 
+;; solution.
 
 (define (positive-integer? n)
   (and (integer? n) (< 0 n)))
@@ -57,27 +17,75 @@
 (define (nonnegative-integer? n)
   (and (integer? n) (<= 0 n)))
 
-(define (rs-ith/left/s16 sound frame)
-  (rsound-extractor sound frame #t (lambda (x) x)))
+(provide rs-ith/left/s16
+         rs-ith/right/s16
+         rs-ith/left
+         rs-ith/right
+         set-rs-ith/left/s16!
+         set-rs-ith/right/s16!
+         set-rs-ith/left!
+         set-rs-ith/right!)
 
-;; return the nth sample of an rsound's right channel
+(define (rs-ith/left/s16 sound frame)
+  (ref-arg-checker 'rs-ith/left/s16 sound frame)
+  (r:rsound-extractor sound frame #t (lambda (x) x)))
+
 (define (rs-ith/right/s16 sound frame)
-  (rsound-extractor sound frame #f (lambda (x) x)))
+  (ref-arg-checker 'rs-ith/right/s16 sound frame)
+  (r:rsound-extractor sound frame #f (lambda (x) x)))
 
 (define (rs-ith/left sound frame)
-  (rsound-extractor sound frame #t rs:s16->real))
+  (ref-arg-checker 'rs-ith/left sound frame)
+  (r:rsound-extractor sound frame #t r:s16->real))
 
 (define (rs-ith/right sound frame)
-  (rsound-extractor sound frame #f rs:s16->real))
+  (ref-arg-checker 'rs-ith/right sound frame)
+  (r:rsound-extractor sound frame #f r:s16->real))
 
-;; the abstraction behind the last four functions...
-(define (rsound-extractor rsound frame left? scale-fun)
-  (unless (rs:rsound? rsound)
-    (raise-type-error 'rsound-extractor "rsound" 0 rsound frame))
+(define (ref-arg-checker fun-name sound frame)
+  (unless (r:rsound? sound)
+    (raise-type-error fun-name "rsound" 0 sound frame))
   (unless (nonnegative-integer? frame)
-    (raise-type-error 'rsound-extractor "nonnegative integer" 1 rsound frame))
-  (unless (< frame (rs:rsound-frames rsound))
-    (raise-type-error 'rsound-extractor (format "frame index less than available # of frames ~s" (rs:rsound-frames rsound)) 1 rsound frame))
-  (rs:rsound-extractor rsound frame left? scale-fun))
+    (raise-type-error fun-name "integer" 1 sound frame))
+  (unless (< frame (r:rs-frames sound))
+    (raise-type-error
+     fun-name
+     (format
+      "frame index less than available # of frames ~s"
+      (r:rs-frames sound)) 1 sound frame)))
+
+;; mutators
+
+(define (set-rs-ith/left! . args)
+  (apply mutator-arg-checker 'set-rs-ith/left! args)
+  (apply r:set-rs-ith/left! args))
+
+(define (set-rs-ith/right! . args)
+  (apply mutator-arg-checker 'set-rs-ith/right! args)
+  (apply r:set-rs-ith/right! args))
+
+(define (set-rs-ith/left/s16! . args)
+  (apply mutator-arg-checker 'set-rs-ith/left/s16! args)
+  (apply r:set-rs-ith/left/s16! args))
+
+(define (set-rs-ith/right/s16! . args)
+  (apply mutator-arg-checker 'set-rs-ith/right/s16! args)
+  (apply r:set-rs-ith/right/s16! args))
+
+
+
+(define (mutator-arg-checker fun-name sound frame new-val)
+  (unless (r:rsound? sound)
+    (raise-type-error fun-name "rsound" 0 sound frame new-val))
+  (unless (nonnegative-integer? frame)
+    (raise-type-error fun-name "nonnegative integer" 1 sound frame new-val))
+  (unless (< frame (r:rs-frames sound))
+    (raise-type-error 
+     fun-name
+     (format "frame index less than available # of frames ~s" (r:rs-frames sound)) 1 sound frame new-val))
+  (unless (real? new-val)
+    (raise-type-error fun-name "real" 2 sound frame new-val)))
+
+
 
 

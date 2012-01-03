@@ -13,7 +13,7 @@
 (define (rsound-scale scale sound)
   (define (left i) (* scale (rsound-ith/left sound i)))
   (define (right i) (* scale (rsound-ith/right sound i)))
-  (signals->rsound/stereo (rsound-frames sound)
+  (signals->rsound/stereo (rs-frames sound)
                        (rsound-sample-rate sound)
                        left
                        right))
@@ -40,7 +40,7 @@
 (define (resample factor sound)
   (define (left i) (rsound-ith/left sound (round (* factor i))))
   (define (right i) (rsound-ith/right sound (round (* factor i))))
-  (signals->rsound/stereo (round (/ (rsound-frames sound) factor))
+  (signals->rsound/stereo (round (/ (rs-frames sound) factor))
                        (rsound-sample-rate sound)
                        left
                        right))
@@ -52,8 +52,8 @@
 (define (single-cycle->tone rsound dur)
   (let ()
     (define num-frames (round (* (rsound-sample-rate rsound) dur)))
-    (define num-whole-copies (quotient num-frames (rsound-frames rsound)))
-    (define leftover-frames (remainder num-frames (rsound-frames rsound)))
+    (define num-whole-copies (quotient num-frames (rs-frames rsound)))
+    (define leftover-frames (remainder num-frames (rs-frames rsound)))
     (rsound-append* (append 
                      (for/list ([i (in-range num-whole-copies)])
                        rsound)
@@ -61,7 +61,7 @@
 
 (let* ([saw3 (signal->rsound 4 44100 (lambda (x) (/ x 4)))]
        [extended-saw (single-cycle->tone saw3 0.01)])
-  (check-equal? (rsound-frames extended-saw) 441)
+  (check-equal? (rs-frames extended-saw) 441)
   (check-= (rsound-ith/left extended-saw 402) 0.5 0.001))
 
 (define (single-cycle->note rsound native-pitch note-num dur)
@@ -80,7 +80,7 @@
 (require (planet clements/rsound/draw))
 (rsound-draw anasquareemu03)
 #;(vector-draw/real/imag (rsound-fft/left anasquareemu03))
-(rsound-frames anasquareemu03/1sec)
+(rs-frames anasquareemu03/1sec)
 #;(rsound-play anasquareemu03/1sec)
 #;(rsound-play (single-cycle->tone asqhi 1.0))
 

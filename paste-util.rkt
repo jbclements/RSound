@@ -30,14 +30,18 @@
 (define (rs-copy-add! tgt tgt-offset 
                       src src-offset
                       copy-frames buf-frames)
+  (unless (cpointer? tgt)
+    (raise-type-error 'rs-copy-add! "cpointer" 0 tgt tgt-offset 
+                      src src-offset
+                      copy-frames buf-frames))
   (unless (<= 0 tgt-offset (+ tgt-offset copy-frames) buf-frames)
     (error 'rs-copy-add! "tgt bounds violation, must have (0 <= ~s <= ~s <= ~s)"
            tgt-offset (+ tgt-offset copy-frames) buf-frames))
-  (unless (<= 0 src-offset (+ src-offset copy-frames)(rsound-frames src))
+  (unless (<= 0 src-offset (+ src-offset copy-frames)(rs-frames src))
     (error 'rs-copy-add! "src bounds violation, must have (0 <= ~s <= ~s <= ~s)"
            src-offset 
            (+ src-offset copy-frames)
-           (rsound-frames src)))
+           (rs-frames src)))
   (define tgt-ptr (ptr-add tgt (frames->bytes tgt-offset)))
   (define src-real-offset (+ src-offset (rsound-start src)))
   (define src-ptr (ptr-add (s16vector->cpointer (rsound-data src))
