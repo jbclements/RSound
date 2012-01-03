@@ -9,23 +9,40 @@
 
 ;; a simple rsound sequencer
 
-(provide (all-defined-out))
+
+
+(provide/contract
+ [make-unplayed-heap (-> heap?)]
+ [queue-for-playing! (-> heap? rsound? nonnegative-integer? void?)]
+ [heap->signal/block/unsafe 
+  (-> heap? (values procedure? procedure?))])
 
 
 
 ;; an entry is a vector of an rsound, a start frame, and an end frame.
-(struct entry (sound start finish) #:transparent)
+(define-struct entry (sound start finish) #:transparent)
 
 ;; a heap of entries, ordered by start time.
 (define (make-unplayed-heap)
   (make-heap (lambda (a b)
+               (unless (entry? a)
+                 (raise-type-error 'unplayed-heap
+                                   "entry" 0 a b))
+               (unless (entry? b)
+                 (raise-type-error 'unplayed-heap
+                                   "entry" 1 a b))
                (<= (entry-start a) (entry-start b)))))
 
 ;; given a heap and a sound and a start, add the sound to the
 ;; heap with the given start and a computed end
 (define (queue-for-playing! heap sound start)
-  (heap-add! heap (entry sound start (+ start (rs-frames sound)))))
+  (when (heap-has-false? heap)
+    (error 'queue-for-playing "heap has false in it: ~s"
+           (heap->vector heap)))
+  (heap-add! heap (make-entry sound start (+ start (rs-frames sound)))))
 
+(define (heap-has-false? heap)
+  (not (for/and ([elt (heap->vector heap)]) elt)))
 
 ;; this accepts a heap of input sound entries and produces a "sensitive"
 ;; signal/block that plays them, and a thunk that can be used to determine the
@@ -41,16 +58,18 @@
   (define last-t 0)
   (define (get-last-t) last-t)
   (define (signal/block cpointer frames t)
+    (when (< frames 0)
+      (error 'sequencer "callback called with frames < 0: ~e\n" frames))
     (define new-last-t (+ frames t))
     (when (< new-last-t last-t)
-      (error 'sequencer "new value of last-t ~s is less than old value ~s."
+      (error 'sequencer "new value of last-t ~e is less than old value ~e."
              new-last-t
              last-t))
     (set! last-t new-last-t)
-    ;; remove sounds that end before the start
+    ;; remove sounds that end before the start:
     (define sounds-removed? (clear-ended-sounds playing t))
-    ;; add sounds that start before the end
-    (define sounds-added? (add-new-sounds unplayed playing (+ t frames)))
+    ;; add sounds that start before the end:
+    (define sounds-added? (add-new-sounds unplayed playing t (+ t frames)))
     (when (or sounds-removed? sounds-added?)
       (set! playing-vec (heap->vector playing)))
     (combine-onto! cpointer t frames playing-vec))
@@ -74,6 +93,7 @@
   ;; in global time:
   (define copy-start (max t start))
   (define copy-finish (min (+ t len) finish))
+  ;; must have finish later than start:
   (define copy-len (- copy-finish copy-start))
   ;; relative to source buffer:
   (define src-start (- copy-start start))
@@ -98,13 +118,22 @@
 
 ;; given a heap of queued sounds (ordered by starting time), 
 ;; a heap of playing sounds (ordered by ending time), and
-;; a time, add the sounds that begin before the given time.
-(define (add-new-sounds queued-heap playing-heap current-time)
+;; a time, add the sounds that begin before the given ending
+;; time, unless they end before the given starting time.
+(define (add-new-sounds queued-heap playing-heap start-time stop-time)
   (let loop ([added? #f])
   (cond [(= (heap-count queued-heap) 0) added?]
         [else
          (define earliest-to-play (heap-min queued-heap))
-         (cond [(<= (entry-start earliest-to-play) current-time)
+         #;(log-debug (format "earliest: ~s\n" earliest-to-play))
+         (cond [(<= (entry-finish earliest-to-play) start-time)
+                (log-warning 
+                 (format "missed a queued sound entirely, because ~e<=~e"
+                         (entry-finish earliest-to-play) 
+                         start-time))
+                (heap-remove-min! queued-heap)
+                (loop added?)]
+               [(<= (entry-start earliest-to-play) stop-time)
                 (heap-add! playing-heap earliest-to-play)
                 (heap-remove-min! queued-heap)
                 (loop #t)]

@@ -5,32 +5,26 @@
          ffi/vector
          racket/async-channel)
 
-(define (nonnegative-integer? n) 
-  (and (exact-integer? n)
-       (<= 0 n)))
-
-(define (positive-integer? n)
-  (and (exact-integer? n)
-       (< 0 n)))
-
-(define frames? nonnegative-integer?)
-(define sample-rate? positive-integer?)
+(define (nonnegative-real? n)
+  (and (real? n) (not (negative? n))))
 
 (provide/contract (buffer-play (-> s16vector?
                                    exact-integer?
                                    (or/c false? exact-integer?)
-                                   sample-rate?
+                                   nonnegative-real?
                                    void?))
                   #;(buffer-loop (-> cpointer?
                                    frames?
-                                   sample-rate?
+                                   nonnegative-real?
                                    void?))
                   [signal->signal/block/unsafe
                    (-> procedure? procedure?)]
-                  [signal/block-play (-> procedure? sample-rate? (or/c real? false?) void?)]
-                  [signal/block-play/unsafe (-> procedure? sample-rate? (or/c real? false?) void?)]
+                  [signal/block-play (-> procedure? nonnegative-real? (or/c nonnegative-real? false?) 
+                                         (-> nonnegative-real?))]
+                  [signal/block-play/unsafe (-> procedure? nonnegative-real? (or/c nonnegative-real? false?) 
+                                                (-> nonnegative-real?))]
                   [stop-playing (-> void?)]
-                  [channels positive-integer?])
+                  [channels exact-nonnegative-integer?])
 
 
 
@@ -70,7 +64,8 @@
     (stream-play block-filler actual-buffer-time sample-rate))
   (async-channel-put 
    live-stream-channel
-   (lambda () (stop-sound))))
+   (lambda () (stop-sound)))
+  stream-time)
 
 ;; a wrapper for portaudio's signal/block-play/unsafe, that
 ;; uses the default buffer size and saves a stopper
@@ -81,7 +76,8 @@
     (stream-play/unsafe block-filler actual-buffer-time sample-rate))
   (async-channel-put 
    live-stream-channel
-   (lambda () (stop-sound))))
+   (lambda () (stop-sound)))
+  stream-time)
 
 ;; given a signal, produces a signal/block/unsafe;
 ;; that is, a function that can fill a full buffer on
