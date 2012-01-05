@@ -11,6 +11,10 @@
 (define i (sqrt -1))
 (define twopi (* 2 pi))
 
+;; poly : a transfer function
+;; coefficients : a list of coefficients to use in a transfer function
+;; roots / zeros : places where the transfer function is zero
+;; poles : places where the transfer function is infinite
 
 ;; frequency response, given input frequency in Hz
 (define (response/raw poly)
@@ -29,10 +33,10 @@
      (* 10 (/ (log (max 1e-6 (magnitude x))) (/ (log 10) 2))))
    (response/raw poly)))
 
-;; given a set of poles, compute the corresponding
+;; given a set of zeros, compute the corresponding
 ;; polynomial
-(define (roots->poly iir-poles)
-  (coefficients->poly (roots->coefficients iir-poles)))
+(define (roots->poly roots)
+  (coefficients->poly (roots->coefficients roots)))
 
 ;; given a set of poles, compute the corresponding
 ;; IIR feedback coefficients.
@@ -114,11 +118,16 @@
 ;; convert s-space value to z-space value
 (define (s-space->z-space pole) (exp pole))
   
-;; given a scale, produce a 4-pole chebyshev low-pass filter
+;; given a scale, produce a 4-pole chebyshev low-pass filter, returning
+;; iir coefficients
 (define (lpf-coefficients scale)
-  (define s-poles (map (lambda (x) (* scale x)) chebyshev-s-poles))
+  (define s-poles (let ([ans (map (lambda (x) (* scale x)) chebyshev-s-poles)])
+                    (printf "~s\n" ans)
+                    ans))
   (define z-poles (map s-space->z-space s-poles))
-  (map tidy-imag (cdr (roots->coefficients z-poles))))
+  (map tidy-imag (cdr (let ([ans (roots->coefficients z-poles)])
+                        (printf "~s\n" ans)
+                        ans))))
 
 
 

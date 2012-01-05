@@ -7,6 +7,7 @@
          rackunit/text-ui
          racket/flonum)
 
+(define i (sqrt -1))
 (define msr mono-signal->rsound)
 ;; there could be a *lot* of good tests here...
 
@@ -131,6 +132,10 @@
 
 (check-true (andmap = (roots->coefficients '(0.5 0.5+i 0.5-i))
                      (list 1.0 -1.5 1.75 -0.625)))
+  
+(check-= (magnitude ((roots->poly (list 1.0 -1.0)) 1.0)) 0.0 1e-5)
+(check-= (magnitude ((roots->poly (list 1.0 -1.0)) -1.0)) 0.0 1e-5)
+(check-= (magnitude ((roots->poly (list 1.0 -1.0)) i)) 2.0 1e-5)  
 
 (check-= (product-of '(1 2 3 4)) 24 0.0)
 (check-= (sum-of '(1 2 3 4)) 10 0.0)
