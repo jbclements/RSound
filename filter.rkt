@@ -3,6 +3,7 @@
 (require (only-in racket pi)
          racket/match
          "rsound.rkt"
+         "filter-typed.rkt"
          racket/flonum)
 
 (provide (except-out (all-defined-out)
@@ -15,122 +16,6 @@
 ;; coefficients : a list of coefficients to use in a transfer function
 ;; roots / zeros : places where the transfer function is zero
 ;; poles : places where the transfer function is infinite
-
-;; frequency response, given input frequency in Hz
-(define (response/raw poly)
-  (define sr-inv (/ 1 (default-sample-rate)))
-  (lambda (omega)
-    (let ([z (exp (* i sr-inv twopi omega))])
-      (poly z))))
-
-;; compute the magnitude of the response in decibels
-(define (response/mag poly)
-  (compose 
-   (lambda (x) 
-     ;; log-based, cap at -100 db, square to get power
-     #;(max -100 (* 10 (/ (log (expt (magnitude x) 2)) (log 10))))
-     ;; equivalent to:
-     (* 10 (/ (log (max 1e-6 (magnitude x))) (/ (log 10) 2))))
-   (response/raw poly)))
-
-;; given a set of zeros, compute the corresponding
-;; polynomial
-(define (roots->poly roots)
-  (coefficients->poly (roots->coefficients roots)))
-
-;; given a set of poles, compute the corresponding
-;; IIR feedback coefficients.
-(define (roots->coefficients iir-poles)
-  (let ([neg-poles (map - iir-poles)])
-  (reverse
-   (for/list ([exponent (in-range (add1 (length neg-poles)))])
-     (sum-of (map product-of (all-but-n exponent neg-poles)))))))
-
-;; given a number, check that it's close to real, return the
-;; real number
-(define (tidy-imag i)
-  (define angl (angle i))
-  (define wrapped-angle (cond [(< angl (- (/ pi 2))) (+ angl (* 2 pi))]
-                              [else angl]))
-  (cond [(< (abs wrapped-angle) angle-epsilon) (magnitude i)]
-        [(< (abs (- pi wrapped-angle)) angle-epsilon)
-         (- (magnitude i))]
-        [else (error 'tidy-imag "angle ~s of complex number ~s is not close to zero or pi." wrapped-angle i)]))
-(define angle-epsilon 1e-5)
-
-
-;; sum-of : (listof number) -> number
-(define (sum-of l) (foldl + 0 l))
-
-;; product-of : (listof number) -> number
-(define (product-of l) (foldl * 1 l))
-
-;; all-but-n : ways of choosing all but 'n' elements of the list
-(define (all-but-n n l)
-  (cond [(= n 0) (list l)]
-        [(= n (length l)) (list '())]
-        [else (append (all-but-n (- n 1) (cdr l))
-                      (map (lambda (x)
-                             (cons (car l) x))
-                           (all-but-n n (cdr l))))]))
-
-;; given a set of polynomial coefficients, return
-;; the corresponding polynomial
-(define ((coefficients->poly coefficients) x)
-  (for/fold ([so-far 0])
-    ([coefficient (in-list coefficients)])
-    (+ coefficient (* so-far x))))
-
-
-
-;; given a list of poles and a list of zeros in z-space, 
-;; return the corresponding transfer function.
-(define (poles&zeros->fun poles zeros)
-  (coefficient-sets->fun (roots->coefficients poles)
-                         (roots->coefficients zeros)))
-
-;; given a list of feedback coefficients and a list of feedforward
-;; coefficients, return the corresponding transfer function
-(define (coefficient-sets->fun fb-coefficients ff-coefficients)
-  (let ([feedback-poly (coefficients->poly fb-coefficients)]
-        [feedforward-poly (coefficients->poly ff-coefficients)])
-    (lambda (x)
-      (/ (feedforward-poly x)
-         (feedback-poly x)))))
-
-;; constants in the 4-pole chebyshev low-pass filter:
-(define chebyshev-s-poles
-  (let ()
-    ;; how many poles (more poles is more computationally intensive)
-    (define num-poles 4)
-    ;; higher epsilon gives sharper drop but more ripple in passband
-    (define epsilon 1.0)
-    
-    ;; the left half of the poles *in s-space*:
-    (define left-half
-      (for/list ([m (in-range num-poles)])
-        (* i (cos (+ (* (/ 1 num-poles) 
-                        (acos (/ i epsilon))) 
-                     (/ (* pi m) num-poles))))))
-    left-half))
-
-
-;; convert s-space value to z-space value
-(define (s-space->z-space pole) (exp pole))
-  
-;; given a scale, produce a 4-pole chebyshev low-pass filter, returning
-;; iir coefficients
-(define (lpf-coefficients scale)
-  (define s-poles (let ([ans (map (lambda (x) (* scale x)) chebyshev-s-poles)])
-                    (printf "~s\n" ans)
-                    ans))
-  (define z-poles (map s-space->z-space s-poles))
-  (map tidy-imag (cdr (let ([ans (roots->coefficients z-poles)])
-                        (printf "~s\n" ans)
-                        ans))))
-
-
-
 
 ;; FIR filters
 
@@ -169,8 +54,7 @@
                result)))))]
     [other (raise-type-error 'fir-filter "(listof (list number number))" 0 params)]))
 
-(define (up-to-power-of-two n)
-  (inexact->exact (expt 2 (ceiling (/ (log (max n 1)) (log 2))))))
+
 
 
 
