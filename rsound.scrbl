@@ -40,7 +40,7 @@ volume. Hmm.
 These procedures start and stop playing sounds and loops.
 
 @defproc[(play (rsound rsound?)) void?]{
- Plays an rsound. Interrupts an already-playing sound, if there is one.}
+ Plays an rsound. Plays concurrently with an already-playing sound, if there is one.}
 
 @;{@defproc[(rsound-loop (rsound rsound?)) void?]{
  Plays an rsound repeatedly.  Continues looping until interrupted by 
@@ -185,7 +185,7 @@ are several built-in functions that produce signals.
  Produces a constant signal at @racket[amplitude]. Inaudible unless used to multiply by
  another signal.}
 
-In order to listen to them, you'll need to transform them into rsounds:
+In order to listen to them, you can transform them into rsounds, or play them directly:
 
 @defproc[(mono-signal->rsound (frames nonnegative-integer?) (signal signal?)) rsound?]{
  Builds a sound of length @racket[frames] at the default sample-rate by calling 
@@ -219,10 +219,13 @@ In order to listen to them, you'll need to transform them into rsounds:
 
 @defproc[(signals->rsound (frames nonnegative-integer?) 
                              (left-fun signal?) (right-fun signal?)) rsound?]{
- Builds a stereo sound of length @racket[frames] and sample-rate @racket[sample-rate] by calling 
+ Builds a stereo sound of length @racket[frames] by calling 
  @racket[left-fun] and @racket[right-fun] 
  with integers from 0 up to @racket[frames]-1. The result should be an inexact 
  number in the range @racket[-1.0] to @racket[1.0]. Values outside this range are clipped.}
+                                                                             
+@defproc[(signal-play (signal signal?) (sample-rate? positive-real?)) void?]{
+ Plays a (single-channel) signal. Halt playback using @racket[(stop)].}
 
 
 @defproc[(fader [fade-samples number?]) signal?]{

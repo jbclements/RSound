@@ -4,8 +4,7 @@
          "util.rkt"
          "paste-util.rkt"
          data/heap
-         ffi/vector
-         rackunit)
+         ffi/vector)
 
 ;; a simple rsound sequencer
 
@@ -118,8 +117,9 @@
 
 ;; given a heap of queued sounds (ordered by starting time), 
 ;; a heap of playing sounds (ordered by ending time), and
-;; a time, add the sounds that begin before the given ending
+;; a time, add the sounds that begin before or on the given ending
 ;; time, unless they end before the given starting time.
+;; return a boolean indicating whether any sounds were added.
 (define (add-new-sounds queued-heap playing-heap start-time stop-time)
   (let loop ([added? #f])
   (cond [(= (heap-count queued-heap) 0) added?]
@@ -140,13 +140,9 @@
                [else added?])])))
 
 
+(module+ test
 
-;; these tests refer to a number of internals, and it's hard
-;; to peel them out.
-
-(define-test-suite
-  sequencer-internals
-
+  (require rackunit)
 
 ;; test of queue
 (let ()
@@ -186,26 +182,31 @@
   (define queued-heap (make-unplayed-heap))
   (heap-add-all! queued-heap (list (entry 'a 14 29)
                                     (entry 'b 16 21)
+                                    (entry 'e 26 27)
                                     (entry 'c 5 25)
                                     (entry 'd 3 25)))
   (define playing-heap (make-heap 
                         (lambda (a b)
                           (<= (entry-finish a) (entry-finish b)))))
-  (check-equal? (heap-count queued-heap) 4)
+  (check-equal? (heap-count queued-heap) 5)
   (check-equal? (heap-min queued-heap) (entry 'd 3 25))
-  (check-equal? (add-new-sounds queued-heap playing-heap 0) #f)
-  (check-equal? (heap-count queued-heap) 4)
+  (check-equal? (add-new-sounds queued-heap playing-heap 0 2) #f)
+  (check-equal? (heap-count queued-heap) 5)
   (check-equal? (heap-count playing-heap) 0)
-  (check-equal? (add-new-sounds queued-heap playing-heap 3) #t)
-  (check-equal? (heap-count queued-heap) 3)
+  (check-equal? (add-new-sounds queued-heap playing-heap 2 4) #t)
+  (check-equal? (heap-count queued-heap) 4)
   (check-equal? (heap-count playing-heap) 1)
-    (check-equal? (add-new-sounds queued-heap playing-heap 5) #t)
-  (check-equal? (heap-count queued-heap) 2)
+  (check-equal? (add-new-sounds queued-heap playing-heap 4 13) #t)
+  (check-equal? (heap-count queued-heap) 3)
   (check-equal? (heap-count playing-heap) 2)
-    (check-equal? (add-new-sounds queued-heap playing-heap 16) #t)
-  (check-equal? (heap-count queued-heap) 0)
+  (check-equal? (add-new-sounds queued-heap playing-heap 13 19) #t)
+  (check-equal? (heap-count queued-heap) 1)
   (check-equal? (heap-count playing-heap) 4)
-  (check-equal? (add-new-sounds queued-heap playing-heap 20) #f))
+  (check-equal? (add-new-sounds queued-heap playing-heap 19 25) #f)
+  ;; oops, missed e completely:
+  (check-equal? (add-new-sounds queued-heap playing-heap 30 35) #f)
+  (check-equal? (heap-count queued-heap) 0)
+  (check-equal? (heap-count playing-heap) 4))
 
 
 

@@ -123,25 +123,25 @@
 (define (1-zero z)
   (+ 1 (expt z -1)))
 
-(complex-check ((response/raw 1-zero) 0) 2.0 1e-4)
-(complex-check ((response/raw 1-zero) 22050) 0.0 1e-4)
+(complex-check ((response/raw 1-zero) 0.0) 2.0 1e-4)
+(complex-check ((response/raw 1-zero) 22050.0) 0.0 1e-4)
 
 
 (check-equal? (all-but-n 3 '(1 2 3 4 5))
               '((4 5) (3 5) (3 4) (2 5) (2 4) 
                 (2 3) (1 5) (1 4) (1 3) (1 2)))
 
-(check-true (andmap = (roots->coefficients '(0.5 0.5+i 0.5-i))
+(check-true (andmap = (roots->coefficients '(0.5+0.0i 0.5+i 0.5-i))
                      (list 1.0 -1.5 1.75 -0.625)))
   
-(check-= (magnitude ((roots->poly (list 1.0 -1.0)) 1.0)) 0.0 1e-5)
-(check-= (magnitude ((roots->poly (list 1.0 -1.0)) -1.0)) 0.0 1e-5)
-(check-= (magnitude ((roots->poly (list 1.0 -1.0)) i)) 2.0 1e-5)  
+(check-= (magnitude ((roots->poly (list 1.0+0.0i -1.0+0.0i)) 1.0+0.0i)) 0.0 1e-5)
+(check-= (magnitude ((roots->poly (list 1.0+0.0i -1.0+0.0i)) -1.0+0.0i)) 0.0 1e-5)
+(check-= (magnitude ((roots->poly (list 1.0+0.0i -1.0+0.0i)) 0.0+0.0i)) 1.0 1e-5)
 
-(check-= (product-of '(1 2 3 4)) 24 0.0)
-(check-= (sum-of '(1 2 3 4)) 10 0.0)
+(check-= (product-of '(1.0+0.0i 2.0+0.0i 3.0+0.0i 4.0+0.0i)) 24 0.0)
+(check-= (sum-of '(1.0+0.0i 2.0+0.0i 3.0+0.0i 4.0+0.0i)) 10 0.0)
 
-(check-= ((coefficients->poly '(3 1 9)) 6)
+(check-= ((coefficients->poly '(3.0 1.0 9.0)) 6.0+0.0i)
          123
          1e-7)
               

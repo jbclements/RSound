@@ -147,10 +147,15 @@
   (define saved-iir-terms #f)
   (define saved-gain #f)
   (lambda (t)
-    (unless (= t (add1 last-t))
-      (error 'fir-filter "called with t=~s, expecting t=~s. Sorry about that limitation." 
+    (when (< t (add1 last-t))
+      (error 'fir-filter "called with t=~s, expecting t >= ~s. out of order!." 
              t
              (add1 last-t)))
+    (when (< (add1 last-t) t)
+      (fprintf (current-error-port) "forward jump; resetting tap buffers.\n")
+      (for ([i input-buf-len]) (flvector-set! saved-input-buf i 0.0))
+      (for ([i output-buf-len]) (flvector-set! saved-output-buf i 0.0))
+      (set! last-t (sub1 t)))
     ;; only update the filter parameters every 32 samples
     (when (= (modulo t filter-param-update-interval) 0)
       (define-values (fir-terms iir-terms gain) (param-signal t))
@@ -230,7 +235,7 @@
      (values (flvector)
              tap-mults
              gain))
-   0 5
+   0 4
    input-signal))
 
 (define (flvector-sum vec)

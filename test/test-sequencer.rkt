@@ -1,7 +1,5 @@
 #lang racket
 
 (require rackunit/text-ui
-         "../sequencer.rkt")
+         (submod "../sequencer.rkt" test))
 
-
-(run-tests sequencer-internals)

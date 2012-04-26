@@ -10,6 +10,8 @@
          response/mag
          roots->poly
          coefficients->poly
+         poles&zeros->poly
+         coefficient-sets->poly
          roots->coefficients
          real-part/ck
          lpf-coefficients
@@ -19,17 +21,17 @@
          sum-of)
 
 
-(: i Inexact-Complex)
+(: i Complex)
 (define i (exact->inexact (sqrt -1)))
 (define twopi (* 2 pi))
 
-(define-type Poly (Inexact-Complex -> Inexact-Complex))
-(define-type Z-Plane-Points (Listof Inexact-Complex))
+(define-type Poly (Complex -> Complex))
+(define-type Z-Plane-Points (Listof Complex))
 (define-type Zeros Z-Plane-Points)
 (define-type Poles Z-Plane-Points)
-(define-type Coefficients (Listof Inexact-Real))
-(define-type Frequency Positive-Inexact-Real)
-(define-type Signal (Nonnegative-Fixnum -> Inexact-Real))
+(define-type Coefficients (Listof Real))
+(define-type Frequency Nonnegative-Real)
+(define-type Signal (Nonnegative-Fixnum -> Real))
 
 ;; poly : a transfer function
 ;; coefficients : a list of coefficients to use in a transfer function
@@ -37,7 +39,7 @@
 ;; poles : places where the transfer function is infinite
 
 ;; frequency response, given input frequency in Hz
-(: response/raw (Poly -> Frequency -> Inexact-Complex))
+(: response/raw (Poly -> Frequency -> Complex))
 (define (response/raw poly)
   (define sr-inv (exact->inexact
                   (/ 1 (default-sample-rate))))
@@ -55,7 +57,7 @@
   #;(max -100 (* 10 (/ (log (expt mag 2)) (log 10))))
   ;; equivalent to:
   (* 10 (/ (ann (log (ann (max 1.0e-6 mag)
-                          Positive-Inexact-Real))
+                          Positive-Real))
                 Real)
            (/ (log 10) 2))))
 
@@ -69,7 +71,7 @@
 ;; the corresponding polynomial
 (: coefficients->poly (Coefficients -> Poly))
 (define ((coefficients->poly coefficients) x)
-  (for/fold: ([so-far : Inexact-Complex 0.0+0.0i])
+  (for/fold: ([so-far : Complex 0.0+0.0i])
     ([coefficient (in-list coefficients)])
     (+ coefficient (* so-far x))))
 
@@ -107,13 +109,13 @@
 
 ;; given a scale, produce a 4-pole chebyshev low-pass filter, returning
 ;; iir coefficients
-(: lpf-coefficients (Inexact-Real -> Coefficients))
+(: lpf-coefficients (Real -> Coefficients))
 (define (lpf-coefficients scale)
-  (define s-poles (map (lambda: ([x : Inexact-Complex])
+  (define s-poles (map (lambda: ([x : Complex])
                          (* scale x))
                        chebyshev-s-poles))
   (define z-poles (map s-space->z-space s-poles))
-  (roots->coefficients z-poles))
+  (cdr (roots->coefficients z-poles)))
 
 ;; constants in the 4-pole chebyshev low-pass filter:
 (: chebyshev-s-poles Poles)
@@ -125,7 +127,7 @@
     (define epsilon 1.0)
     ;; the left half of the poles *in s-space*:
     (define left-half
-      (for/list: : (Listof Inexact-Complex) 
+      (for/list: : (Listof Complex) 
         ([m (in-range num-poles)])
         (* i (cos (+ (* (/ 1 num-poles) 
                         (acos (/ i epsilon))) 
@@ -136,7 +138,7 @@
 
 ;; fir-filter : (listof (list/c delay amplitude)) -> signal -> signal
 ;; filter the input signal using the delay values and amplitudes given for an FIR filter
-(: fir-filter ((Listof (List Nonnegative-Fixnum Inexact-Real)) -> Signal -> Signal))
+(: fir-filter ((Listof (List Nonnegative-Fixnum Real)) -> Signal -> Signal))
 (define (fir-filter params)
   (match params
     [`((,delays ,amplitudes) ...)
@@ -145,7 +147,7 @@
        (define max-delay
          (up-to-power-of-two (+ 1 (apply max delays))))
        ;; set up buffer to delay the signal
-       (: delay-buf (Vectorof Inexact-Real))
+       (: delay-buf (Vectorof Real))
        (define delay-buf (make-vector max-delay 0.0))
        (define next-idx 0)
        ;; ugh... we must be called sequentially:
@@ -155,7 +157,7 @@
          (cond [(andmap exact-nonnegative-integer? delays)
                 delays]
                [(error 'impossible "Make TR happy")]))
-       (: amplitudes/t (Listof Inexact-Real))
+       (: amplitudes/t (Listof Real))
        (define amplitudes/t
          (cond [(andmap inexact-real? amplitudes)
                 amplitudes]
@@ -172,7 +174,7 @@
              (vector-set! delay-buf next-idx this-val)
              (define result
                (for/fold:  
-                ([sum : Inexact-Real 0.0])
+                ([sum : Real 0.0])
                 ([d (in-list delays/t)]
                  [a (in-list amplitudes/t)])
                 (+ sum 
@@ -189,16 +191,16 @@
 
 
 ;; convert s-space value to z-space value
-(: s-space->z-space (Inexact-Complex -> Inexact-Complex))
+(: s-space->z-space (Complex -> Complex))
 (define (s-space->z-space pole) (exp pole))
 
 
 ;; sum-of : (listof number) -> number
-(: sum-of ((Listof Inexact-Complex) -> Inexact-Complex))
+(: sum-of ((Listof Complex) -> Complex))
 (define (sum-of l) (foldl + 0.0+0.0i l))
 
 ;; product-of : (listof number) -> number
-(: product-of ((Listof Inexact-Complex) -> Inexact-Complex))
+(: product-of ((Listof Complex) -> Complex))
 (define (product-of l) (foldl * 1.0+0.0i l))
 
 ;; all-but-n : ways of choosing all but 'n' elements of the list
@@ -216,7 +218,7 @@
 
 ;; given a number, check that it's close to real, return the
 ;; real number
-(: real-part/ck (Inexact-Complex -> Inexact-Real))
+(: real-part/ck (Complex -> Real))
 (define (real-part/ck i)
   (define angl (angle i))
   (define wrapped-angle (cond [(< angl (- (/ pi 2))) (+ angl (* 2 pi))]
