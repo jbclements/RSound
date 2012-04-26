@@ -128,6 +128,11 @@
 (define filter-param-update-interval 32)
 
 ;; we want to be able to change the filter dynamically...
+
+;; the param-signal must accept a time and return three values: the 
+;; fir terms, the iir terms, and the gain. The input and output-tap-len
+;; specify the length of the vectors used for these terms. Then
+;; there's the input signal....
 (define (dynamic-lti-signal param-signal input-tap-len output-tap-len
                             input-signal)
   (define input-buf-len (max 1 input-tap-len))
@@ -153,14 +158,14 @@
                    (= (flvector-length fir-terms)
                       input-tap-len))
         (error 'dynamic-lti-signal 
-               "expected vector of length ~s for fir-terms, got ~s"
-               input-tap-len fir-terms))
+               "expected vector of length ~s for fir-terms, got vector of length ~s"
+               input-tap-len (flvector-length fir-terms)))
       (unless (and (flvector? iir-terms)
                    (= (flvector-length iir-terms)
                       output-tap-len))
         (error 'dynamic-lti-signal 
-               "expected vector of length ~s for iir-terms, got ~s"
-               output-tap-len iir-terms))
+               "expected vector of length ~s for iir-terms, got vector of length ~s"
+               output-tap-len (flvector-length iir-terms)))
       (set! saved-fir-terms fir-terms)
       (set! saved-iir-terms iir-terms)
       (set! saved-gain gain))
@@ -196,6 +201,8 @@
                                             perceptible-interval))) 
                                        #f))
 
+;; dynamic low-pass filter: the first argument is a signal that controls
+;; the filter cutoff, the second is the signal being filtered.
 (define (lpf/dynamic scale-signal input-signal)
   (dynamic-lti-signal
    (lambda (t)
@@ -223,7 +230,7 @@
      (values (flvector)
              tap-mults
              gain))
-   0 4
+   0 5
    input-signal))
 
 (define (flvector-sum vec)

@@ -50,13 +50,13 @@
   (check-= (rs-ith/left shorty 2) 0.02 1e-4)
   (check-= (rs-ith/right shorty 9) 0.09 1e-4)
   
-  (define shorty2 (overlay shorty shorty))
+  (define shorty2 (rs-overlay shorty shorty))
   (check-= (rs-ith/right shorty2 13) 0.26 1e-4)
   
-  (define shorty3 (overlay* (list shorty shorty shorty)))
+  (define shorty3 (rs-overlay* (list shorty shorty shorty)))
   (check-= (rs-ith/left shorty3 6) 0.18 1e-4)
   
-  (let ([s (scale 0.75 shorty)])
+  (let ([s (rs-scale 0.75 shorty)])
     (check-= (rs-ith/left s 8) 0.06 1e-4))
   
 

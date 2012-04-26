@@ -131,12 +131,12 @@ These procedures allow the creation, analysis, and manipulation of rsounds.
  Returns a new rsound containing the given @racket[rsounds], appended sequentially. This procedure is relatively
  fast. All of the given rsounds must have the same sample-rate.}
 
-@defproc[(overlay (rsound-1 rsound?) (rsound-2 rsound?)) rsound?]{
+@defproc[(rs-overlay (rsound-1 rsound?) (rsound-2 rsound?)) rsound?]{
  Returns a new rsound containing the two sounds played simultaneously.  
  Note that unless both sounds have amplitudes less that 0.5, clipping
  or wrapping is likely.}
 
-@defproc[(overlay* (rsounds (listof rsound?))) rsound?]{
+@defproc[(rs-overlay* (rsounds (listof rsound?))) rsound?]{
  Returns a new rsound containing all of the sounds played simultaneously.  
  Note that unless all of the sounds have low amplitudes, clipping
  or wrapping is likely.}
@@ -159,7 +159,7 @@ These procedures allow the creation, analysis, and manipulation of rsounds.
  
  }
 
-@defproc[(scale (scalar nonnegative-number?) (rsound rsound?)) rsound?]{
+@defproc[(rs-scale (scalar nonnegative-number?) (rsound rsound?)) rsound?]{
  Scale the given sound by multiplying all of its samples by the given scalar.}
 
 @section{Signals}

@@ -12,7 +12,11 @@
          coefficients->poly
          roots->coefficients
          real-part/ck
-         lpf-coefficients)
+         lpf-coefficients
+         up-to-power-of-two
+         all-but-n
+         product-of
+         sum-of)
 
 
 (: i Inexact-Complex)
@@ -220,7 +224,7 @@
   (cond [(< (abs wrapped-angle) angle-epsilon) (magnitude i)]
         [(< (abs (- pi wrapped-angle)) angle-epsilon)
          (- (magnitude i))]
-        [else (error 'tidy-imag "angle ~s of complex number ~s is not close to zero or pi." wrapped-angle i)]))
+        [else (error 'real-part/ck "angle ~s of complex number ~s is not close to zero or pi." wrapped-angle i)]))
 (define angle-epsilon 1e-5)
 
 ;; pick the next largest (or equal) power of 2
@@ -246,7 +250,10 @@
   (lambda (x) (sin (exact->inexact
                     (* 2.0 pi (/ 1.0 44100.0) 400.0 x)))))
 
+
 ;; time test for FIR filter
+
+#|(: sig2 Signal)
 (define sig2 ((fir-filter `((1 0.287) (4 -0.2987))) my-signal))
 
 (: vec-len Nonnegative-Fixnum)
@@ -255,8 +262,8 @@
 (define m (make-vector vec-len 0.0))
 (printf "filling vector with filtered signal")
 (begin
-  (for: ([i : (Sequenceof Nonnegative-Fixnum)
+  (for: ([i : Nonnegative-Fixnum
             (ann (in-range (ann vec-len Nonnegative-Fixnum))
                  (Sequenceof Nonnegative-Fixnum))])
         (vector-set! m i (sig2 i)))
-  13)
+  13)|#

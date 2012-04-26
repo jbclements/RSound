@@ -25,7 +25,7 @@ rsound-max-volume
 
 (provide rs-map
          rs-map/idx
-         scale
+         rs-scale
          resample
          clip
          rs-mult
@@ -68,8 +68,8 @@ rsound-max-volume
          make-ding
          split-in-4
          times
-         overlay*
-         overlay
+         rs-overlay*
+         rs-overlay
          mono
          vectors->rsound
          tile-to-len
@@ -106,7 +106,7 @@ rsound-max-volume
                    right)))
 
 ;; rsound-scale : number rsound -> rsound
-(define (scale scalar rsound)
+(define (rs-scale scalar rsound)
   (rs-map (lambda (x) (* x scalar)) rsound))
 
 
@@ -607,11 +607,11 @@ rsound-max-volume
 
 
 ;; overlay a list of sounds on top of each other
-(define (overlay* los)
+(define (rs-overlay* los)
   (assemble (map (lambda (s) (list s 0)) los)))
 
 ;; overlay two sounds on top of each other
-(define (overlay sound1 sound2)
+(define (rs-overlay sound1 sound2)
   (assemble (list (list sound1 0)
                   (list sound2 0))))
 

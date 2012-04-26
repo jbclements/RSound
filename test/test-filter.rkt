@@ -3,6 +3,7 @@
 
 (require "../rsound.rkt"
          "../filter.rkt"
+         "../filter-typed.rkt"
          rackunit
          rackunit/text-ui
          racket/flonum)
@@ -15,9 +16,9 @@
 (test-suite "filter tests"
 (let ()
 
-  (check-equal? (tidy-imag -0.9283+2.2938792e-17i) -0.9283)
-  (check-equal? (tidy-imag -0.9283-2.2938792e-17i) -0.9283)
-  (check-equal? (tidy-imag 0.9283+2.2938792e-17i) 0.9283)
+  (check-equal? (real-part/ck -0.9283+2.2938792e-17i) -0.9283)
+  (check-equal? (real-part/ck -0.9283-2.2938792e-17i) -0.9283)
+  (check-equal? (real-part/ck 0.9283+2.2938792e-17i) 0.9283)
   
   
   (define (test-sig t) (/ t 500))
