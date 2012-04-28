@@ -140,7 +140,8 @@
                [else added?])])))
 
 
-(module+ test
+;; oops; module+ isn't released, yet:
+;(module+ test
 
   (require rackunit)
 
@@ -274,4 +275,6 @@
   (check-equal? (s16vector->list tgt)
                 (list 4 4 7 7 7 7 4 4 4 4
                       4 4 4 4 4 4 4 4 4 4))
-  (check-equal? (last-time) 50)))
+  (check-equal? (last-time) 50))
+
+;)

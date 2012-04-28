@@ -1,5 +1,6 @@
 #lang racket
 
-(require rackunit/text-ui
-         (submod "../sequencer.rkt" test))
+;; put back after submodules are released...
+;(require rackunit/text-ui
+;         (submod "../sequencer.rkt" test))
 
