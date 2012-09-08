@@ -56,10 +56,16 @@
   ;; log-based, cap at -100 db, square to get power
   #;(max -100 (* 10 (/ (log (expt mag 2)) (log 10))))
   ;; equivalent to:
-  (* 10 (/ (ann (log (ann (max 1.0e-6 mag)
+  ;; FIXME: ensure-positive not required in later versions...
+  (* 10 (/ (ann (log (ann (ensure-not-nan (max 1.0e-6 mag))
                           Positive-Real))
                 Real)
            (/ (log 10) 2))))
+
+(: ensure-not-nan ((U Positive-Inexact-Real Inexact-Real-Nan) -> Positive-Inexact-Real))
+(define (ensure-not-nan n)
+  (cond [(nan? n) (error 'ensure-not-nan "internal error; should be impossible")]
+        [else n]))
 
 ;; given a set of zeros, compute the corresponding
 ;; polynomial
@@ -100,8 +106,8 @@
   (reverse
    (for/list: ([exponent : Exact-Nonnegative-Integer
                          (ann
-                          (in-range (ann (add1 (length neg-points))
-                                         Nonnegative-Fixnum))
+                          (in-range 0
+                                    (add1 (length neg-points)))
                           (Sequenceof Nonnegative-Fixnum))])
      (real-part/ck
       (sum-of (map product-of (all-but-n exponent neg-points))))))))
@@ -205,16 +211,24 @@
 
 ;; all-but-n : ways of choosing all but 'n' elements of the list
 (: all-but-n (All (T) (Natural (Listof T) -> (Listof (Listof T)))))
-(define (all-but-n n l)
-  (cond [(= n 0) (list l)]
+(define (all-but-n n-in l)
+  (define n (ann n-in Integer))
+  (cond [(<= n 0) (list l)]
         [(= n (length l)) (list '())]
-        [else (define drop-this-one 
-                (all-but-n (- n 1) (cdr l)))
-              (define keep-this-one
-                (map (lambda: ([x : (Listof T)])
-                       (cons (car l) x))
-                     (all-but-n n (cdr l))))
-              (append drop-this-one keep-this-one)]))
+        [else 
+         (define drop-this-one 
+           (all-but-n (- n 1 ) (cdr l)))
+         (define keep-this-one
+           (map (lambda: ([x : (Listof T)])
+                  (cons (car l) x))
+                (all-but-n n (cdr l))))
+         (append drop-this-one keep-this-one)]))
+
+(: foo (Integer -> Natural))
+(define (foo n)
+  (cond [(<= n 0) 13]
+        [else
+         (ann (- n 1) Natural)]))
 
 ;; given a number, check that it's close to real, return the
 ;; real number
