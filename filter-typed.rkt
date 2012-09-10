@@ -57,15 +57,12 @@
   #;(max -100 (* 10 (/ (log (expt mag 2)) (log 10))))
   ;; equivalent to:
   ;; FIXME: ensure-positive not required in later versions...
-  (* 10 (/ (ann (log (ann (ensure-not-nan (max 1.0e-6 mag))
+  (* 10 (/ (ann (log (ann (filter-out-nan (max 1.0e-6 mag))
                           Positive-Real))
                 Real)
            (/ (log 10) 2))))
 
-(: ensure-not-nan ((U Positive-Inexact-Real Inexact-Real-Nan) -> Positive-Inexact-Real))
-(define (ensure-not-nan n)
-  (cond [(nan? n) (error 'ensure-not-nan "internal error; should be impossible")]
-        [else n]))
+
 
 ;; given a set of zeros, compute the corresponding
 ;; polynomial
@@ -283,3 +280,17 @@
                  (Sequenceof Nonnegative-Fixnum))])
         (vector-set! m i (sig2 i)))
   13)|#
+
+
+;; this only seems necessary pre 5.3.0.20
+(define-predicate is-irnan? Inexact-Real-Nan)
+
+(: filter-out-nan ((U Positive-Inexact-Real Inexact-Real-Nan) 
+                   ->
+                   Positive-Inexact-Real))
+
+(define (filter-out-nan n)
+  (cond [(is-irnan? n) (error 'boo)]
+        [else n]))
+
+;;filter-typed.rkt:68:14: Type Checker: Expected Positive-Inexact-Real, but got (U Positive-Inexact-Real Inexact-Real-Nan) in: n

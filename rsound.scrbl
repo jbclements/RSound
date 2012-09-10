@@ -22,7 +22,7 @@ advantages (speed, mostly) and disadvantages (clipping).
 Does it work on your machine? Try this example (and accept my 
 apologies if I forget to update the version number):
 @racketblock[
- (require (planet "main.rkt" ("clements" "rsound.plt" 3 2)))
+ (require (planet "main.rkt" ("clements" "rsound.plt" 3 4)))
   
  (play ding)
  ]
@@ -51,6 +51,9 @@ These procedures start and stop playing sounds and loops.
 }
 @defproc[(stop) void]{
  Stop all of the the currently playing sounds.}
+
+@defthing[ding rsound?]{
+ A one-second "ding" sound. Nice for testing whether sound playing is working.}
 
 @section{Sound I/O}
 
