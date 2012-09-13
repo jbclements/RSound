@@ -1,8 +1,6 @@
 #lang racket
 
 ;; to-do:
-;; contracts everywhere? NO! can't be used with beginner
-;; change "rsound-" to "rs-"
 ;; check okay for inputs to be inexact integers?
 ;; go to time instead of frames?
 ;; tighter sanity checks on sample rate?
@@ -33,7 +31,10 @@
                   ;; for testing...
                   [sound-list-total-frames (-> s&t-list? number?)])
 
-(provide (except-out (all-defined-out) sound-list-total-frames))
+(provide (except-out (all-defined-out) 
+                     sound-list-total-frames
+                     rs-play/helper
+                     rs-mutator))
 
 (define s16max #x7fff)
 (define -s16max (- s16max))
@@ -67,11 +68,11 @@
 ;; a function of no arguments that produces real numbers in the range -1 to 1.
 
 
-(define (rsound-equal? r1 r2)
+(define (rs-equal? r1 r2)
   (unless (rsound? r1)
-    (raise-type-error 'rsound-equal? "rsound" 0 r1 r2))
+    (raise-type-error 'rs-equal? "rsound" 0 r1 r2))
   (unless (rsound? r2)
-    (raise-type-error 'rsound-equal? "rsound" 1 r1 r2))
+    (raise-type-error 'rs-equal? "rsound" 1 r1 r2))
   (and (= (rs-frames r1)
           (rs-frames r2))
        (= (rsound-sample-rate r1)
@@ -101,39 +102,39 @@
 ;; just a wrapper around read-sound/floatblock
 (define (rs-read path)
   (unless (path-string? path)
-    (raise-type-error 'rsound-read "path-string" 0 path))
+    (raise-type-error 'rs-read "path-string" 0 path))
   (match (read-sound/s16vector path 0 #f)
     [(list data sample-rate) (rsound/all data sample-rate)]))
 
 ;; read a portion of a sound
 (define (rs-read/clip path start-frame end-frame)
   (unless (path-string? path)
-    (raise-type-error 'rsound-read "path-string" 0 path start-frame end-frame))
+    (raise-type-error 'rs-read "path-string" 0 path start-frame end-frame))
   (unless (nonnegative-integer? start-frame)
-    (raise-type-error 'rsound-read "non-negative integer" 1 path start-frame end-frame))
+    (raise-type-error 'rs-read "non-negative integer" 1 path start-frame end-frame))
   (unless (nonnegative-integer? end-frame)
-    (raise-type-error 'rsound-read "non-negative integer" 2 path start-frame end-frame))
+    (raise-type-error 'rs-read "non-negative integer" 2 path start-frame end-frame))
   (match (read-sound/s16vector path (inexact->exact start-frame) (inexact->exact end-frame))
     [(list data sample-rate) (rsound/all data sample-rate)]))
 
 ;; what is the sample-rate of a file?
 (define (rs-read-sample-rate path)
   (unless (path-string? path)
-    (raise-type-error 'rsound-read-sample-rate "path-string" 0 path))
+    (raise-type-error 'rs-read-sample-rate "path-string" 0 path))
   (second (read-sound/formatting path)))
 
 ;; how many frames are in the file?
 (define (rs-read-frames path)
   (unless (path-string? path)
-    (raise-type-error 'rsound-read-frames "path-string" 0 path))
+    (raise-type-error 'rs-read-frames "path-string" 0 path))
   (first (read-sound/formatting path)))
 
 ;; just a wrapper around write-sound/floatblock
 (define (rs-write sound path)
   (unless (rsound? sound)
-    (raise-type-error 'rsound-write "rsound" 0 sound path))
+    (raise-type-error 'rs-write "rsound" 0 sound path))
   (unless (path-string? path)
-    (raise-type-error 'rsound-write "path" 1 sound path))
+    (raise-type-error 'rs-write "path" 1 sound path))
   (match sound
     [(struct rsound (data start stop sample-rate))
      (write-sound/s16vector data start stop sample-rate path)]))
@@ -156,34 +157,34 @@
   (rc:signal/block-play/unsafe signal/block sample-rate buffer-time))
 
 ;; play a sound using portaudio:
-(define ((rsound-play/helper loop?) sound)
+(define ((rs-play/helper loop?) sound)
   (unless (rsound? sound)
     (raise-type-error 'play "rsound" 0 sound))
   (match sound
     [(struct rsound (data start finish sample-rate))
      (if loop?
-         (error 'rsound-play/helper "not implemented")
+         (error 'rs-play/helper "not implemented")
          (rc:buffer-play data start finish sample-rate))]
     [other
-     (error 'rsound-play/helper "expected an rsound, got: ~e" sound)]))
+     (error 'rs-play/helper "expected an rsound, got: ~e" sound)]))
 
 ;; play an rsound
 (define play 
-  (rsound-play/helper #f))
+  (rs-play/helper #f))
 
 ;; loop an rsound endlessly
-(define (rsound-loop sound)
+#;(define (rs-loop sound)
   (when (= (rs-frames sound) 0)
-    (error 'rsound-loop "It's a bad idea to loop an empty sound."))
-  ((rsound-play/helper #t) sound))
+    (error 'rs-loop "It's a bad idea to loop an empty sound."))
+  ((rs-play/helper #t) sound))
  
 ;; backup solution: play from a file:
-#;(define (rsound-play sound)
+#;(define (rs-play sound)
   (let ([filename (make-temporary-file "tmpsound~a.wav")])
     ;; don't blow out anyone's eardrums. takes about 
     ;; 1 sec per minute of on my 2006 machine.
     (check-below-threshold sound 2.0)
-    (rsound-write sound filename)
+    (rs-write sound filename)
     (thread 
      (lambda ()
        (play-sound filename #f)
@@ -203,43 +204,43 @@
 
 ;; return the nth sample of an rsound's left channel.
 (define (rs-ith/left/s16 sound frame)
-  (rsound-extractor sound frame #t (lambda (x) x)))
+  (rs-extractor sound frame #t (lambda (x) x)))
 
 ;; return the nth sample of an rsound's right channel
 (define (rs-ith/right/s16 sound frame)
-  (rsound-extractor sound frame #f (lambda (x) x)))
+  (rs-extractor sound frame #f (lambda (x) x)))
 
 (define (rs-ith/left sound frame)
-  (rsound-extractor sound frame #t s16->real))
+  (rs-extractor sound frame #t s16->real))
 
 (define (rs-ith/right sound frame)
-  (rsound-extractor sound frame #f s16->real))
+  (rs-extractor sound frame #f s16->real))
 
 ;; the abstraction behind the last four functions...
-(define (rsound-extractor rsound frame left? scale-fun)
+(define (rs-extractor rsound frame left? scale-fun)
   (scale-fun (s16vector-ref (rsound-data rsound) (frame->sample (+ (rsound-start rsound) frame) left?))))
 
 
 ;; set the ith frame of the left channel to be new-val
 (define (set-rs-ith/left! sound frame new-val)
-  (rsound-mutator sound frame #t new-val real->s16))
+  (rs-mutator sound frame #t new-val real->s16))
 
 ;; set the ith frame of the right channel to be new-val
 (define (set-rs-ith/right! sound frame new-val)
-  (rsound-mutator sound frame #f new-val real->s16))
+  (rs-mutator sound frame #f new-val real->s16))
 
 ;; set the ith frame of the left channel to be new-val
 (define (set-rs-ith/left/s16! sound frame new-val)
-  (rsound-mutator sound frame #t new-val  (lambda (x) x)))
+  (rs-mutator sound frame #t new-val  (lambda (x) x)))
 
 ;; set the ith frame of the right channel to be new-val
 (define (set-rs-ith/right/s16! sound frame new-val)
-  (rsound-mutator sound frame #f new-val (lambda (x) x)))
+  (rs-mutator sound frame #f new-val (lambda (x) x)))
 
 
 
 ;; a mutation abstraction:
-(define (rsound-mutator rsound frame left? new-val scale-fun)
+(define (rs-mutator rsound frame left? new-val scale-fun)
   (s16vector-set! (rsound-data rsound)
                   (frame->sample (+ (rsound-start rsound) frame) left?)
                   (scale-fun new-val)))
@@ -251,14 +252,14 @@
 ;; RSOUND OPERATIONS: subsound, append, overlay, etc...
 
 
-;; rsound-append : rsound rsound -> rsound
+;; rs-append : rsound rsound -> rsound
 (define (rs-append sound-a sound-b)
   (rs-append* (list sound-a sound-b)))
 
-;; rsound-append* : (listof rsound) -> rsound
+;; rs-append* : (listof rsound) -> rsound
 (define (rs-append* los)
   (unless (and (list? los) (andmap rsound? los))
-    (raise-type-error 'rsound-append* "list of rsounds" 0 los))
+    (raise-type-error 'rs-append* "list of rsounds" 0 los))
   (same-sample-rate-check los)
   (define total-frames (apply + (map rs-frames los)))
   (define cblock (make-s16vector (* rc:channels total-frames)))
@@ -272,7 +273,7 @@
       (+ offset-samples sound-samples)))
   (rsound cblock 0 total-frames (rsound-sample-rate (car los))))
 
-;; rsound-overlay* : (listof (list/c rsound nat)) -> rsound
+;; rs-overlay* : (listof (list/c rsound nat)) -> rsound
 ;; overlay all of the sounds at the specified offsets to form one
 ;; new sound.  
 ;; ** early implementations were too slow, so now I call out to C.

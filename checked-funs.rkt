@@ -28,19 +28,19 @@
 
 (define (rs-ith/left/s16 sound frame)
   (ref-arg-checker 'rs-ith/left/s16 sound frame)
-  (r:rsound-extractor sound frame #t (lambda (x) x)))
+  (r:rs-extractor sound frame #t (lambda (x) x)))
 
 (define (rs-ith/right/s16 sound frame)
   (ref-arg-checker 'rs-ith/right/s16 sound frame)
-  (r:rsound-extractor sound frame #f (lambda (x) x)))
+  (r:rs-extractor sound frame #f (lambda (x) x)))
 
 (define (rs-ith/left sound frame)
   (ref-arg-checker 'rs-ith/left sound frame)
-  (r:rsound-extractor sound frame #t r:s16->real))
+  (r:rs-extractor sound frame #t r:s16->real))
 
 (define (rs-ith/right sound frame)
   (ref-arg-checker 'rs-ith/right sound frame)
-  (r:rsound-extractor sound frame #f r:s16->real))
+  (r:rs-extractor sound frame #f r:s16->real))
 
 (define (ref-arg-checker fun-name sound frame)
   (unless (r:rsound? sound)

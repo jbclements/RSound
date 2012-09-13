@@ -141,7 +141,7 @@
 
 
 ;; oops; module+ isn't released, yet:
-;(module+ test
+(module+ test
 
   (require rackunit)
 
@@ -153,7 +153,7 @@
   (check-equal? (heap-count h) 2)
   (check-equal? (heap-min h) (entry ding 18000 (+ 18000 44100)))
   (heap-remove-min! h)
-  (check rsound-equal?
+  (check rs-equal?
          (entry-sound (heap-min h))
          (clip ding 0 10000))
   (check-equal? (entry-start (heap-min h)) 20000)
@@ -277,4 +277,4 @@
                       4 4 4 4 4 4 4 4 4 4))
   (check-equal? (last-time) 50))
 
-;)
+)

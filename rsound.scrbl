@@ -110,7 +110,7 @@ These procedures allow the creation, analysis, and manipulation of rsounds.
 @defproc[(rs-frames [sound rsound?]) nonnegative-integer?]{
  Returns the length of a sound, in frames.}
 
-@defproc[(rsound-equal? [sound1 rsound?] [sound2 rsound?]) boolean?]{
+@defproc[(rs-equal? [sound1 rsound?] [sound2 rsound?]) boolean?]{
  Returns @racket[#true] when the two sounds are (extensionally) equal.
          
  This procedure is necessary because s16vectors don't natively support @racket[equal?].}

@@ -50,12 +50,12 @@
   (check-= (rs-ith/left t 0) 0 1e-4)
   (check-= (rs-ith/right t 1) (sin (* twopi 13/44100)) 1e-4))
 
-;; test of rsound-equal?
+;; test of rs-equal?
 (let ([v1 (mono-signal->rsound 100 (lambda (i) (/ i 100)))]
       [v2 (mono-signal->rsound 100 (lambda (i) (/ i 100)))])
-  (check rsound-equal? v1 v2)
+  (check rs-equal? v1 v2)
   (s16vector-set! (rsound-data v2) 50 -30)
-  (check-equal? (rsound-equal? v1 v2) false))
+  (check-equal? (rs-equal? v1 v2) false))
 ;; tests of silence
 
 
@@ -170,7 +170,7 @@
 
 (let ([temp (make-temporary-file)])
   (rs-write test-rsound temp)
-  (check rsound-equal? (rs-read temp) test-rsound))
+  (check rs-equal? (rs-read temp) test-rsound))
 
 ;;rsound-append (*)
 (let ([short-test2 (rs-append test-rsound test-rsound)])
@@ -206,8 +206,9 @@
 
 
 ;; check that you can't loop with an rsound of length 0
-(check-exn exn:fail?
-           (lambda () (rsound-loop (silence 0))))
+;; actually, you can't loop at all...
+#;(check-exn exn:fail?
+           (lambda () (rs-loop (silence 0))))
 
 ;; clipping isn't happening right.
 
@@ -219,7 +220,7 @@
          1e-4)
 
 
-;; set-rs-ith/left! and right!
+;; set-rs-ith/left! and right!t
 (let ([s (silence 100)])
   (set-rs-ith/left! s 34 0.7)
   (set-rs-ith/right! s 87 0.3)
