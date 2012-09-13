@@ -170,18 +170,19 @@ These procedures allow the creation, analysis, and manipulation of rsounds.
 A signal is a function mapping a frame number to a real number in the range @racket[-1.0] to @racket[1.0]. There
 are several built-in functions that produce signals.
 
-@defproc[(sine-wave [frequency nonnegative-number?] [sample-rate nonnegative-number?]) signal?]{
+@defproc[(sine-wave [frequency nonnegative-number?]) signal?]{
  Produces a signal representing a sine wave of the given
- frequency, of amplitude 1.0.}
+ frequency, at the default sample rate, of amplitude 1.0.}
 
-@defproc[(sawtooth-wave [frequency nonnegative-number?] [sample-rate nonnegative-number?]) signal?]{
+@defproc[(sawtooth-wave [frequency nonnegative-number?]) signal?]{
  Produces a signal representing a naive sawtooth wave of the given
  frequency, of amplitude 1.0. Note that since this is a simple -1.0 up to 1.0 sawtooth wave, it's got horrible 
  aliasing all over the spectrum.}
 
 @defproc[(square-wave [frequency nonnegative-number?] [sample-rate nonnegative-number?]) signal?]{
  Produces a signal representing a naive square wave of the given
- frequency, of amplitude 1.0. Note that since this is a simple 1/-1 square wave, it's got horrible 
+ frequency, of amplitude 1.0, at the default sample rate. 
+ Note that since this is a simple 1/-1 square wave, it's got horrible 
  aliasing all over the spectrum.}
 
 @defproc[(dc-signal [amplitude real?]) signal?]{
