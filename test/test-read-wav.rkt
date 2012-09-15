@@ -5,9 +5,9 @@
          racket/runtime-path
          racket/math
          rackunit
-         rackunit/text-ui
          ffi/vector)
 
+(provide the-test-suite)
 
 (define-runtime-path short-test-wav "./short-test.wav")
 
@@ -30,7 +30,7 @@
 (define fiftieth-sample (desired-nth-sample 50))
 
 
-(run-tests
+(define the-test-suite
  (test-suite 
   "read tests"
   (let ()
@@ -84,3 +84,7 @@
     
     3
     )))
+
+(module+ test
+  (require rackunit/text-ui)
+  (run-tests the-test-suite))

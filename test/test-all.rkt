@@ -9,7 +9,13 @@
          "play-stream-test.rkt"
          "play-latency-test.rkt"
          "play-stream-latency-test.rkt"
+         
+         (prefix-in fft: "test-fft.rkt")
          ;; just load it:
-         "../drum-samples.rkt")
+         "../drum-samples.rkt"
+         rackunit/text-ui)
 
+(module+ test
+  (run-tests
+   fft:the-test-suite))
 ;; try manually: test-sequencer-playing.rkt

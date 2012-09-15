@@ -1,6 +1,6 @@
 #lang racket
 
-(require (planet clements/portaudio:2)
+(require (planet clements/portaudio:3)
          (only-in ffi/unsafe cpointer? ptr-set! _sint16)
          ffi/vector
          racket/async-channel)
@@ -85,7 +85,7 @@
 ;; because it makes a call to the signal function for
 ;; every sample; you can do a lot better....
 (define (signal->signal/block/unsafe signal)
-  (define (signal/block/unsafe ptr frames base-t)
+  (define (signal/block/unsafe ptr frames)
     (for ([frame (in-range 0 frames)]
           [t (in-range base-t (+ base-t frames))])
       (define sample (real->s16 (signal t)))

@@ -1,32 +1,41 @@
 #lang racket
 
-(require #;plot
+(require plot
          rackunit
-         rackunit/text-ui
          "../fft.rkt")
 
-;;; Data
+(provide the-test-suite)
+
 
 (define 2*pi (* 2 pi))
-#|
-(printf "Data~n")
 
-(define data (build-vector 4096 (lambda (t) (+ (sin (* t (/ 2*pi 500))) 0.0))))
+
+(define data (build-vector 4096 (lambda (t) (+ (sin (* t (/ 2*pi 512))) 0.0))))
 (define data-points (for/list ((j (in-vector data))
                                (i (in-naturals)))
                       (vector i j)))
-(plot (points data-points #:sym 'dot #:color 'blue)
-      #:title "Data"
-      #:x-min -100
-      #:x-max 5000
-      #:y-min -1.2
-      #:y-max 1.2)
+
+
+(define the-test-suite
+(test-suite "ffi"
+
+;;; Data
+
+(let ()
+  (printf "sine wave with 8+ cycles\n")
+  (plot (points data-points #:sym 'dot #:color 'blue)
+        #:title "Data"
+        #:x-min -100
+        #:x-max 5000
+        #:y-min -1.2
+        #:y-max 1.2))
 
 ;;; Radix 2 Complex FFT (Decimation in Time)
 
 (printf "Radix 2 Complex FFT - Decimation in Time~n")
-
+(let ()
 (define data1 (vector-copy data))
+  
 (time (fft-complex-radix2-forward data1))
 (define data1-max (for/fold ((max-magnitude 0.0))
                             ((x (in-vector data1)))
@@ -34,13 +43,16 @@
 (define data1-points-forward (for/list ((j (in-vector data1))
                                         (i (in-naturals)))
                                (vector i (magnitude j))))
+(printf "8th dot should be higher\n")
 (plot (points data1-points-forward #:sym 'dot #:color 'blue)
       #:title "Radix 2 Complex FFT (Forward)"
-      #:x-min -100
-      #:x-max 5000
+      #:x-min -10
+      #:x-max 20
+      #:y-min -200
       #:y-max (* 1.2 data1-max))
 
-(fft-complex-radix2-inverse data1)
+
+  (fft-complex-radix2-inverse data1)
 (define data1-points-inverse (for/list ((j (in-vector data1))
                                         (i (in-naturals)))
                                (vector i (real-part j))))
@@ -49,12 +61,12 @@
       #:x-min -100
       #:x-max 5000
       #:y-min -1.2
-      #:y-max 1.2)
+      #:y-max 1.2))
 
 ;;; Complex FFT
 
 (printf "Complex FFT~n")
-
+(let ()
 (define data0 (vector-copy data))
 (time (fft-complex-forward data0))
 (printf "Running it again...\n")
@@ -81,14 +93,14 @@
       #:x-min -100
       #:x-max 5000
       #:y-min -1.2
-      #:y-max 1.2)
+      #:y-max 1.2))
 
 
 
 ;;; Radix 2 Complex FFT (Decimation in Frequency)
 
 (printf "Radix 2 Complex FFT - Decimation in Frequency~n")
-
+(let ()
 (define data2 (vector-copy data))
 (time (fft-complex-radix2-dif-forward data2))
 (define data2-max (for/fold ((max-magnitude 0.0))
@@ -103,7 +115,7 @@
       #:x-max 5000
       #:y-max (* 1.2 data2-max))
 
-(fft-complex-radix2-dif-inverse data2)
+  (fft-complex-radix2-dif-inverse data2)
 (define data2-points-inverse (for/list ((j (in-vector data2))
                                         (i (in-naturals)))
                                (vector i (real-part j))))
@@ -112,12 +124,12 @@
       #:x-min -100
       #:x-max 5000
       #:y-min -1.2
-      #:y-max 1.2)
-t
+      #:y-max 1.2))
+
 ;;; Multi-Radix Complex DFT
 
 (printf "Multi-Radix Complex DFT~n")
-
+(let ()
 (define dft (time (dft-complex-forward data)))
 (define dft-max (for/fold ((max-magnitude 0.0))
                           ((x (in-vector dft)))
@@ -131,7 +143,7 @@ t
       #:x-max 5000
       #:y-max (* 1.2 dft-max))
 
-(define dft-inv (dft-complex-inverse dft))
+  (define dft-inv (dft-complex-inverse dft))
 (define dft-inv-points (for/list ((j (in-vector data))
                                   (i (in-naturals)))
                          (vector i (real-part j))))
@@ -140,11 +152,9 @@ t
       #:x-min -100
       #:x-max 5000
       #:y-min -1.2
-      #:y-max 1.2)
-|#
+      #:y-max 1.2))
 
-(run-tests
-(test-suite "ffi"
+
 (let ()
 (let* ([vect (build-vector 4800 (lambda (i) (cos (* i 2*pi 147/44100))))])
   (time (fft-complex-forward vect))
@@ -165,3 +175,6 @@ t
 (check-not-exn (lambda () (fft-complex-forward (build-vector 16 (lambda (i) 0))))))))
 
 
+(module+ test
+  (require rackunit/text-ui)
+  (run-tests the-test-suite))

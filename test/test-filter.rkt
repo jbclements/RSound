@@ -5,14 +5,15 @@
          "../filter.rkt"
          "../filter-typed.rkt"
          rackunit
-         rackunit/text-ui
          racket/flonum)
+
+(provide the-test-suite)
 
 (define i (sqrt -1))
 (define msr mono-signal->rsound)
 ;; there could be a *lot* of good tests here...
 
-(run-tests
+(define the-test-suite
 (test-suite "filter tests"
 (let ()
 
@@ -150,3 +151,6 @@
 )))
 
 
+(module+ test
+  (require rackunit/text-ui)
+  (run-tests the-test-suite))

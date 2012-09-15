@@ -7,7 +7,9 @@
          rackunit
          rackunit/text-ui)
 
-(run-tests
+(provide the-test-suite)
+
+(define the-test-suite
 (test-suite 
  "write-wav"
 (let ()
@@ -61,4 +63,6 @@
   
   )))
 
-
+(module+ test
+  (require rackunit/text-ui)
+  (run-tests the-test-suite))

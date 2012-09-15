@@ -6,6 +6,8 @@
          racket/runtime-path
          ffi/vector)
 
+(provide the-test-suite)
+
 ;;; HELPERS FOR TEST CASES
 
 
@@ -29,10 +31,8 @@
 
 (define-runtime-path short-with-pad-wav "./short-with-pad.wav")
 
-
-;;; TEST CASES
-(run-tests
-(test-suite "rsound"
+(define the-test-suite
+  (test-suite "rsound"
 (let ()
 (let ([t (mono-signal->rsound 100 (lambda (i) (sin (* twopi 13/44100 i))))])
   (check-equal? (rs-ith/left/s16 t 0) 0)
@@ -67,7 +67,7 @@
   (check-exn exn:fail? (lambda () (check-below-threshold (rsound-data sample-sound) (rs-frames sample-sound) 0.1))))
 
 (check-exn (lambda (exn)
-             (regexp-match #px"^rsound-append\\*: " (exn-message exn)))
+             (regexp-match #px"^rs-append\\*: " (exn-message exn)))
            (lambda () (rs-append* 34)))
 
 ;; how long does it take to scan a minute of sound for loud things?
@@ -236,3 +236,7 @@
                                           (list (make-tone 404 0.15 1000) 0))) 400 100))
 
 |#)))
+
+;;; TEST CASES
+(module+ test
+  (run-tests the-test-suite))
