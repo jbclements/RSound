@@ -95,7 +95,7 @@ rsound-max-volume
 (define (rs-map fun sound)
   (rs-map/idx (lambda (s i) (fun s)) sound))
 
-;; given a function from sample and index to sample and an rsound,
+;; given (a function from sample and index to sample) and an rsound,
 ;; produce a new rsound where every sample is modified 
 ;; by applying the given function
 (define (rs-map/idx fun sound)

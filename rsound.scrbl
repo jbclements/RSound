@@ -167,7 +167,7 @@ These procedures allow the creation, analysis, and manipulation of rsounds.
 
 @section{Signals}
 
-A signal is a function mapping a frame number to a real number in the range @racket[-1.0] to @racket[1.0]. There
+A signal is a function of no arguments that produces real numbers in the range @racket[-1.0] to @racket[1.0]. There
 are several built-in functions that produce signals.
 
 @defproc[(sine-wave [frequency nonnegative-number?]) signal?]{
@@ -191,7 +191,7 @@ are several built-in functions that produce signals.
 
 In order to listen to them, you can transform them into rsounds, or play them directly:
 
-@defproc[(mono-signal->rsound (frames nonnegative-integer?) (signal signal?)) rsound?]{
+@defproc[(signal->rsound (frames nonnegative-integer?) (signal signal?)) rsound?]{
  Builds a sound of length @racket[frames] at the default sample-rate by calling 
  @racket[signal] with integers from 0 up to @racket[frames]-1. The result should be an inexact 
  number in the range @racket[-1.0] to @racket[1.0]. Values outside this range are clipped.
@@ -203,10 +203,11 @@ In order to listen to them, you can transform them into rsounds, or play them di
 (define samplerate 44100)
 (define sr/inv (/ 1 samplerate))
 
+;; FIXME!
 (define (sig1 t)
   (* 0.1 (sin (* t 560 twopi sr/inv))))
 
-(define r (mono-signal->rsound (* samplerate 4) sig1))
+(define r (signal->rsound (* samplerate 4) sig1))
 
 (play r)]
  
@@ -215,7 +216,7 @@ In order to listen to them, you can transform them into rsounds, or play them di
  @racketblock[
 (define samplerate (default-sample-rate))
 
-(define r (mono-signal->rsound (* samplerate 4) (scale 0.1 (sine-wave 560 samplerate))))
+(define r (signal->rsound (* samplerate 4) (scale 0.1 (sine-wave 560 samplerate))))
 
 (play r)]}
                                                   
@@ -427,7 +428,7 @@ overhead.
  (define (control f) (+ 0.5 (* 0.2 (sin (* f 7.123792865282977e-05)))))
  (define (sawtooth f) (/ (modulo f 220) 220))
 
- (play (mono-signal->rsound 88200 (lpf/dynamic control sawtooth)))]
+ (play (signal->rsound 88200 (lpf/dynamic control sawtooth)))]
  
  }
 }

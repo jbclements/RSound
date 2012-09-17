@@ -19,8 +19,10 @@
                                    void?))
                   [signal->signal/block/unsafe
                    (-> procedure? procedure?)]
-                  [signal/block-play (-> procedure? nonnegative-real? (or/c nonnegative-real? false?) 
-                                         (-> nonnegative-real?))]
+                  [signal/block-play 
+                   (-> procedure? nonnegative-real? 
+                       (or/c nonnegative-real? false?) 
+                       (-> nonnegative-real?))]
                   [signal/block-play/unsafe (-> procedure? nonnegative-real? (or/c nonnegative-real? false?) 
                                                 (-> nonnegative-real?))]
                   [stop-playing (-> void?)]
@@ -81,14 +83,11 @@
 
 ;; given a signal, produces a signal/block/unsafe;
 ;; that is, a function that can fill a full buffer on
-;; each call. Note that this is pretty inefficient, 
-;; because it makes a call to the signal function for
-;; every sample; you can do a lot better....
+;; each call.
 (define (signal->signal/block/unsafe signal)
   (define (signal/block/unsafe ptr frames)
-    (for ([frame (in-range 0 frames)]
-          [t (in-range base-t (+ base-t frames))])
-      (define sample (real->s16 (signal t)))
+    (for ([frame (in-range 0 frames)])
+      (define sample (real->s16 (signal)))
       (define sample-num (* frame channels))
       (ptr-set! ptr _sint16 sample-num sample)
       (ptr-set! ptr _sint16 (add1 sample-num) sample)))

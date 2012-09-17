@@ -70,9 +70,9 @@
 
 (define (rs-equal? r1 r2)
   (unless (rsound? r1)
-    (raise-type-error 'rs-equal? "rsound" 0 r1 r2))
+    (raise-argument-error 'rs-equal? "rsound" 0 r1 r2))
   (unless (rsound? r2)
-    (raise-type-error 'rs-equal? "rsound" 1 r1 r2))
+    (raise-argument-error 'rs-equal? "rsound" 1 r1 r2))
   (and (= (rs-frames r1)
           (rs-frames r2))
        (= (rsound-sample-rate r1)
@@ -89,11 +89,15 @@
 
 ;; can this procedure be used as a signal? 
 (define (signal? f)
-  (and (procedure? f) (procedure-arity-includes? f 1)))
+  (and (procedure? f) (procedure-arity-includes? f 0)))
 
 ;; can this procedure be used as a signal/block?
 (define (signal/block? f)
-  (and (procedure? f) (procedure-arity-includes? f 3)))
+  (and (procedure? f) (procedure-arity-includes? f 2)))
+
+;; can this procedure be used as a signal/block/unsafe?
+(define (signal/block/unsafe? f)
+  (and (procedure? f) (procedure-arity-includes? f 2)))
 
 
 
@@ -102,64 +106,71 @@
 ;; just a wrapper around read-sound/floatblock
 (define (rs-read path)
   (unless (path-string? path)
-    (raise-type-error 'rs-read "path-string" 0 path))
+    (raise-argument-error 'rs-read "path-string" 0 path))
   (match (read-sound/s16vector path 0 #f)
     [(list data sample-rate) (rsound/all data sample-rate)]))
 
 ;; read a portion of a sound
 (define (rs-read/clip path start-frame end-frame)
   (unless (path-string? path)
-    (raise-type-error 'rs-read "path-string" 0 path start-frame end-frame))
+    (raise-argument-error 'rs-read "path-string" 0 path start-frame end-frame))
   (unless (nonnegative-integer? start-frame)
-    (raise-type-error 'rs-read "non-negative integer" 1 path start-frame end-frame))
+    (raise-argument-error 'rs-read "non-negative integer" 1 path start-frame end-frame))
   (unless (nonnegative-integer? end-frame)
-    (raise-type-error 'rs-read "non-negative integer" 2 path start-frame end-frame))
+    (raise-argument-error 'rs-read "non-negative integer" 2 path start-frame end-frame))
   (match (read-sound/s16vector path (inexact->exact start-frame) (inexact->exact end-frame))
     [(list data sample-rate) (rsound/all data sample-rate)]))
 
 ;; what is the sample-rate of a file?
 (define (rs-read-sample-rate path)
   (unless (path-string? path)
-    (raise-type-error 'rs-read-sample-rate "path-string" 0 path))
+    (raise-argument-error 'rs-read-sample-rate "path-string" 0 path))
   (second (read-sound/formatting path)))
 
 ;; how many frames are in the file?
 (define (rs-read-frames path)
   (unless (path-string? path)
-    (raise-type-error 'rs-read-frames "path-string" 0 path))
+    (raise-argument-error 'rs-read-frames "path-string" 0 path))
   (first (read-sound/formatting path)))
 
 ;; just a wrapper around write-sound/floatblock
 (define (rs-write sound path)
   (unless (rsound? sound)
-    (raise-type-error 'rs-write "rsound" 0 sound path))
+    (raise-argument-error 'rs-write "rsound" 0 sound path))
   (unless (path-string? path)
-    (raise-type-error 'rs-write "path" 1 sound path))
+    (raise-argument-error 'rs-write "path" 1 sound path))
   (match sound
     [(struct rsound (data start stop sample-rate))
      (write-sound/s16vector data start stop sample-rate path)]))
 
 ;; play a signal using portaudio:
 (define (signal-play signal sample-rate)
-  (unless (and (procedure? signal)
-               (procedure-arity-includes? signal 1))
-    (raise-type-error 'signal-play "signal" 0 signal sample-rate))
+  (unless (signal? signal)
+    (raise-argument-error 'signal-play "signal" 0 signal sample-rate))
   (unless (positive-integer? sample-rate)
-    (raise-type-error 'signal-play "sample rate (nonnegative exact integer)" 1 signal sample-rate))
+    (raise-argument-error 'signal-play "sample rate (nonnegative exact integer)" 1 signal sample-rate))
   (rc:signal/block-play/unsafe (rc:signal->signal/block/unsafe signal) sample-rate #f))
 
 ;; play a signal/block using portaudio:
 (define (signal/block-play signal/block sample-rate #:buffer-time [buffer-time #f])
+  (unless (signal/block? signal/block)
+    (raise-argument-error 'signal/block-play "signal/block" 0 signal/block sample-rate buffer-time))
+  (unless (positive-integer? sample-rate)
+    (raise-argument-error 'signal/block-play "positive integer" 1 signal/block sample-rate buffer-time))
   (rc:signal/block-play signal/block sample-rate buffer-time))
 
-;; play a signal/block using portaudio:
+;; play a signal/block/unsafe using portaudio:
 (define (signal/block-play/unsafe signal/block sample-rate #:buffer-time [buffer-time #f])
+  (unless (signal/block/unsafe? signal/block)
+    (raise-argument-error 'signal/block/unsafe-play "signal/block/unsafe" 0 signal/block sample-rate buffer-time))
+  (unless (positive-integer? sample-rate)
+    (raise-argument-error 'signal/block/unsafe-play "positive integer" 1 signal/block sample-rate buffer-time))
   (rc:signal/block-play/unsafe signal/block sample-rate buffer-time))
 
 ;; play a sound using portaudio:
 (define ((rs-play/helper loop?) sound)
   (unless (rsound? sound)
-    (raise-type-error 'play "rsound" 0 sound))
+    (raise-argument-error 'play "rsound" 0 sound))
   (match sound
     [(struct rsound (data start finish sample-rate))
      (if loop?
@@ -195,7 +206,7 @@
 ;; ** ASSUMES SAMPLE-RATE IS UNCHANGED **
 #;(define (change-loop sound)
   (unless (rsound? sound)
-    (raise-type-error 'change-loop "rsound" 0 sound))
+    (raise-argument-error 'change-loop "rsound" 0 sound))
   (match sound 
     [(struct rsound (data frames sample-rate))
      (error 'change-loop "not currently implemented")]
@@ -259,7 +270,7 @@
 ;; rs-append* : (listof rsound) -> rsound
 (define (rs-append* los)
   (unless (and (list? los) (andmap rsound? los))
-    (raise-type-error 'rs-append* "list of rsounds" 0 los))
+    (raise-argument-error 'rs-append* "list of rsounds" 0 los))
   (same-sample-rate-check los)
   (define total-frames (apply + (map rs-frames los)))
   (define cblock (make-s16vector (* rc:channels total-frames)))
@@ -285,7 +296,7 @@
                                         (rsound? (first x)) 
                                         (nonnegative-integer? (second x))))
                        sound&times))
-    (raise-type-error 'assemble "list of (list <rsound> <frame>)"
+    (raise-argument-error 'assemble "list of (list <rsound> <frame>)"
                       0 sound&times))
   (same-sample-rate-check (map car sound&times))
   (let* ([total-frames (inexact->exact (sound-list-total-frames sound&times))]
@@ -330,17 +341,17 @@
 ;; make a monaural sound of the given number of frames at the specified sample-rate
 ;; using the function 'f' applied to the frame number to generate each sample. It 
 ;; assumes that the result is a floating-point number between -1 and 1.
-(define (mono-signal->rsound frames f)
+(define (signal->rsound frames f)
   (define sample-rate (default-sample-rate))
   (unless (nonnegative-integer? frames)
-    (raise-type-error 'signal->rsound "non-negative integer" 0 frames sample-rate f))
-  (unless (and (procedure? f) (procedure-arity-includes? f 1))
-    (raise-type-error 'signal->rsound "function of one argument" 2 frames sample-rate f)) 
+    (raise-argument-error 'signal->rsound "non-negative integer" 0 frames sample-rate f))
+  (unless (signal? f)
+    (raise-argument-error 'signal->rsound "signal" 2 frames sample-rate f)) 
   (let* ([int-frames (inexact->exact (floor frames))]
          [cblock (make-s16vector (* rc:channels int-frames))])
     (for ([i (in-range int-frames)])
       (let* ([offset (* rc:channels i)]
-             [sample (real->s16 (f i))])
+             [sample (real->s16 (f))])
         (s16vector-set! cblock offset       sample)
         (s16vector-set! cblock (+ offset 1) sample)))
     (rsound cblock 0 int-frames sample-rate)))
@@ -352,23 +363,23 @@
 (define (signals->rsound frames fleft fright)
   (define sample-rate (default-sample-rate))
   (unless (nonnegative-integer? frames)
-    (raise-type-error 'signal->rsound/stereo "non-negative integer" 0 frames sample-rate fleft fright))
-  (unless (and (procedure? fleft) (procedure-arity-includes? fleft 1))
-    (raise-type-error 'signal->rsound/stereo "function of one argument" 2 frames sample-rate fleft fright))  
-  (unless (and (procedure? fright) (procedure-arity-includes? fright 1))
-    (raise-type-error 'signal->rsound/stereo "function of one argument" 3 frames sample-rate fleft fright)) 
+    (raise-argument-error 'signal->rsound/stereo "non-negative integer" 0 frames sample-rate fleft fright))
+  (unless (signal? fleft)
+    (raise-argument-error 'signal->rsound/stereo "signal" 2 frames sample-rate fleft fright))  
+  (unless (signal? fright)
+    (raise-argument-error 'signal->rsound/stereo "signal" 3 frames sample-rate fleft fright)) 
   (define int-frames (inexact->exact frames))
   (let* ([cblock (make-s16vector (* rc:channels int-frames))])
     (for ([i (in-range int-frames)])
       (let* ([offset (* rc:channels i)])
-        (s16vector-set! cblock offset       (real->s16 (fleft i)))
-        (s16vector-set! cblock (+ offset 1) (real->s16 (fright i)))))
+        (s16vector-set! cblock offset       (real->s16 (fleft)))
+        (s16vector-set! cblock (+ offset 1) (real->s16 (fright)))))
     (rsound cblock 0 int-frames sample-rate)))
 
-;; special-case silence (it's easy to generate):
+;; special-case silence (it's fast to generate):
 (define (silence frames)
   (unless (nonnegative-integer? frames)
-    (raise-type-error 'make-silence "non-negative integer" 0 frames sample-rate))
+    (raise-argument-error 'make-silence "non-negative integer" 0 frames sample-rate))
   (define sample-rate (default-sample-rate))
   (define int-frames (inexact->exact frames))
   (let* ([cblock (make-s16vector (* rc:channels int-frames))])
