@@ -5,6 +5,7 @@
          (prefix-in r: "test-rsound.rkt")
          (prefix-in u: "test-util.rkt")
          (prefix-in f: "test-filter.rkt")
+         (prefix-in n: "test-network.rkt")
          "test-s16vector-add.rkt"
          "test-sequencer.rkt"
          "test-make-tone.rkt"
@@ -20,4 +21,5 @@
              r:the-test-suite
              u:the-test-suite
              f:the-test-suite
+             n:the-test-suite
              ))

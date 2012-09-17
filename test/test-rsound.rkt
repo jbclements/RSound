@@ -21,7 +21,7 @@
 
 ;; make a monaural pitch with the given number of frames
 (define (make-tone pitch volume frames)
-  (mono-signal->rsound frames (sine-wave pitch (default-sample-rate) volume)))
+  (signal->rsound frames (sine-wave pitch (default-sample-rate) volume)))
 
 
 (define-runtime-path short-test-wav "./short-test.wav")
@@ -31,10 +31,17 @@
 
 (define-runtime-path short-with-pad-wav "./short-with-pad.wav")
 
+(define (add-ticker n)
+  (network ()
+           (offby1 (add1 (prev offby1)))
+           (ticker (- offby1 1))
+           (out (n ticker))
+           out))
+
 (define the-test-suite
   (test-suite "rsound"
 (let ()
-(let ([t (mono-signal->rsound 100 (lambda (i) (sin (* twopi 13/44100 i))))])
+(let ([t (signal->rsound 100 (add-ticker (lambda (i) (sin (* twopi 13/44100 i)))))])
   (check-equal? (rs-ith/left/s16 t 0) 0)
   (check-equal? (rs-ith/right/s16 t 1) (inexact->exact
                                             (round (* s16max (sin (* twopi 13/44100)))))))
@@ -46,13 +53,13 @@
   (check-= (rs-ith/right s 89) 11/100 1e-4))
 
 ;; test rs-ith/left & right
-(let ([t (mono-signal->rsound 100 (lambda (i) (sin (* twopi 13/44100 i))))])
+(let ([t (signal->rsound 100 (lambda (i) (sin (* twopi 13/44100 i))))])
   (check-= (rs-ith/left t 0) 0 1e-4)
   (check-= (rs-ith/right t 1) (sin (* twopi 13/44100)) 1e-4))
 
 ;; test of rs-equal?
-(let ([v1 (mono-signal->rsound 100 (lambda (i) (/ i 100)))]
-      [v2 (mono-signal->rsound 100 (lambda (i) (/ i 100)))])
+(let ([v1 (signal->rsound 100 (lambda (i) (/ i 100)))]
+      [v2 (signal->rsound 100 (lambda (i) (/ i 100)))])
   (check rs-equal? v1 v2)
   (s16vector-set! (rsound-data v2) 50 -30)
   (check-equal? (rs-equal? v1 v2) false))
@@ -111,7 +118,7 @@
                 (+ (rs-ith/left/s16 sample-sound 5)
                    (rs-ith/left/s16 sample-sound 2))))
   
-  (let* ([sample-sound (mono-signal->rsound 100 (lambda (x) (* 0.2 (random))))]
+  (let* ([sample-sound (signal->rsound 100 (lambda (x) (* 0.2 (random))))]
          [overlaid (assemble (list (list sample-sound 25) 
                                           (list sample-sound 0)
                                           (list sample-sound 75)))])
@@ -212,7 +219,7 @@
 
 ;; clipping isn't happening right.
 
-(check-= (/ (rs-ith/left/s16 (mono-signal->rsound 300
+(check-= (/ (rs-ith/left/s16 (signal->rsound 300
                                                  (lambda (i) (* 1.5 (sin (* twopi 147/44100 i)))))
                                  73)
             #x7fff)

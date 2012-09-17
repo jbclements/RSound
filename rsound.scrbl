@@ -19,10 +19,9 @@ to run on Linux, Mac, and Windows.
 It represents all sounds internally as stereo 16-bit PCM, with all the attendant
 advantages (speed, mostly) and disadvantages (clipping).
 
-Does it work on your machine? Try this example (and accept my 
-apologies if I forget to update the version number):
+Does it work on your machine? Try this example:
 @racketblock[
- (require (planet "main.rkt" ("clements" "rsound.plt" 3 4)))
+ (require (planet clements/rsound))
   
  (play ding)
  ]
@@ -229,7 +228,7 @@ In order to listen to them, you can transform them into rsounds, or play them di
  with integers from 0 up to @racket[frames]-1. The result should be an inexact 
  number in the range @racket[-1.0] to @racket[1.0]. Values outside this range are clipped.}
                                                                              
-@defproc[(signal-play (signal signal?) (sample-rate? positive-real?)) void?]{
+@defproc[(signal-play (signal signal?)) void?]{
  Plays a (single-channel) signal. Halt playback using @racket[(stop)].}
 
 
@@ -238,18 +237,6 @@ In order to listen to them, you can transform them into rsounds, or play them di
  Inaudible unless used to multiply by another signal.}
 
 
-@defproc[(signal [proc procedure?] [args (listof any/c)] ...) signal?]{
- Produces a signal whose values are computed by calling @racket[proc] with the current frame and the additional
- values @racket[args].
- 
- So, for instance, if we defined the function @racket[flatline] as
- 
- @racketblock[
- (define (flatline t l) 
-   l)
- ]
- 
- ... then @racket[(signal flatline 0.4)] would produce the same result as @racket[(dc-signal 0.4)].}
 
 
 There are also a number of functions that combine existing signals, called "signal combinators":

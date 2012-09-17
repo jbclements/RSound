@@ -1,7 +1,11 @@
 #lang racket
 
-(require (for-syntax syntax/parse)
-         plot)
+(require (for-syntax syntax/parse))
+
+
+(provide network
+         (struct-out network/s)
+         (contract-out [network-init (-> network/c procedure?)]))
 
 ;; this representation can in principle handle multiple-out networks,
 ;; but the surface syntax will get yucky. For now, let's just do one
@@ -10,16 +14,28 @@
 ;; a network is either a function or (make-network number number procedure)
 
 ;; ins and outs not currently used, could be used for static checking...
-;; or for better error messages, at any rat.
+;; or for better error messages, at any rate.
 
 (struct network/s (ins outs maker))
+
+(define network/c (or/c network/s? procedure?))
+
+;; given a network/c, initialize it and return a thunk that 
+;; produces samples
+(define (network-init signal)
+  (cond [(network/s? signal) ((network/s-maker signal))]
+        [(procedure? signal) signal]
+        [else (raise-argument-error
+               'signal-init
+               "network or procedure" signal)]))
+
 
 ;; maker: (-> (arg ... -> result ...))
 
 ;; ah, fergeddit; I'm going with zero inits for prevs.
 
 
-  (define-syntax prev (syntax-rules ()))
+(define-syntax prev (syntax-rules ()))
 
 (define-syntax (network stx)
   (define-syntax-class network-clause
@@ -54,7 +70,7 @@
                [(free-identifier=? id (car lhses))
                 #`(quote #,i)]
                [else (loop (cdr lhses) (add1 i))])))
-     (with-syntax ([(signal-thunk ...)
+     (with-syntax ([(signal-proc ...)
                     (generate-temporaries #'(clause ...))]
                    [((arg ...) ...)
                     (map rewrite/l (syntax->list
@@ -67,14 +83,10 @@
              #`(lambda ()
                  (define saves-vec
                    (make-vector (quote #,num-clauses) 0.0))
-                 (define signal-thunk
-                   (let ([node-val clause.node])
-                     (cond [(network/s? node-val)
-                            ((network/s-maker node-val))]
-                           [else node-val])))
+                 (define signal-proc (network-init clause.node))
                  ...
                  (lambda (in ...)
-                   (let* ([clause.out (signal-thunk arg ...)]
+                   (let* ([clause.out (signal-proc arg ...)]
                          ...)
                      (begin
                        (vector-set! saves-vec idx clause.out)
@@ -83,34 +95,3 @@
          #`(network/s (quote #,num-ins) 1 maker)))]))
 
 
-;; angles are expressed in 44100ths of a circle....
-
-(define (wraparound angle)
-  (cond [(< angle 0) (+ angle 44100)]
-        [(< 44099 angle) (- angle 44100)]
-        [else angle]))
-
-(define (cyclic-angle incr angle)
-  (wraparound (+ angle incr)))
-
-(define srinv (/ 1.0 44100.0))
-(define (lookup angle)
-  ;; could just be a lookup....
-  (sin (* 2.0 pi srinv angle)))
-
-(define variable-pitch-oscillator
-  (network (incr)
-           [angle (cyclic-angle incr (prev angle))]
-           [wave (lookup angle)]
-           wave))
-
-(define mynet
-(network ()
-         [wave (variable-pitch-oscillator 440)]
-         [gain (* wave 0.1)]
-         gain))
-
-(define generator ((network/s-maker mynet)))
-(plot 
- (points (for/list ([i (in-range 100)])
-         (vector i (generator)))))

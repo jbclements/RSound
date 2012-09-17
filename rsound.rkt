@@ -9,6 +9,7 @@
          ffi/vector
          "read-wav.rkt"
          "write-wav.rkt"
+         "network.rkt"
          (prefix-in rc: "rsound-commander.rkt")
          "private/s16vector-add.rkt")
 
@@ -34,7 +35,8 @@
 (provide (except-out (all-defined-out) 
                      sound-list-total-frames
                      rs-play/helper
-                     rs-mutator))
+                     rs-mutator)
+         network)
 
 (define s16max #x7fff)
 (define -s16max (- s16max))
@@ -89,7 +91,8 @@
 
 ;; can this procedure be used as a signal? 
 (define (signal? f)
-  (and (procedure? f) (procedure-arity-includes? f 0)))
+  (or (and (network/s? f) (= (network/s-ins f) 0))
+      (and (procedure? f) (procedure-arity-includes? f 0))))
 
 ;; can this procedure be used as a signal/block?
 (define (signal/block? f)
@@ -98,8 +101,6 @@
 ;; can this procedure be used as a signal/block/unsafe?
 (define (signal/block/unsafe? f)
   (and (procedure? f) (procedure-arity-includes? f 2)))
-
-
 
 ;; ** FILE I/O **
 
@@ -144,12 +145,11 @@
      (write-sound/s16vector data start stop sample-rate path)]))
 
 ;; play a signal using portaudio:
-(define (signal-play signal sample-rate)
+(define (signal-play signal)
   (unless (signal? signal)
-    (raise-argument-error 'signal-play "signal" 0 signal sample-rate))
-  (unless (positive-integer? sample-rate)
-    (raise-argument-error 'signal-play "sample rate (nonnegative exact integer)" 1 signal sample-rate))
-  (rc:signal/block-play/unsafe (rc:signal->signal/block/unsafe signal) sample-rate #f))
+    (raise-argument-error 'signal-play "signal" 0 signal))
+  (define sample-maker (network-init signal))
+  (rc:signal/block-play/unsafe (rc:signal->signal/block/unsafe sample-maker) (default-sample-rate) #f))
 
 ;; play a signal/block using portaudio:
 (define (signal/block-play signal/block sample-rate #:buffer-time [buffer-time #f])
@@ -346,12 +346,13 @@
   (unless (nonnegative-integer? frames)
     (raise-argument-error 'signal->rsound "non-negative integer" 0 frames sample-rate f))
   (unless (signal? f)
-    (raise-argument-error 'signal->rsound "signal" 2 frames sample-rate f)) 
+    (raise-argument-error 'signal->rsound "signal" 2 frames sample-rate f))
+  (define sample-maker (network-init f))
   (let* ([int-frames (inexact->exact (floor frames))]
          [cblock (make-s16vector (* rc:channels int-frames))])
     (for ([i (in-range int-frames)])
       (let* ([offset (* rc:channels i)]
-             [sample (real->s16 (f))])
+             [sample (real->s16 (sample-maker))])
         (s16vector-set! cblock offset       sample)
         (s16vector-set! cblock (+ offset 1) sample)))
     (rsound cblock 0 int-frames sample-rate)))
