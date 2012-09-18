@@ -1,24 +1,21 @@
 #lang racket
 
-(require racket/flonum)
+(require racket/flonum
+         "network.rkt")
 
 (provide 
  (contract-out [build-wavetable (-> procedure? 
                                     flvector?)]
                [wavetable-build-sample-rate number?]))
 
-;; given a length and a function, build the corresponding flvector
-(define (build-flvector len fun)
-  (let ([newvec (make-flvector len)])
-    (for ([i (in-range len)])
-      (flvector-set! newvec i (exact->inexact (fun i))))
-    newvec))
-
 ;; build a wavetable for a periodic function with the 
-;; contract (pitch sample-rate -> sample -> value)
+;; contract (pitch sample-rate -> signal)
 (define (build-wavetable fun)
-  (build-flvector wavetable-build-sample-rate
-                  (fun 1 wavetable-build-sample-rate)))
+  (define sigfun (network-init (fun 1 wavetable-build-sample-rate)))
+  (let ([newvec (make-flvector wavetable-build-sample-rate)])
+    (for ([i (in-range wavetable-build-sample-rate)])
+      (flvector-set! newvec i (exact->inexact (sigfun))))
+    newvec))
 
 ;; this is independent, but it should be nice and high to get 
 ;; good wavetables

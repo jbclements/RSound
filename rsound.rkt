@@ -36,7 +36,8 @@
                      sound-list-total-frames
                      rs-play/helper
                      rs-mutator)
-         network)
+         network
+         prev)
 
 (define s16max #x7fff)
 (define -s16max (- s16max))
@@ -53,7 +54,7 @@
 
 ;; an rsound (racket sound) provides a representation for sounds 
 ;; that leaves them packed as C data. For the moment, it's 
-;; 2-channel float only. Also, it discards all meta-information
+;; 2-channel int16 only. Also, it discards all meta-information
 ;; except length and sample-rate.
 
 
@@ -370,11 +371,13 @@
   (unless (signal? fright)
     (raise-argument-error 'signal->rsound/stereo "signal" 3 frames sample-rate fleft fright)) 
   (define int-frames (inexact->exact frames))
+  (define sample-maker/left (network-init fleft))
+  (define sample-maker/right (network-init fright))
   (let* ([cblock (make-s16vector (* rc:channels int-frames))])
     (for ([i (in-range int-frames)])
       (let* ([offset (* rc:channels i)])
-        (s16vector-set! cblock offset       (real->s16 (fleft)))
-        (s16vector-set! cblock (+ offset 1) (real->s16 (fright)))))
+        (s16vector-set! cblock offset       (real->s16 (sample-maker/left)))
+        (s16vector-set! cblock (+ offset 1) (real->s16 (sample-maker/right)))))
     (rsound cblock 0 int-frames sample-rate)))
 
 ;; special-case silence (it's fast to generate):

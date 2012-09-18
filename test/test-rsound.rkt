@@ -15,9 +15,10 @@
 
 (define (sine-wave pitch sample-rate volume)
   (let ([scalar (* twopi pitch)])
-    (lambda (i)
-      (let ([t (/ i sample-rate)])
-        (* volume (sin (* scalar t)))))))
+    (add-ticker
+     (lambda (i)
+       (let ([t (/ i sample-rate)])
+         (* volume (sin (* scalar t))))))))
 
 ;; make a monaural pitch with the given number of frames
 (define (make-tone pitch volume frames)
@@ -33,9 +34,8 @@
 
 (define (add-ticker n)
   (network ()
-           (offby1 (add1 (prev offby1)))
-           (ticker (- offby1 1))
-           (out (n ticker))
+           (frame (add1 (prev frame)) #:init -1)
+           (out (n frame))
            out))
 
 (define the-test-suite
@@ -46,20 +46,22 @@
   (check-equal? (rs-ith/right/s16 t 1) (inexact->exact
                                             (round (* s16max (sin (* twopi 13/44100)))))))
 
-
+  (define ramp-signal (add-ticker (lambda (i) (/ i 100))))
 ;; signal->rsound/stereo
-(let ([s (signals->rsound 100 (lambda (i) (/ i 100)) (lambda (i) (- 1 (/ i 100))))])
+(let ([s (signals->rsound 100 ramp-signal 
+                          (add-ticker (lambda (i) (- 1 (/ i 100)))))])
   (check-= (rs-ith/left s 13) 13/100 1e-4)
   (check-= (rs-ith/right s 89) 11/100 1e-4))
 
 ;; test rs-ith/left & right
-(let ([t (signal->rsound 100 (lambda (i) (sin (* twopi 13/44100 i))))])
+(let ([t (signal->rsound 100 (add-ticker
+                              (lambda (i) (sin (* twopi 13/44100 i)))))])
   (check-= (rs-ith/left t 0) 0 1e-4)
   (check-= (rs-ith/right t 1) (sin (* twopi 13/44100)) 1e-4))
 
 ;; test of rs-equal?
-(let ([v1 (signal->rsound 100 (lambda (i) (/ i 100)))]
-      [v2 (signal->rsound 100 (lambda (i) (/ i 100)))])
+(let ([v1 (signal->rsound 100 ramp-signal)]
+      [v2 (signal->rsound 100 ramp-signal)])
   (check rs-equal? v1 v2)
   (s16vector-set! (rsound-data v2) 50 -30)
   (check-equal? (rs-equal? v1 v2) false))
@@ -118,7 +120,7 @@
                 (+ (rs-ith/left/s16 sample-sound 5)
                    (rs-ith/left/s16 sample-sound 2))))
   
-  (let* ([sample-sound (signal->rsound 100 (lambda (x) (* 0.2 (random))))]
+  (let* ([sample-sound (signal->rsound 100 (lambda () (* 0.2 (random))))]
          [overlaid (assemble (list (list sample-sound 25) 
                                           (list sample-sound 0)
                                           (list sample-sound 75)))])
@@ -219,9 +221,12 @@
 
 ;; clipping isn't happening right.
 
-(check-= (/ (rs-ith/left/s16 (signal->rsound 300
-                                                 (lambda (i) (* 1.5 (sin (* twopi 147/44100 i)))))
-                                 73)
+(check-= (/ (rs-ith/left/s16 
+             (signal->rsound 
+              300
+              (add-ticker
+               (lambda (i) (* 1.5 (sin (* twopi 147/44100 i))))))
+             73)
             #x7fff)
          1.0
          1e-4)

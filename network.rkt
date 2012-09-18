@@ -4,6 +4,7 @@
 
 
 (provide network
+         prev
          (struct-out network/s)
          (contract-out [network-init (-> network/c procedure?)]))
 
@@ -40,24 +41,25 @@
 (define-syntax (network stx)
   (define-syntax-class network-clause
     #:description "network clause"
-    (pattern (out:id (node:expr input:node-in ...))))
+    (pattern (out:id (node:expr input:node-in ...) (~optional (~seq #:init init:expr) #:defaults ([init #'0])))))
   (define-syntax-class node-in
     #:description "network node input"
     #:literals (prev)
     (pattern (prev in-ref:id))
     (pattern in:expr))
-  #;(define (rewrite-prevs inss))
   (syntax-parse stx
     [(_ (in:id ...)
-        clause:network-clause ...
-        out:id)
+        clause:network-clause ...+)
      (define num-ins (length (syntax->list #'(in ...))))
      (define num-clauses (length (syntax->list #'(clause ...))))
      (define lhses (syntax->list #'(clause.out ...)))
+     (define last-out (car (reverse lhses)))
      (define (rewrite/l input-list)
        (map rewrite (syntax->list input-list)))
+     ;; rewrite occurrences of "prev" into vector references
      (define (rewrite in)
        (syntax-parse in
+         #:literals (prev)
          [(prev in:id) #`(vector-ref saves-vec #,(find-idx #'in))]
          [other:expr #'other]))
      (define (find-idx id)
@@ -82,7 +84,7 @@
            ([maker
              #`(lambda ()
                  (define saves-vec
-                   (make-vector (quote #,num-clauses) 0.0))
+                   (vector clause.init ...))
                  (define signal-proc (network-init clause.node))
                  ...
                  (lambda (in ...)
@@ -91,7 +93,7 @@
                      (begin
                        (vector-set! saves-vec idx clause.out)
                        ...)
-                     out)))])
+                     #,last-out)))])
          #`(network/s (quote #,num-ins) 1 maker)))]))
 
 

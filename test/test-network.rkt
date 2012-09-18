@@ -21,14 +21,12 @@
 (define variable-pitch-oscillator
   (network (incr)
            [angle (cyclic-angle incr (prev angle))]
-           [wave (lookup angle)]
-           wave))
+           [wave (lookup angle)]))
 
 (define mynet
   (network ()
            [wave (variable-pitch-oscillator 440)]
-           [gain (* wave 0.1)]
-           gain))
+           [gain (* wave 0.1)]))
 
 (define the-test-suite
   (test-suite
@@ -37,7 +35,31 @@
      (define started (network-init mynet))
      (check-equal? (started) (* 0.1 (sin (* 440 1/44100 2 pi))))
      (check-equal? (started) (* 0.1 (sin (* 440 2/44100 2 pi))))
-     )))
+     
+     
+     ;; test case that exposes an old bug:
+     (define testnet
+       (network ()
+                (offby1 (+ 10 (prev offby1)))
+                (out ((lambda (i) i) (sub1 offby1)))))
+     
+     (define a (network-init testnet))
+     
+     (check-equal? (a) 9)
+     (check-equal? (a) 19)
+     
+     )
+   (let ()
+     
+     ;; try out new "init"
+     (define testnet
+       (network ()
+                (a (add1 (prev a)) #:init 147)
+                (b (+ a a))))
+     
+     (define a (network-init testnet))
+     (check-equal? (a) (* 148 2))
+     (check-equal? (a) (* 149 2)))))
 
 (module+ test
   (require rackunit/text-ui)
