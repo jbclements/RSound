@@ -17,6 +17,21 @@
       (flvector-set! newvec i (exact->inexact (sigfun))))
     newvec))
 
+;; given a wavetable, make a wavetable lookup function
+;; how much slower would it be with interpolation?
+;; flvector -> number number -> signal
+(define ((make-table-based-wavefun vec) pitch sample-rate)
+  (define relative-pitch (* pitch (/ wavetable-build-sample-rate sample-rate)))
+  (define skip-rate (inexact->exact (round relative-pitch)))
+  (define index-net (loop-ctr wavetable-build-sample-rate skip-rate))
+  (network ()
+           (idx (index-net))
+           (out (flvector-ref vec idx))))
+
 ;; this is independent, but it should be nice and high to get 
 ;; good wavetables
 (define wavetable-build-sample-rate 44100)
+
+(module+ test
+  (require rackunit)
+  ())

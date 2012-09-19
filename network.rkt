@@ -9,7 +9,9 @@
          signal-*s
          signal-+s
          (struct-out network/s)
-         (contract-out [network-init (-> network/c procedure?)]))
+         (contract-out [network-init (-> network/c procedure?)])
+         loop-ctr
+         simple-ctr)
 
 ;; this representation can in principle handle multiple-out networks,
 ;; but the surface syntax will get yucky. For now, let's just do one
@@ -125,4 +127,30 @@
                    (lambda ()
                      (for/sum ([fun sigfuns]) (fun))))))
 
+;; a simple signal that starts at 0 and increments by "skip"
+;; until it passes "len", then jumps back to 0
+(define (loop-ctr len skip)
+  (define limit-val (- len skip))
+  (define (increment p)
+    (cond [(< p limit-val) (+ p skip)]
+          [else 0]))
+  (network ()
+           (out (increment (prev out)) #:init (- skip))))
 
+;; a signal that simply starts at "init"  and adds "skip"
+;; each time
+(define (simple-ctr init skip)
+  (network ()
+           (out (+ skip (prev out)) #:init (- init skip))))
+
+
+
+;; a vector containing the first 'n' samples of a signal
+(define (signal-samples signal n)
+  (define sigfun (network-init signal))
+  (define vec (make-vector n))
+  (for ([i n])
+    (vector-set! vec i (sigfun)))
+  vec)
+
+(stream-take (sequence->stream (in-producer (lambda () 14) #f)))

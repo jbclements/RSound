@@ -177,21 +177,7 @@ rsound-max-volume
                                 (rs-ith/right b i))))))
   new-snd)
 
-;; a simple signal that starts at 0 and increments by "skip"
-;; until it passes "len", then jumps back to 0
-(define (loop-ctr len skip)
-  (define limit-val (- len skip))
-  (define (increment p)
-    (cond [(< p limit-val) (+ p skip)]
-          [else 0]))
-  (network ()
-           (out (increment (prev out)) #:init -1)))
 
-;; a signal that simply starts at "init"  and adds "skip"
-;; each time
-(define (simple-ctr init skip)
-  (network ()
-           (out (+ skip (prev out)) #:init (- init skip))))
 
 ;; convert an index-based signal into a signal, by supplying
 ;; a counter.
@@ -199,17 +185,6 @@ rsound-max-volume
   (network ()
            (ctr ((simple-ctr 0 1)))
            (out (oss ctr))))
-
-
-;; given a wavetable, make a wavetable lookup function
-;; how much slower would it be with interpolation?
-(define ((make-table-based-wavefun vec) pitch sample-rate)
-  (define relative-pitch (* pitch (/ wavetable-build-sample-rate sample-rate)))
-  (define skip-rate (inexact->exact (round relative-pitch)))
-  (define index-net (loop-ctr wavetable-build-sample-rate skip-rate))
-  (network ()
-           (idx (index-net))
-           (out (flvector-ref vec idx))))
 
 
 ;; given a raw function, produce a table-based version of it

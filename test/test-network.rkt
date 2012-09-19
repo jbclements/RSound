@@ -59,7 +59,20 @@
      
      (define a (network-init testnet))
      (check-equal? (a) (* 148 2))
-     (check-equal? (a) (* 149 2)))))
+     (check-equal? (a) (* 149 2)))
+   
+   (let ()
+     (define ctr1 (simple-ctr 34 14))
+     (define sigfun (network-init ctr1))
+     (check-equal? (sigfun) 34)
+     (check-equal? (sigfun) 48))
+   (let ()
+     (define ctr1 (loop-ctr 34 14))
+     (define sigfun (network-init ctr1))
+     (check-equal? (sigfun) 0)
+     (check-equal? (sigfun) 14)
+     (check-equal? (sigfun) 28)
+     (check-equal? (sigfun) 0))))
 
 (module+ test
   (require rackunit/text-ui)
