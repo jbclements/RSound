@@ -18,6 +18,7 @@ rsound-max-volume
          "integral-cycles.rkt"
          "wavetable.rkt"
          racket/flonum
+         racket/fixnum
          ffi/vector
          (for-syntax syntax/parse))
 
@@ -49,6 +50,7 @@ rsound-max-volume
          signal-*s
          signal-+s
          thresh/signal
+         mono
          
          signal-scale
          clip&volume
@@ -71,15 +73,13 @@ rsound-max-volume
          times
          rs-overlay*
          rs-overlay
-         mono
          vectors->rsound
          tile-to-len
          fader-snd
          
          rsound-fft/left
          rsound-fft/right
-         rsound-max-volume
-         signal
+         rsound-maximize-volume
          midi-note-num->pitch
          ;; for testing:
          raw-sine-wave
@@ -180,8 +180,9 @@ rsound-max-volume
 ;; a simple signal that starts at 0 and increments by "skip"
 ;; until it passes "len", then jumps back to 0
 (define (loop-ctr len skip)
+  (define limit-val (- len skip))
   (define (increment p)
-    (cond [(< p len) (+ p skip)]
+    (cond [(< p limit-val) (+ p skip)]
           [else 0]))
   (network ()
            (out (increment (prev out)) #:init -1)))
@@ -245,7 +246,7 @@ rsound-max-volume
         [scalar2 (* twopi 2 pitch)]
         [scalar3 (* twopi 3 pitch)])
     (network ()
-             (ctr ((simple-ctr (/ 1.0 sample-rate))))
+             (ctr ((simple-ctr 0 (/ 1.0 sample-rate))))
              (out (+ (sin (* scalar1 ctr))
                      (* 0.5 (sin (* scalar2 ctr)))
                      (* 0.25 (sin (* scalar3 ctr))))))))
@@ -284,17 +285,20 @@ rsound-max-volume
 (define approx-sawtooth-wave (make-checked-wave-fun 
                               raw-sawtooth-approx-wave))
 
-;; RIGHT HERE
-
 ;; square waves
 
 (define (raw-square-wave pitch sample-rate)
-  (let* ([period (* sample-rate (/ 1 pitch))])
-    (lambda (i)
-      (let* ([scaled (/ i period)]
-             [frac (- scaled (floor scaled))])
-        (cond [(< frac 0.5) 1.0]
-              [else -1.0])))))
+  (when (< (/ sample-rate 2) pitch)
+    (raise-argument-error 'raw-square-wave "pitch <= half the sample rate" 0 pitch sample-rate))
+  ;; rounding...
+  (define period (inexact->exact (round (* sample-rate (/ 1 pitch)))))
+  (define high-part (floor (/ period 2)))
+  (define (hi-lo idx)
+    (cond [(< idx high-part) 1.0]
+          [else -1.0]))
+  (network ()
+           (idx ((loop-ctr period 1)))
+           (out (hi-lo idx))))
 
 (define square-wave (make-checked-wave-fun raw-square-wave))
 
@@ -302,35 +306,37 @@ rsound-max-volume
 (define (fader fade-frames)
   (let ([p (expt 0.001 (/ 1 fade-frames))])
     (network ()
-             (out (* p (prev out)) #:init (/ 1 p))
-             out)))
+             (out (* p (prev out)) #:init (/ 1 p)))))
 
 ;; frisellinator : frames -> signal
 (define (frisellinator intro-frames)
+  (old-style-signal->signal
   (lambda (i)
     (cond [(< intro-frames i) 1.0]
-          [else (* 0.5 (- 1.0 (cos (* pi (/ i intro-frames)))))])))
+          [else (* 0.5 (- 1.0 (cos (* pi (/ i intro-frames)))))]))))
 
 ;; dc-signal : number -> signal
 (define (dc-signal volume)
   (lambda () volume))
 
-(define (signal-*s lof)
-  (lambda (i) (apply * (map (lambda (x) (x i)) lof))))
-
-(define (signal-* a b) (signal-*s (list a b)))
-
-(define (signal-+s lof)
-  (lambda (i) (apply + (map (lambda (x) (x i)) lof))))
+(define (signal-* a b)
+  (network ()
+           (a-out (a))
+           (b-out (b))
+           (out (* a b))))
 
 ;; given a number and a signal, scale the number by the signal
 ;; this can be done using signal-* and dc-signal, but this
 ;; turns out to be a lot faster
 (define (sig-scale volume signal)
-  (lambda (i) (* volume (signal i))))
+  (network ()
+           (s (signal))
+           (out (* volume s))))
 
 ;; convert a wavefun into a tone-maker; basically just keep a hash table
 ;; of previously generated sounds.
+
+;; FIXME: IS THIS ACTUALLY FASTER?
 (define (wavefun->tone-maker wavefun)
   (let ([tone-table (make-hash)])
     (lambda (pitch volume frames)
@@ -389,16 +395,12 @@ rsound-max-volume
 ;; have the right parameters, so we just re-purpose them.
 
 (define (fader-as-wavefun fade-frames dc1 dc2)
-  (let ([p (expt 0.001 (/ 1 fade-frames))])
-    (lambda (i)
-      (expt p i))))
+  (fader fade-frames))
 
 (define fader-proxy (wavefun->tone-maker fader-as-wavefun))
 
 (define (fader-snd fade-frames frames)
   (fader-proxy fade-frames #f frames))
-
-
 
 
 ;; generate a sound containing repeated copies of the sound out to the
@@ -454,20 +456,23 @@ rsound-max-volume
 
 (define (make-pulse-tone duty-cycle)
   (when (not (< 0.0 duty-cycle 1.0))
-    (raise-type-error 'make-pulse-tone
-                      "number between 0 and 1"
-                      0
-                      duty-cycle))
+    (raise-argument-error 'make-pulse-tone
+                          "number between 0 and 1"
+                          0
+                          duty-cycle))
   (wavefun->tone-maker/periodic
    (lambda (pitch volume sample-rate)
      (define wavelength (/ sample-rate pitch))
-     (define on-samples (round (* duty-cycle wavelength)))
-     (define total-samples (round wavelength))
+     (define on-samples (inexact->exact (round (* duty-cycle wavelength))))
+     (define total-samples (inexact->exact (round wavelength)))
      (define up volume)
      (define down (- up))
-     (lambda (i)
-       (cond [(< (modulo i total-samples) on-samples) up]
-             [else down])))))
+     (define (hi-lo idx)
+       (cond [(< idx on-samples) up]
+             [else down]))
+     (network ()
+              (idx ((loop-ctr total-samples)))
+              (out (hi-lo idx))))))
 
 (define (make-ding pitch)
   (define sample-rate (default-sample-rate))
@@ -515,23 +520,16 @@ rsound-max-volume
 
 ;; ADSR envelope (actually more of an ADS envelope)
 (define (adsr frames attack-len attack-height decay-len decay-height)
-  (let* ([t1 attack-len]
-         [t2 (+ t1 decay-len)]
-         [t3 frames])
-  (lambda (i)
-    (cond [(< i t1) (weighted (/ i attack-len) 0 attack-height)]
-          [(< i t2) (weighted (/ (- i t1) decay-len) attack-height decay-height)]
-          [(< i t3) decay-height]
-          [else 0]))))
-
-;; (1-s)*a + s*b
-(define (weighted s a b)
-  (+ (* a (- 1 s)) (* b s)))
-
-;; turn a function of multiple arguments into a signal. Basically,
-;; just curry w.r.t. the first argument.
-(define (signal f . args)
-  (lambda (t) (apply f (cons t args))))
+  (define slope1 (exact->inexact (/ attack-height attack-len)))
+  (define slope2 (exact->inexact (/ (- decay-height attack-height) decay-len)))
+  (define (ramp idx p)
+    (cond [(<= idx attack-len) (+ p slope1)]
+          [(<= idx decay-len) (+ p slope2)]
+          [(<= idx frames) p]
+          [else 0]))
+  (network ()
+           (frame ((simple-ctr 0 1)))
+           (volume (ramp frame (prev volume)) #:init (- slope1))))
 
 ;; FFTs
 
@@ -566,7 +564,7 @@ rsound-max-volume
     v))
 
 ;; make the sound as lound as possible without distortion
-(define (rsound-max-volume rsound)
+(define (rsound-maximize-volume rsound)
   (let* ([scalar (fl/ 1.0 (exact->inexact (rs-largest-sample rsound)))])
     (signals->rsound (rs-frames rsound)
                      (rsound-sample-rate rsound)
@@ -610,16 +608,24 @@ rsound-max-volume
 ;; thresh/signal : number signal -> signal
 ;; clip to a threshold (lifted to signals)
 (define (thresh/signal threshold signal)
-  (let* ([abs-thresh (abs threshold)]
-         [neg-abs-thresh (- abs-thresh)])
-    (lambda (t)
-      (max neg-abs-thresh (min abs-thresh (signal t))))))
+  (define abs-threshold (abs threshold))
+  (define neg-threshold (- abs-threshold))
+  (define (limit-fun s)
+    (cond [(< s neg-threshold) neg-threshold]
+          [(< s abs-threshold) s]
+          [else abs-threshold]))
+  ;; this pattern is looking very abstract-able...
+  (network ()
+           (base (signal))
+           (out (limit-fun base))))
 
 ;; scale : number signal -> signal
 ;; scale the signal by the given number
 (define (signal-scale volume signal)
-  (lambda (t)
-    (* volume (signal t))))
+  (define mult (lambda (s) (* volume s)))
+  (network ()
+           (s (signal))
+           (out (mult s))))
 
 ;; clip&volume : number signal -> signal
 ;; clip the given signal to 1.0, then multiply by the volume.
@@ -642,7 +648,8 @@ rsound-max-volume
   (syntax-parse stx
     [(_ frames:expr timevar:id body:expr ...)
      #'(signal->rsound frames 
-                            (lambda (timevar) body ...))]))
+                       (old-style-signal->signal
+                        (lambda (timevar) body ...)))]))
 
 
 ;; noise

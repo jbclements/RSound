@@ -2,6 +2,7 @@
 
 (require "../rsound.rkt"
          "../util.rkt"
+         "../network.rkt"
          rackunit
          rackunit/text-ui
          (for-syntax syntax/parse))
@@ -28,16 +29,22 @@
               
               ;; table-based-sine-wave
               
-              (check-= ((raw-sine-wave 4 44100) 13) (sin (* 2 pi 13/44100 4)) 1e-4)
+              ;; determine the nth sample, by discarding the first n-1:
+              (define (signal-nth signal n)
+                (define sigfun (network-init signal))
+                (for ([i (- n 1)]) (sigfun))
+                sigfun)
               
-              (check-= ((raw-square-wave 2 500) 0) 1.0 1e-4)
-              (check-= ((raw-square-wave 2 500) 10) 1.0 1e-4)
-              (check-= ((raw-square-wave 2 500) 124) 1.0 1e-4)
-              (check-= ((raw-square-wave 2 500) 125) -1.0 1e-4)
-              (check-= ((raw-square-wave 2 500) 249) -1.0 1e-4)
-              (check-= ((raw-square-wave 2 500) 250)  1.0 1e-4)
-              (check-= ((raw-square-wave 3 500) 166) -1.0 1e-4)
-              (check-= ((raw-square-wave 3 500) 167)  1.0 1e-4)
+              (check-= (signal-nth (raw-sine-wave 4 44100) 13) (sin (* 2 pi 13/44100 4)) 1e-4)
+              
+              (check-= (signal-nth (raw-square-wave 2 500) 0) 1.0 1e-4)
+              (check-= (signal-nth (raw-square-wave 2 500) 10) 1.0 1e-4)
+              (check-= (signal-nth (raw-square-wave 2 500) 124) 1.0 1e-4)
+              (check-= (signal-nth (raw-square-wave 2 500) 125) -1.0 1e-4)
+              (check-= (signal-nth (raw-square-wave 2 500) 249) -1.0 1e-4)
+              (check-= (signal-nth (raw-square-wave 2 500) 250)  1.0 1e-4)
+              (check-= (signal-nth (raw-square-wave 3 500) 166) -1.0 1e-4)
+              (check-= (signal-nth (raw-square-wave 3 500) 167)  1.0 1e-4)
               
               (define pulse-12.5 (make-pulse-tone 0.125))
               (define short-pulse  (pulse-12.5 441 0.2 50))
@@ -75,15 +82,15 @@
               ;; answer: not yet a problem.
               #;(time 
                  (for ([i (in-range 100)])
-                   (mono-signal->rsound 44100 (fader 44100))))
+                   (signal->rsound 44100 (fader 44100))))
               
               #;(time 
                  (for ([i (in-range 100)])
-                   (mono-signal->rsound 44100 (sine-wave 440))))
+                   (signal->rsound 44100 (sine-wave 440))))
               
               #;(time
                  (for ([i (in-range 100)])
-                   (mono-signal->rsound 44100 (sawtooth-wave 440))))
+                   (signal->rsound 44100 (sawtooth-wave 440))))
               
               (parameterize ([default-sample-rate 1000])
                 (let ([tr (sawtooth-wave 100)])
@@ -93,7 +100,7 @@
               
               ;; memoizing
               
-              (let ([s1 (mono-signal->rsound 200 (signal-*s (list (dc-signal 0.5) 
+              (let ([s1 (signal->rsound 200 (signal-*s (list (dc-signal 0.5) 
                                                                   (sine-wave 100))))]
                     [s2 (time (make-tone 100 0.5 441000))]
                     [s3 (time (make-tone 100 0.5 441000))])
@@ -127,8 +134,8 @@
               (check-equal? (binary-logn 4096) 12)
               (check-equal? (binary-logn 4095) #f)
               
-              ;; SIGNAL
-              (check-equal? ((signal (lambda (t b c) (+ t b c)) 3 4) 1) 8)
+              ;; SIGNAL... actually, I think signal was a bad idea.
+              #;(check-equal? ((signal (lambda (t b c) (+ t b c)) 3 4) 1) 8)
               
               ;; SIGNAL?
               (check-equal? (signal? (lambda (t) 14)) #t)
@@ -147,20 +154,20 @@
               
               ;; RSOUND->SIGNAL
               (check-= ((rsound->signal/left 
-                         (mono-signal->rsound 100 (lambda (x) (/ x 1000)))) 23)
+                         (signal->rsound 100 (lambda (x) (/ x 1000)))) 23)
                        0.023
                        1e-4)
               
               ;; off the edge:
               (check-= ((rsound->signal/left 
-                         (mono-signal->rsound 100 (lambda (x) (/ x 1000)))) 150)
+                         (signal->rsound 100 (lambda (x) (/ x 1000)))) 150)
                        0.0
                        1e-4)
               
               (check-exn exn:fail? (lambda () (rsound->signal/left 14)))
               
               (check-= ((rsound->signal/right
-                         (mono-signal->rsound 100 (lambda (x) (/ x 1000)))) 23)
+                         (signal->rsound 100 (lambda (x) (/ x 1000)))) 23)
                        0.023
                        1e-4)
               
@@ -284,7 +291,7 @@
 (n-times-throwaway 
  40
  (lambda ()
-   (mono-signal->rsound (default-sample-rate) (lambda (t) (sin (* twopi t 340 1/44100))))))
+   (signal->rsound (default-sample-rate) (lambda (t) (sin (* twopi t 340 1/44100))))))
 
 (define (testfun t f)
   (sin (* twopi t f 1/44100)))
@@ -292,12 +299,12 @@
 (n-times-throwaway 
  40
  (lambda ()
-   (mono-signal->rsound (default-sample-rate) (lambda (t) (testfun t 340)))))
+   (signal->rsound (default-sample-rate) (lambda (t) (testfun t 340)))))
 
 (n-times-throwaway 
  40
  (lambda ()
-   (mono-signal->rsound (default-sample-rate) (signal testfun 340))))
+   (signal->rsound (default-sample-rate) (signal testfun 340))))
 |#
               )))
 

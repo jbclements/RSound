@@ -37,7 +37,10 @@
                      rs-play/helper
                      rs-mutator)
          network
-         prev)
+         prev
+         signal?
+         signal-+s
+         signal-*s)
 
 (define s16max #x7fff)
 (define -s16max (- s16max))
@@ -89,11 +92,6 @@
           (s16vector-length v2))
        (for/and ([i (in-range (s16vector-length v1))])
          (= (s16vector-ref v1 i) (s16vector-ref v2 i)))))
-
-;; can this procedure be used as a signal? 
-(define (signal? f)
-  (or (and (network/s? f) (= (network/s-ins f) 0))
-      (and (procedure? f) (procedure-arity-includes? f 0))))
 
 ;; can this procedure be used as a signal/block?
 (define (signal/block? f)

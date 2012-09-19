@@ -5,6 +5,9 @@
 
 (provide network
          prev
+         signal?
+         signal-*s
+         signal-+s
          (struct-out network/s)
          (contract-out [network-init (-> network/c procedure?)]))
 
@@ -95,5 +98,31 @@
                        ...)
                      #,last-out)))])
          #`(network/s (quote #,num-ins) 1 maker)))]))
+
+
+;; a signal is a network with no inputs.
+;; can this procedure be used as a signal? 
+(define (signal? f)
+  (or (and (network/s? f) (= (network/s-ins f) 0))
+      (and (procedure? f) (procedure-arity-includes? f 0))))
+
+
+;; multiply the signals together:
+(define (signal-*s los)
+  (unless (andmap signal? los)
+    (raise-argument-error 'signal-*s "list of signals" 0 los))
+  (network/s 0 1 (lambda ()
+                   (define sigfuns (map network-init los))
+                   (lambda ()
+                     (for/product ([fun sigfuns]) (fun))))))
+
+;; add the signals together:
+(define (signal-+s los)
+  (unless (andmap signal? los)
+    (raise-argument-error 'signal-*s "list of signals" 0 los))
+  (network/s 0 1 (lambda ()
+                   (define sigfuns (map network-init los))
+                   (lambda ()
+                     (for/sum ([fun sigfuns]) (fun))))))
 
 
