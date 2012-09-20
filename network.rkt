@@ -11,7 +11,9 @@
          (struct-out network/s)
          (contract-out [network-init (-> network/c procedure?)])
          loop-ctr
-         simple-ctr)
+         simple-ctr
+         signal-samples
+         signal-nth)
 
 ;; this representation can in principle handle multiple-out networks,
 ;; but the surface syntax will get yucky. For now, let's just do one
@@ -148,9 +150,12 @@
 ;; a vector containing the first 'n' samples of a signal
 (define (signal-samples signal n)
   (define sigfun (network-init signal))
-  (define vec (make-vector n))
-  (for ([i n])
-    (vector-set! vec i (sigfun)))
-  vec)
+  (for/vector ([i n]) (sigfun)))
 
-(stream-take (sequence->stream (in-producer (lambda () 14) #f)))
+;; determine the nth sample, by discarding the first n-1:
+(define (signal-nth signal n)
+  (define sigfun (network-init signal))
+  (for ([i n]) (sigfun))
+  (sigfun))
+
+

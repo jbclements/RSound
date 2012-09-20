@@ -9,11 +9,7 @@
 
 (provide the-test-suite)
 
-;; determine the nth sample, by discarding the first n-1:
-(define (signal-nth signal n)
-  (define sigfun (network-init signal))
-  (for ([i n]) (sigfun))
-  (sigfun))
+
 
 (define the-test-suite
 (test-suite 
@@ -94,7 +90,7 @@
      (check-equal? (rs-ith/left/s16 r 0)  (round (* s 3)))
      (check-equal? (rs-ith/right/s16 r 1)  (round (* s -15))))
    
-   (check-not-exn (lambda () (make-harm3tone 430 0.1 400)))
+   #;(check-not-exn (lambda () (make-harm3tone 430 0.1 400)))
    
    ;; is fader too slow?
    ;; answer: not yet a problem.
@@ -112,9 +108,25 @@
    
    (parameterize ([default-sample-rate 1000])
      (let ([tr (sawtooth-wave 100)])
-       (check-= (tr 0) 0.0 1e-5)
-       (check-= (tr 1) 0.2 1e-5)
-       (check-= (tr 5) -1.0 1e-5)))
+       (check-= (signal-nth tr 0) 0.0 1e-5)
+       (check-= (signal-nth tr 1) 0.2 1e-5)
+       (check-= (signal-nth tr 5) -1.0 1e-5)))
+   
+   ;; signal-*
+   
+   (check-equal? (signal-samples (signal-* (simple-ctr 1 0.5)
+                                           (simple-ctr 0 2))
+                                 4)
+                 (vector 0 3.0 8.0 15.0))
+   
+   ;; signal-+
+   
+   (check-equal? (signal-samples (signal-+ (simple-ctr 1.0 0.5)
+                                           (simple-ctr 0 2))
+                                 4)
+                 (vector 1.0 3.5 6.0 8.5))
+   
+   
    
    ;; memoizing
    
@@ -143,9 +155,9 @@
      (check-= (magnitude (vector-ref fft 16)) 2400.0 1e-2)
      (check-= (magnitude (vector-ref fft 17)) 0.0 1e-2))
    
-   (check-= ((frisellinator 100) 0) 0.0 1e-4)
-   (check-= ((frisellinator 100) 100) 1.0 1e-4)
-   (check-= ((frisellinator 100) 50) 0.5 1e-4)
+   (check-= (signal-nth (frisellinator 100) 0) 0.0 1e-4)
+   (check-= (signal-nth (frisellinator 100) 100) 1.0 1e-4)
+   (check-= (signal-nth (frisellinator 100) 50) 0.5 1e-4)
    
    
    
@@ -154,11 +166,6 @@
    
    ;; SIGNAL... actually, I think signal was a bad idea.
    #;(check-equal? ((signal (lambda (t b c) (+ t b c)) 3 4) 1) 8)
-   
-   ;; SIGNAL?
-   (check-equal? (signal? (lambda (t) 14)) #t)
-   (check-equal? (signal? (lambda (x y) 14)) #f)
-   (check-equal? (signal? (lambda args 14)) #t)
    
    ;; MIDI-NOTE-NUM->PITCH
    
@@ -170,22 +177,27 @@
               (lambda ()
                 (midi-note-num->pitch (list 34 24))))
    
+   ;; indexed-signal
+   (check-= (signal-nth (indexed-signal (lambda (x) (* x 3))) 4)
+            12
+            1e-4)
+   
    ;; RSOUND->SIGNAL
    (check-= ((rsound->signal/left 
-              (signal->rsound 100 (lambda (x) (/ x 1000)))) 23)
+              (mono 100 x (/ x 1000))) 23)
             0.023
             1e-4)
    
    ;; off the edge:
    (check-= ((rsound->signal/left 
-              (signal->rsound 100 (lambda (x) (/ x 1000)))) 150)
+              (mono 100 x (/ x 1000))) 150)
             0.0
             1e-4)
    
    (check-exn exn:fail? (lambda () (rsound->signal/left 14)))
    
    (check-= ((rsound->signal/right
-              (signal->rsound 100 (lambda (x) (/ x 1000)))) 23)
+              (mono 100 x (/ x 1000))) 23)
             0.023
             1e-4)
    
@@ -200,15 +212,15 @@
    (check-= (thresh 2.0 -6.0) -2.0 1e-4)
    (check-= (thresh -2.5 3.4) 2.5 1e-4)
    
-   (let* ([f (lambda (t) (* 2 (sin (* t twopi 1 1/12))))]
+   (let* ([f (indexed-signal (lambda (t) (* 2 (sin (* t twopi 1 1/12)))))]
           [vf (clip&volume 0.5 f)]
           [sf (signal-scale 4.0 f)])
-     (check-= (f 0) 0 1e-4)
-     (check-= (f 6) 0 1e-4)
-     (check-= (f 3) 2.0 1e-4)
-     (check-= (vf 0) 0 1e-4)
-     (check-= (vf 3) 0.5 1e-4)
-     (check-= (sf 3) 8.0 1e-4))
+     (check-= (signal-nth f 0) 0 1e-4)
+     (check-= (signal-nth f 6) 0 1e-4)
+     (check-= (signal-nth f 3) 2.0 1e-4)
+     (check-= (signal-nth vf 0) 0 1e-4)
+     (check-= (signal-nth vf 3) 0.5 1e-4)
+     (check-= (signal-nth sf 3) 8.0 1e-4))
    
    
    (let ()

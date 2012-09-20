@@ -33,25 +33,20 @@
        (let* ([max-delay (up-to-power-of-two (+ 1 (apply max delays)))]
               ;; set up buffer to delay the signal
               [delay-buf (make-vector max-delay 0.0)]
-              [next-idx 0]
-              ;; ugh... we must be called sequentially:
-              [last-t -1])
-         (lambda (t)
-           (unless (= t (add1 last-t))
-             (error 'fir-filter "called with t=~s, expecting t=~s. Sorry about that limitation." 
-                    t
-                    (add1 last-t)))
-           (let ([this-val (signal t)])
-             (begin
-               (vector-set! delay-buf next-idx this-val)
-               (define result
-                 (for/fold ([sum 0])
-                   ([d (in-list delays)]
-                    [a (in-list amplitudes)])
-                   (+ sum (* a (vector-ref delay-buf (modulo (- next-idx d) max-delay))))))
-               (set! last-t (add1 last-t))
-               (set! next-idx (modulo (add1 next-idx) max-delay))
-               result)))))]
+              [next-idx 0])
+         (define (wraparound-add1 idx)
+           (define next (add1 idx))
+           (cond [(<= max-delay next) 0]
+                 [else next]))
+         (lambda (this-val)
+           (vector-set! delay-buf next-idx this-val)
+           (define result
+             (for/fold ([sum 0])
+               ([d (in-list delays)]
+                [a (in-list amplitudes)])
+               (+ sum (* a (vector-ref delay-buf (modulo (- next-idx d) max-delay))))))
+           (set! next-idx (wraparound-add1 next-idx))
+           result)))]
     [other (raise-type-error 'fir-filter "(listof (list number number))" 0 params)]))
 
 

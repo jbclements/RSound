@@ -35,8 +35,7 @@
 (define (add-ticker n)
   (network ()
            (frame (add1 (prev frame)) #:init -1)
-           (out (n frame))
-           out))
+           (out (n frame))))
 
 (define the-test-suite
   (test-suite "rsound"

@@ -6,7 +6,9 @@
 (provide 
  (contract-out [build-wavetable (-> procedure? 
                                     flvector?)]
-               [wavetable-build-sample-rate number?]))
+               [wavetable-build-sample-rate number?]
+               [make-table-based-wavefun
+                (-> flvector? (-> number? number? signal?))]))
 
 ;; build a wavetable for a periodic function with the 
 ;; contract (pitch sample-rate -> signal)
@@ -32,6 +34,3 @@
 ;; good wavetables
 (define wavetable-build-sample-rate 44100)
 
-(module+ test
-  (require rackunit)
-  ())

@@ -72,13 +72,34 @@
      (check-equal? (sigfun) 0)
      (check-equal? (sigfun) 14)
      (check-equal? (sigfun) 28)
-     (check-equal? (sigfun) 0))))
+     (check-equal? (sigfun) 0))
+   
+   (check-equal? (signal-nth (simple-ctr 34 14) 1) 48)
+   
+   (check-equal? (signal-samples (simple-ctr 4 3) 5)
+                 (vector 4 7 10 13 16))
+   
+   ;; SIGNAL?
+   (check-equal? (signal? (lambda () 14)) #t)
+   (check-equal? (signal? (lambda (x y) 14)) #f)
+   (check-equal? (signal? (lambda args 14)) #t)
+   (check-equal? (signal? (network () (out ((lambda (x) x) 3)))) #t)
+   
+   ;; signal-+s
+   
+   (check-equal? (signal-samples (signal-+s (list (simple-ctr 2 10)
+                                                  (simple-ctr 4 9)
+                                                  (simple-ctr 10 1)))
+                                 4)
+                 (vector 16 36 56 76))
+   (check-equal? (signal-samples (signal-*s (list (simple-ctr 1.0 -0.25)
+                                                  (loop-ctr 20 10)))
+                                 4)
+                 (vector 0 7.5 0 2.5))
+   
+))
 
 (module+ test
   (require rackunit/text-ui)
   (run-tests the-test-suite))
 
-#;(define generator ((network/s-maker mynet)))
-#;(plot 
- (points (for/list ([i (in-range 100)])
-         (vector i (generator)))))
