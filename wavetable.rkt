@@ -34,4 +34,9 @@
 
 (module+ test
   (require rackunit)
-  ())
+  (define wtvec (build-wavetable (lambda (pitch sample-rate) random)))
+  (define wavefun ((make-table-based-wavefun wtvec) 33 22100))
+  (check-equal? (signal-nth wavefun 0) (flvector-ref wtvec 0))
+  (check-equal? (signal-nth wavefun 5) (flvector-ref wtvec (* 33 2 5)))
+  
+  )

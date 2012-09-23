@@ -9,11 +9,6 @@
 
 (provide the-test-suite)
 
-;; determine the nth sample, by discarding the first n-1:
-(define (signal-nth signal n)
-  (define sigfun (network-init signal))
-  (for ([i n]) (sigfun))
-  (sigfun))
 
 (define the-test-suite
 (test-suite 
