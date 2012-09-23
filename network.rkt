@@ -152,10 +152,11 @@
 ;; a vector containing the first 'n' samples of a signal
 (define (signal-samples signal n)
   (define sigfun (network-init signal))
-  (for/vector ([i n][e (in-producer sigfun unforgeable)]) e))
+  (for/vector ([i n]) (sigfun)))
 
 ;; determine the nth sample, by discarding the first n-1:
 (define (signal-nth signal n)
   (define sigfun (network-init signal))
   (for ([i n]) (sigfun))
   (sigfun))
+

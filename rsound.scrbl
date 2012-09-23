@@ -215,7 +215,7 @@ In order to listen to them, you can transform them into rsounds, or play them di
  @racketblock[
 (define samplerate (default-sample-rate))
 
-(define r (signal->rsound (* samplerate 4) (scale 0.1 (sine-wave 560 samplerate))))
+(define r (signal->rsound (* samplerate 4) (rs-scale 0.1 (sine-wave 560 samplerate))))
 
 (play r)]}
                                                   

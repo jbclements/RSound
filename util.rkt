@@ -17,6 +17,7 @@ rsound-max-volume
          "fft.rkt"
          "integral-cycles.rkt"
          "wavetable.rkt"
+         "network.rkt"
          racket/flonum
          racket/fixnum
          ffi/vector
@@ -37,6 +38,7 @@ rsound-max-volume
          approx-sawtooth-wave
          square-wave
          harm3-wave
+         pulse-wave
          noise
          rearrange
          ;; functions on numbers
@@ -49,8 +51,11 @@ rsound-max-volume
          ;; signal combiners
          signal-*s
          signal-+s
+         signal-*
+         signal-+
          thresh/signal
          mono
+         indexed-signal
          
          signal-scale
          clip&volume
@@ -59,13 +64,7 @@ rsound-max-volume
          rs-largest-sample
          ;; rsound makers
          make-tone
-         make-squaretone
-         make-sawtooth-tone
-         make-zugtone
-         make-harm3tone
          make-pulse-tone
-         make-square-fade-tone
-         make-sawtooth-fade-tone
          wavefun->tone-maker
          ding
          make-ding
@@ -99,8 +98,10 @@ rsound-max-volume
 ;; produce a new rsound where every sample is modified 
 ;; by applying the given function
 (define (rs-map/idx fun sound)
-  (define (left i) (fun (rs-ith/left sound i) i))
-  (define (right i) (fun (rs-ith/right sound i) i))
+  (define left
+    (indexed-signal (lambda (i) (fun (rs-ith/left sound i) i))))
+  (define right
+    (indexed-signal (lambda (i) (fun (rs-ith/right sound i) i))))
   (parameterize ([default-sample-rate (rsound-sample-rate sound)])
   (signals->rsound (rs-frames sound)
                    left
@@ -139,10 +140,15 @@ rsound-max-volume
 ;; to obtain a new one. Using e.g. factor of 2 will make the sound one
 ;; octave higher and half as long.
 (define (resample factor sound)
-  (define (left i) (rs-ith/left sound 
-                                (inexact->exact (floor (* factor i)))))
-  (define (right i) (rs-ith/right sound 
-                                  (inexact->exact (floor (* factor i)))))
+  (define left 
+    (indexed-signal
+     (lambda (i)
+       (rs-ith/left sound 
+                    (inexact->exact (floor (* factor i)))))))
+  (define right
+    (indexed-signal
+     (lambda (i) (rs-ith/right sound 
+                               (inexact->exact (floor (* factor i)))))))
   (parameterize ([default-sample-rate 
                    (rsound-sample-rate sound)])
     (signals->rsound (inexact->exact
@@ -179,14 +185,6 @@ rsound-max-volume
 
 
 
-;; convert an index-based signal into a signal, by supplying
-;; a counter.
-(define (old-style-signal->signal oss)
-  (network ()
-           (ctr ((simple-ctr 0 1)))
-           (out (oss ctr))))
-
-
 ;; given a raw function, produce a table-based version of it
 ;; (nat nat -> signal) -> (nat nat -> signal)
 (define (make-checked-wave-fun raw-wave-fun)
@@ -201,6 +199,19 @@ rsound-max-volume
              (table-based-fun (inexact->exact pitch) (default-sample-rate))]
             [else
              (raw-wave-fun pitch (default-sample-rate))]))))
+
+
+;; SIGNAL FUNCTIONS
+
+;; dc-signal : number -> signal
+(define (dc-signal volume)
+  (lambda () volume))
+
+;; indexed-signal : (idx -> sample) -> signal
+(define (indexed-signal fun)
+  (network ()
+           (idx ((simple-ctr 0 1)))
+           (out (fun idx))))
 
 ;; SYNTHESIS OF SINE WAVES
 
@@ -251,7 +262,7 @@ rsound-max-volume
 (define sawtooth-terms 20)
 (define (raw-sawtooth-approx-wave pitch sample-rate)
   (let ([scalar (exact->inexact (* twopi (* pitch (/ 1 sample-rate))))])
-    (old-style-signal->signal
+    (indexed-signal
      (lambda (i) 
       (for/fold ([sum 0.0])
         ([t (in-range 1 sawtooth-terms)])
@@ -260,14 +271,15 @@ rsound-max-volume
 (define approx-sawtooth-wave (make-checked-wave-fun 
                               raw-sawtooth-approx-wave))
 
-;; square waves
+;; pulse waves
 
-(define (raw-square-wave pitch sample-rate)
+(define ((pulse-wave duty-cycle) pitch sample-rate)
   (when (< (/ sample-rate 2) pitch)
-    (raise-argument-error 'raw-square-wave "pitch <= half the sample rate" 0 pitch sample-rate))
+    (raise-argument-error 'raw-pulse-wave 
+                          "pitch <= half the sample rate" 0 pitch sample-rate))
   ;; rounding...
   (define period (inexact->exact (round (* sample-rate (/ 1 pitch)))))
-  (define high-part (floor (/ period 2)))
+  (define high-part (floor (* period duty-cycle)))
   (define (hi-lo idx)
     (cond [(< idx high-part) 1.0]
           [else -1.0]))
@@ -275,7 +287,11 @@ rsound-max-volume
            (idx ((loop-ctr period 1)))
            (out (hi-lo idx))))
 
+;; square waves
+
+(define raw-square-wave (pulse-wave 1/2))
 (define square-wave (make-checked-wave-fun raw-square-wave))
+
 
 ;;fader : frames -> signal
 (define (fader fade-frames)
@@ -285,20 +301,24 @@ rsound-max-volume
 
 ;; frisellinator : frames -> signal
 (define (frisellinator intro-frames)
-  (old-style-signal->signal
+  (indexed-signal
   (lambda (i)
     (cond [(< intro-frames i) 1.0]
           [else (* 0.5 (- 1.0 (cos (* pi (/ i intro-frames)))))]))))
 
-;; dc-signal : number -> signal
-(define (dc-signal volume)
-  (lambda () volume))
-
+;; multiply two signals together
 (define (signal-* a b)
+  (network ()
+           [a-out (a)]
+           [b-out (b)]
+           (out (* a-out b-out))))
+
+;; add two signals together
+(define (signal-+ a b)
   (network ()
            (a-out (a))
            (b-out (b))
-           (out (* a b))))
+           (out (+ a-out b-out))))
 
 ;; given a number and a signal, scale the number by the signal
 ;; this can be done using signal-* and dc-signal, but this
@@ -311,7 +331,6 @@ rsound-max-volume
 ;; convert a wavefun into a tone-maker; basically just keep a hash table
 ;; of previously generated sounds.
 
-;; FIXME: IS THIS ACTUALLY FASTER?
 (define (wavefun->tone-maker wavefun)
   (let ([tone-table (make-hash)])
     (lambda (pitch volume frames)
@@ -388,6 +407,11 @@ rsound-max-volume
    (append (for/list ([i (in-range integral-copies)]) snd)
            (list (clip snd 0 leftover-frames)))))
 
+(define make-tone
+  (wavefun->tone-maker/periodic
+   (lambda (pitch volume sample-rate)
+     (sig-scale volume (sine-wave pitch)))))
+
 (define make-harm3tone/unfaded
   (wavefun->tone-maker/periodic
    (lambda (pitch volume sample-rate)
@@ -398,36 +422,6 @@ rsound-max-volume
 (define (make-harm3tone pitch volume frames)
   (rs-mult (fader-snd 88200 frames)
            (make-harm3tone/unfaded pitch volume frames)))
-
-;; make a monaural pitch with the given number of frames
-(define make-tone
-  (wavefun->tone-maker/periodic 
-   (lambda (pitch volume sample-rate)
-     (sig-scale volume (sine-wave pitch)))))
-
-(define make-squaretone
-  (wavefun->tone-maker/periodic
-   (lambda (pitch volume sample-rate)
-     (sig-scale volume (square-wave pitch)))))
-
-(define (make-square-fade-tone pitch volume frames)
-  (rs-mult (fader-snd 88200 frames)
-           (make-squaretone pitch volume frames)))
-
-(define make-zugtone
-  (wavefun->tone-maker
-   (lambda (pitch volume sample-rate)
-     (sig-scale volume
-                (signal-*s (list (frisellinator 8820) #;(fader 88200) (approx-sawtooth-wave pitch)))))))
-
-(define make-sawtooth-tone
-  (wavefun->tone-maker/periodic
-   (lambda (pitch volume sample-rate)
-     (sig-scale volume (sawtooth-wave pitch)))))
-
-(define (make-sawtooth-fade-tone pitch volume frames)
-  (rs-mult (fader-snd 88200 frames)
-           (make-sawtooth-tone pitch volume frames)))
 
 (define (make-pulse-tone duty-cycle)
   (when (not (< 0.0 duty-cycle 1.0))
@@ -446,7 +440,7 @@ rsound-max-volume
        (cond [(< idx on-samples) up]
              [else down]))
      (network ()
-              (idx ((loop-ctr total-samples)))
+              (idx ((loop-ctr total-samples 1)))
               (out (hi-lo idx))))))
 
 (define (make-ding pitch)
@@ -476,7 +470,8 @@ rsound-max-volume
 (define (vectors->rsound leftvec rightvec)
   (define sample-rate (default-sample-rate))
   (unless (equal? (vector-length leftvec) (vector-length rightvec))
-    (error 'vectors->rsound "expected vectors of equal length, given vectors of lengths ~v and ~v." 
+    (error 'vectors->rsound 
+           "expected vectors of equal length, given vectors of lengths ~v and ~v." 
            (vector-length leftvec) (vector-length rightvec)))
   (let* ([len (vector-length leftvec)]
          [datamax (for/fold ((max-abs 0.0))
@@ -488,8 +483,14 @@ rsound-max-volume
          [newvec (make-s16vector (* 2 len))]
          [scaling (/ s16max datamax)])
     (for ([i (in-range len)])
-      (s16vector-set! newvec (* 2 i)        (inexact->exact (round (* scaling (real-part (vector-ref leftvec i))))))
-      (s16vector-set! newvec (add1 (* 2 i)) (inexact->exact (round (* scaling (real-part (vector-ref rightvec i)))))))
+      (s16vector-set! newvec (* 2 i)        
+                      (inexact->exact 
+                       (round (* scaling 
+                                 (real-part (vector-ref leftvec i))))))
+      (s16vector-set! newvec (add1 (* 2 i))
+                      (inexact->exact 
+                       (round (* scaling 
+                                 (real-part (vector-ref rightvec i)))))))
     (rsound newvec 0 len sample-rate)))
 
 
@@ -541,10 +542,11 @@ rsound-max-volume
 ;; make the sound as lound as possible without distortion
 (define (rsound-maximize-volume rsound)
   (let* ([scalar (fl/ 1.0 (exact->inexact (rs-largest-sample rsound)))])
-    (signals->rsound (rs-frames rsound)
-                     (rsound-sample-rate rsound)
-                     (lambda (i) (fl* scalar (exact->inexact (rs-ith/left/s16 rsound i))))
-                     (lambda (i) (fl* scalar (exact->inexact (rs-ith/right/s16 rsound i)))))))
+    (signals->rsound 
+     (rs-frames rsound)
+     (rsound-sample-rate rsound)
+     (lambda (i) (fl* scalar (exact->inexact (rs-ith/left/s16 rsound i))))
+     (lambda (i) (fl* scalar (exact->inexact (rs-ith/right/s16 rsound i)))))))
 
 
 ;; midi-note-num->pitch : number -> number
@@ -567,11 +569,13 @@ rsound-max-volume
             [else 0.0]))))
 
 ;; rsound->signal/left : rsound -> signal
-;; produce the signal that corresponds to the rsound's left channel, followed by silence.
+;; produce the signal that corresponds to the rsound's 
+;; left channel, followed by silence.
 (define rsound->signal/left (rsound->signal/either rs-ith/left))
 
 ;; rsound->signal/right : rsound -> signal
-;; produce the signal that corresponds to the rsound's right channel, followed by silence.
+;; produce the signal that corresponds to the rsound's 
+;; right channel, followed by silence.
 (define rsound->signal/right (rsound->signal/either rs-ith/right))
 
 ;; thresh : number number -> number
@@ -623,7 +627,7 @@ rsound-max-volume
   (syntax-parse stx
     [(_ frames:expr timevar:id body:expr ...)
      #'(signal->rsound frames 
-                       (old-style-signal->signal
+                       (indexed-signal
                         (lambda (timevar) body ...)))]))
 
 
@@ -655,14 +659,19 @@ rsound-max-volume
 ;; whole thing is just a bit wordy.
 
 (define (rs-largest-sample sound)
-  (buffer-largest-sample/range (rsound-data sound) (rsound-start sound) (rsound-stop sound)
+  (buffer-largest-sample/range (rsound-data sound) 
+                               (rsound-start sound) (rsound-stop sound)
                                (rs-frames sound)))
 
+;; these two aren't actually 'provide'd at all?
+
 (define (rs-largest-frame/range/left sound min-frame max-frame)
-  (buffer-largest-sample/range/left (rsound-data sound) (rs-frames sound) min-frame max-frame))
+  (buffer-largest-sample/range/left (rsound-data sound) 
+                                    (rs-frames sound) min-frame max-frame))
 
 (define (rs-largest-frame/range/right sound min-frame max-frame)
-  (buffer-largest-sample/range/right (rsound-data sound) (rs-frames sound) min-frame max-frame))
+  (buffer-largest-sample/range/right (rsound-data sound) 
+                                     (rs-frames sound) min-frame max-frame))
 
 (define (buffer-largest-sample/range buffer start stop frames)
   (buffer-largest-sample/range/helper buffer (* channels start) 
@@ -699,6 +708,10 @@ rsound-max-volume
 (define (frame-range-checks frames min-frame max-frame)
   (when (not (and (<= 0 min-frame) (<= 0 max-frame)
                   (<= min-frame frames) (<= max-frame frames)))
-    (error 'frame-range-checks "range limits ~v and ~v not in range 0 - ~v" min-frame max-frame frames))
+    (error 'frame-range-checks 
+           "range limits ~v and ~v not in range 0 - ~v" 
+           min-frame max-frame frames))
   (when (not (< min-frame max-frame))
-    (error 'frame-range-checks "range limits ~v and ~v not in order and separated by at least 1" min-frame max-frame)))
+    (error 'frame-range-checks 
+           "range limits ~v and ~v not in order and separated by at least 1" 
+           min-frame max-frame)))

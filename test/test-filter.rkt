@@ -2,6 +2,7 @@
 
 
 (require "../rsound.rkt"
+         "../util.rkt"
          "../filter.rkt"
          "../filter-typed.rkt"
          rackunit
@@ -10,7 +11,6 @@
 (provide the-test-suite)
 
 (define i (sqrt -1))
-(define msr mono-signal->rsound)
 ;; there could be a *lot* of good tests here...
 
 (define the-test-suite
@@ -22,7 +22,7 @@
   (check-equal? (real-part/ck 0.9283+2.2938792e-17i) 0.9283)
   
   
-  (define (test-sig t) (/ t 500))
+  (define test-sig (indexed-signal (lambda (t) (/ t 500))))
   
   (define fir-terms (flvector 0.8 0.2))
   (define iir-terms (flvector 0.3))
@@ -31,7 +31,7 @@
             iir-terms
             0.7))
   (let ()
-    (define snd (msr 10 (dynamic-lti-signal param-maker 2 1 test-sig)))
+    (define snd (signal->rsound 10 (dynamic-lti-signal param-maker 2 1 test-sig)))
     (check-equal? (rs-ith/left snd 0) 0.0)
     (check-= (rs-ith/left snd 1) 0.0014 1e-5)
     
@@ -41,19 +41,20 @@
              1e-5)
     3)
   
-  (check-not-exn (lambda () (msr 10 (dynamic-lti-signal 
-                                     (lambda (t)
-                                       (values (flvector) (flvector) 1.0))
-                                     0 0 test-sig))))
+  (check-not-exn (lambda () (signal->rsound 10 
+                                            (dynamic-lti-signal 
+                                             (lambda (t)
+                                               (values (flvector) (flvector) 1.0))
+                                             0 0 test-sig))))
   (check-not-exn
-   (lambda () (msr 20 (lpf/dynamic (lambda (x) 0.1) test-sig))))
+   (lambda () (signal->rsound 20 (lpf/dynamic (lambda (x) 0.1) test-sig))))
   
   ;; should be the identity on a dc signal (after a while)
   (let ()
   (define tap-mult-vec (flvector -0.1 -0.2 -0.3 -0.4))
   (check-=
    (rs-ith/right
-    (msr 200
+    (signal->rsound 200
          (dynamic-lti-signal
           (lambda (t)
             (values (flvector)
@@ -67,7 +68,7 @@
   
   ;; same test with lpf:
   (check-= (rs-ith/left
-            (msr 200 (lpf/dynamic (lambda (x) 0.34) (lambda (x) 0.5)))
+            (signal->rsound 200 (lpf/dynamic (lambda (x) 0.34) (lambda (x) 0.5)))
             199)
            0.5
            1e-3)
@@ -75,7 +76,7 @@
   
   ;; regression testing:
   (check-= (rs-ith/left
-            (msr 20 (lpf/dynamic (lambda (x) 0.1) (lambda (t)
+            (signal->rsound 20 (lpf/dynamic (lambda (x) 0.1) (lambda (t)
                                                     (/ t 20))))
             19)
            0.0218
@@ -89,7 +90,7 @@
 (define (mush x) (/ (round (* x s16max)) s16max))
 
 (let* ([my-filter (fir-filter '((0 1.0) (13 0.2) (5 0.1)))]
-       [test-sound (mono-signal->rsound 100 (my-filter (lambda (x) (/ x 500))))])
+       [test-sound (signal->rsound 100 (my-filter (lambda (x) (/ x 500))))])
   (check-= (rs-ith/right test-sound 0) 0 1e-7)
   (check-= (rs-ith/right test-sound 1) (mush 1/500) 1e-7)
   (check-= (rs-ith/right test-sound 4) (mush 4/500) 1e-7)
@@ -101,7 +102,7 @@
 ;; IIR-FILTER
 
 (let* ([my-filter (iir-filter '((13 0.2) (5 0.1)))]
-       [test-sound (mono-signal->rsound 100 (my-filter (lambda (x) (/ x 500))))])
+       [test-sound (signal->rsound 100 (my-filter (lambda (x) (/ x 500))))])
   (check-= (rs-ith/right test-sound 0) 0 1e-7)
   (check-= (rs-ith/right test-sound 1) (mush 1/500) 1e-7)
   (check-= (rs-ith/right test-sound 4) (mush 4/500) 1e-7)

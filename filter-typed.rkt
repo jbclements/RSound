@@ -31,7 +31,8 @@
 (define-type Poles Z-Plane-Points)
 (define-type Coefficients (Listof Real))
 (define-type Frequency Nonnegative-Real)
-(define-type Signal (Nonnegative-Fixnum -> Real))
+(define-type Signal (-> Real))
+(define-type Network1 (Real -> Real))
 
 ;; poly : a transfer function
 ;; coefficients : a list of coefficients to use in a transfer function
@@ -139,58 +140,61 @@
 
 
 
-;; fir-filter : (listof (list/c delay amplitude)) -> signal -> signal
+;; fir-filter : (listof (list/c delay amplitude)) -> Network
 ;; filter the input signal using the delay values and amplitudes given for an FIR filter
-(: fir-filter ((Listof (List Nonnegative-Fixnum Real)) -> Signal -> Signal))
+(: fir-filter ((Listof (List Nonnegative-Fixnum Real)) -> Network1))
 (define (fir-filter params)
   (match params
     [`((,delays ,amplitudes) ...)
-     (lambda: ([signal : Signal])
-       ;; enough to hold delayed and current, rounded up to next power of 2:
-       (define max-delay
-         (up-to-power-of-two (+ 1 (apply max delays))))
-       ;; set up buffer to delay the signal
-       (: delay-buf (Vectorof Real))
-       (define delay-buf (make-vector max-delay 0.0))
-       (define next-idx 0)
-       ;; ugh... we must be called sequentially:
-       (define last-t -1)
-       (: delays/t (Listof Nonnegative-Integer))
-       (define delays/t 
-         (cond [(andmap exact-nonnegative-integer? delays)
-                delays]
-               [(error 'impossible "Make TR happy")]))
-       (: amplitudes/t (Listof Real))
-       (define amplitudes/t
-         (cond [(andmap inexact-real? amplitudes)
-                amplitudes]
-               [(error 'impossible "Make TR happy")]))
-       (lambda (t)
-         (unless (= t (add1 last-t))
-           (error 
-            'fir-filter 
-            "called with t=~s, expecting t=~s. Sorry about that limitation." 
-                  t
-                  (add1 last-t)))
-         (let ([this-val (signal t)])
-           (begin
-             (vector-set! delay-buf next-idx this-val)
-             (define result
-               (for/fold:  
-                ([sum : Real 0.0])
-                ([d (in-list delays/t)]
-                 [a (in-list amplitudes/t)])
-                (+ sum 
-                   (* a 
-                      (vector-ref
-                       delay-buf
-                       (modulo (- next-idx d) max-delay))))))
-             (set! last-t (add1 last-t))
-             (set! next-idx (modulo (add1 next-idx) max-delay))
-             result))))]
+     ;; enough to hold delayed and current, rounded up to next power of 2:
+     (: max-delay Index)
+     (define max-delay
+       (up-to-power-of-two (+ 1 (apply max delays))))
+     (: wraparound (Integer -> Index))
+     ;; could specialize this to two forms, one only wraps down:
+     (define (wraparound idx)
+       (cond [(< idx 0) (ensure-index (+ idx max-delay))]
+             [(<= max-delay idx) (ensure-index (- idx max-delay))]
+             [else idx]))
+     ;; set up buffer to delay the signal
+     (: delay-buf (Vectorof Real))
+     (define delay-buf (make-vector max-delay 0.0))
+     (define next-idx 0)
+     ;; ugh... we must be called sequentially:
+     (define last-t -1)
+     (: delays/t (Listof Nonnegative-Integer))
+     (define delays/t 
+       (cond [(andmap exact-nonnegative-integer? delays)
+              delays]
+             [(error 'impossible "Make TR happy")]))
+     (: amplitudes/t (Listof Real))
+     (define amplitudes/t
+       (cond [(andmap inexact-real? amplitudes)
+              amplitudes]
+             [(error 'impossible "Make TR happy")]))
+     (lambda: ([this-val : Real])
+       (vector-set! delay-buf next-idx this-val)
+       (define result
+         (for/fold:  
+             ([sum : Real 0.0])
+           ([d (in-list delays/t)]
+            [a (in-list amplitudes/t)])
+           (+ sum 
+              (* a 
+                 (vector-ref
+                  delay-buf
+                  (wraparound (- next-idx d)))))))
+       (set! last-t (add1 last-t))
+       (set! next-idx (wraparound (add1 next-idx)))
+       result)]
     [other (raise-type-error 'fir-filter "(listof (list number number))" 0 params)]))
 
 
+;; check that a value is an Index, signal an error otherwise
+(: ensure-index (Integer -> Index))
+(define (ensure-index n)
+  (cond [(index? n) n]
+        [else (raise-type-error 'ensure-index "Index" 0 n)]))
 
 
 ;; convert s-space value to z-space value
@@ -241,27 +245,28 @@
 (define angle-epsilon 1e-5)
 
 ;; pick the next largest (or equal) power of 2
-(: up-to-power-of-two (Positive-Fixnum -> Exact-Positive-Integer))
+(: up-to-power-of-two (Index -> Index))
 (define (up-to-power-of-two n)
   (define log-2 (log 2))
   (define log-2-n (log (max n 1)))
   (cond [(<= log-2-n 0) (error 'up-to-power-of-two
                                "impossible, make TR happy.")]
         [(<= log-2 0) (error 'up-to-power-of-two
-                            "impossible, make TR happy.")]
+                             "impossible, make TR happy.")]
         [else
-         (expt 2 (ceiling
-                  (inexact->exact
-                   (/ log-2-n log-2))))]))
+         (ensure-index
+          (expt 2 (ceiling
+                   (inexact->exact
+                    (/ log-2-n log-2)))))]))
 
 
 
 
 
-(: my-signal Signal)
-(define my-signal
-  (lambda (x) (sin (exact->inexact
-                    (* 2.0 pi (/ 1.0 44100.0) 400.0 x)))))
+;(: my-signal Signal)
+;(define my-signal
+;  (lambda (x) (sin (exact->inexact
+;                    (* 2.0 pi (/ 1.0 44100.0) 400.0 x)))))
 
 
 ;; time test for FIR filter
