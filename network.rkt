@@ -45,12 +45,13 @@
 
 (define-syntax prev (syntax-rules ()))
 
-(define-syntax (network stx)
+;; this is the cleaned-up version. It insists on having a sequence of ids for the out-names
+(define-syntax (network/inr stx)
   (define-syntax-class network-clause
-    #:description "network clause"
-    (pattern (out:id (node:expr input:node-in ...) (~optional (~seq #:init init:expr) #:defaults ([init #'0])))))
+    #:description "network/inr clause"
+    (pattern ((out:id ...) (node:expr input:node-in ...) (init:expr ...))))
   (define-syntax-class node-in
-    #:description "network node input"
+    #:description "network/inr node input"
     #:literals (prev)
     (pattern (prev in-ref:id))
     (pattern in:expr))
@@ -59,8 +60,12 @@
         clause:network-clause ...+)
      (define num-ins (length (syntax->list #'(in ...))))
      (define num-clauses (length (syntax->list #'(clause ...))))
-     (define lhses (syntax->list #'(clause.out ...)))
-     (define last-out (car (reverse lhses)))
+     (define lhses (syntax->list #'((clause.out ...) ...)))
+     (define last-out 
+       (syntax-parse (car (reverse lhses))
+         [(out:id) #'out]
+         [(out:id out2:id ...+) #'(values out out2 ...)]))
+     (define lhses/flattened (syntax->list #'(clause.out ... ...)))
      (define (rewrite/l input-list)
        (map rewrite (syntax->list input-list)))
      ;; rewrite occurrences of "prev" into vector references
@@ -69,8 +74,24 @@
          #:literals (prev)
          [(prev in:id) #`(vector-ref saves-vec #,(find-idx #'in))]
          [other:expr #'other]))
+     ;; extract inits; in the case of multi-inits, this may involve
+     ;; extra work.
+     (define (extract-inits clause-info)
+       (syntax-parse clause-info
+         [((id:id ...) (init:expr ...))
+          (define out-len (length (syntax->list #'(id ...))))
+          (define init-len (length (syntax->list #'(init ...))))
+          (cond [(= out-len init-len) #'(init ...)]
+                [(and (< 1 out-len) (= init-len 0))
+                 ;; auto-default:
+                 (for/list ([i out-len]) #'0.0)]
+                [else (error 'network
+                             "expected init list of length ~a, got ~e"
+                             out-len 
+                             (map syntax->datum
+                                  (syntax->list #'(init ...))))])]))
      (define (find-idx id)
-       (let loop ([lhses lhses]
+       (let loop ([lhses lhses/flattened]
                   [i 0])
          (cond [(null? lhses) 
                 (error 'network
@@ -85,23 +106,58 @@
                     (map rewrite/l (syntax->list
                                     #'((clause.input ...) ...)))]
                    [(idx ...)
-                    (for/list ([i (in-range num-clauses)])
-                      #`(quote #,i))])
+                    (for/list ([i (in-range (length lhses/flattened))])
+                      #`(quote #,i))]
+                   [(lhs ...) lhses/flattened]
+                   [((init ...) ...) (map extract-inits
+                                    (syntax->list
+                                     #'(((clause.out ...)
+                                         (clause.init ...))
+                                        ...)))])
        (with-syntax 
            ([maker
              #`(lambda ()
                  (define saves-vec
-                   (vector clause.init ...))
+                   (vector init ... ...))
                  (define signal-proc (network-init clause.node))
                  ...
                  (lambda (in ...)
-                   (let* ([clause.out (signal-proc arg ...)]
+                   (let*-values ([(clause.out ...) (signal-proc arg ...)]
                          ...)
                      (begin
-                       (vector-set! saves-vec idx clause.out)
+                       (vector-set! saves-vec idx lhs)
                        ...)
                      #,last-out)))])
-         #`(network/s (quote #,num-ins) 1 maker)))]))
+         #`(network/s (quote #,num-ins) 1 maker)))])
+  )
+
+(define-syntax (network stx)
+  (define-syntax-class network-clause
+    #:description "network clause"
+    (pattern (out1:id (node:expr input:node-in ...) (~optional (~seq #:init init:expr) #:defaults ([init #'0]))))
+    (pattern ((out*:id ...) (node:expr input:node-in ...)
+                            (~optional (~seq #:init init*:expr ...)
+                                       #:defaults ([(init* 1) null])))))
+  (define-syntax-class node-in
+    #:description "network node input"
+    #:literals (prev)
+    (pattern (prev in-ref:id))
+    (pattern in:expr))
+  (define (rewrite clause)
+    (syntax-parse clause
+      [(out1:id  (node:expr input:node-in ...)
+                 (~optional (~seq #:init init:expr) #:defaults ([init #'0])))
+       #'((out1) (node input ...) (init))]
+      [((out*:id ...) (node:expr input:node-in ...) (~optional (~seq #:init (init:expr ...)) #:defaults ([(init 1) null])))
+       #'((out* ...) (node input ...) (init ...))]))
+  (syntax-parse stx
+    [(_ (in:id ...)
+        clause:network-clause ...+)
+     (with-syntax ([(new-clause ...)
+                    (map rewrite (syntax->list #'(clause ...)))])
+       #'(network/inr (in ...)
+                      new-clause ...))])
+  )
 
 
 ;; a signal is a network with no inputs.

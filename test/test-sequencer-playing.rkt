@@ -21,7 +21,7 @@
 
 (define (g p)
   (queue-for-playing! unplayed-heap 
-                      (make-harm3tone p 0.2 44100)
+                      (signal->rsound 44100 (signal-scale 0.2 (harm3-wave p)))
                       (last-time)))
 
 (signal/block-play/unsafe signal/block/unsafe 44100)

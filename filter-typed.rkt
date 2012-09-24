@@ -32,7 +32,7 @@
 (define-type Coefficients (Listof Real))
 (define-type Frequency Nonnegative-Real)
 (define-type Signal (-> Real))
-(define-type Network1 (Real -> Real))
+(define-type Network1 (Flonum -> Flonum))
 
 ;; poly : a transfer function
 ;; coefficients : a list of coefficients to use in a transfer function
@@ -140,6 +140,8 @@
 
 
 
+(define-predicate float? Float)
+
 ;; fir-filter : (listof (list/c delay amplitude)) -> Network
 ;; filter the input signal using the delay values and amplitudes given for an FIR filter
 (: fir-filter ((Listof (List Nonnegative-Fixnum Real)) -> Network1))
@@ -151,40 +153,43 @@
      (define max-delay
        (up-to-power-of-two (+ 1 (apply max delays))))
      (: wraparound (Integer -> Index))
-     ;; could specialize this to two forms, one only wraps down:
+     ;; this one only counts up by one, wraps down:
      (define (wraparound idx)
-       (cond [(< idx 0) (ensure-index (+ idx max-delay))]
-             [(<= max-delay idx) (ensure-index (- idx max-delay))]
+       (cond [(<= max-delay idx) 0]
              [else idx]))
      ;; set up buffer to delay the signal
-     (: delay-buf (Vectorof Real))
+     (: delay-buf (Vectorof Float))
      (define delay-buf (make-vector max-delay 0.0))
      (define next-idx 0)
-     ;; ugh... we must be called sequentially:
-     (define last-t -1)
      (: delays/t (Listof Nonnegative-Integer))
      (define delays/t 
        (cond [(andmap exact-nonnegative-integer? delays)
               delays]
              [(error 'impossible "Make TR happy")]))
-     (: amplitudes/t (Listof Real))
-     (define amplitudes/t
-       (cond [(andmap inexact-real? amplitudes)
+     (define amplitudes/real
+       (cond [(andmap real? amplitudes)
               amplitudes]
              [(error 'impossible "Make TR happy")]))
-     (lambda: ([this-val : Real])
+     (: amplitudes/t (Listof Float))
+     (define amplitudes/t 
+       (map (ann real->double-flonum (Real -> Flonum)) amplitudes/real))
+     
+     (lambda: ([this-val : Float])
        (vector-set! delay-buf next-idx this-val)
        (define result
          (for/fold:  
-             ([sum : Real 0.0])
+             ([sum : Float 0.0])
            ([d (in-list delays/t)]
             [a (in-list amplitudes/t)])
+           (define offset-idx (- next-idx d))
+           (define wrapped
+             (cond [(< offset-idx 0) 
+                    (ensure-index (+ offset-idx max-delay))]
+                   [(<= max-delay offset-idx) 
+                    (ensure-index (- offset-idx max-delay))]
+                   [else offset-idx]))
            (+ sum 
-              (* a 
-                 (vector-ref
-                  delay-buf
-                  (wraparound (- next-idx d)))))))
-       (set! last-t (add1 last-t))
+              (* a (vector-ref delay-buf wrapped)))))
        (set! next-idx (wraparound (add1 next-idx)))
        result)]
     [other (raise-type-error 'fir-filter "(listof (list number number))" 0 params)]))

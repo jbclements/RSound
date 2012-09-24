@@ -9,7 +9,7 @@
 
 ;; 1 second of noise:
 (define test-rsound
-  (mono-signal->rsound sr sr
+  (signal->rsound sr sr
                   (lambda (t)
                     (- (* 2.0 (random)) 1.0))))
 
@@ -52,7 +52,7 @@
 (printf "\n\n")
 
 (printf "signal->rsound of simple constant value\n")
-(rtavg (mono-signal->rsound (* 100 sr) sr (lambda (t) 0.243)))
+(rtavg (signal->rsound (* 100 sr) sr (lambda (t) 0.243)))
 (printf "expected mean 0.8 seconds, 0.008 generation ratio\n")
 (printf "could be improved substantially by caching.\n")
 (printf "\n\n")
@@ -62,7 +62,7 @@
 (printf "rsound-overlay*\n")
 (printf "about 10 simultaneous streams\n")
 (define quiet-noise 
-  (mono-signal->rsound sr sr
+  (signal->rsound sr sr
                   (lambda (t)
                     (- (* 0.02 (random)) 1.0))))
 (rtavg (let ([offsets (for/list ([i (in-range 100)])

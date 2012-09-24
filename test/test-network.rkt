@@ -3,6 +3,8 @@
 (require "../network.rkt"
          rackunit)
 
+(provide the-test-suite)
+
 ;; angles are expressed in 44100ths of a circle....
 
 (define (wraparound angle)
@@ -49,6 +51,75 @@
      (check-equal? (a) 19)
      
      )
+   
+   (let ()
+     (define testnet 
+       (network ()
+                (a1 ((simple-ctr 1 1)))
+                (b1 ((simple-ctr 4 3)))
+                (c1 ((simple-ctr 10 -1)))
+                (a2 (+ (* 2 a1) b1))
+                (b2 (+ a1 c1))
+                (a1 (- a2 b2))))
+     (check-equal? (signal-samples testnet 3)
+                   (vector -5 0 5)))
+   
+   (let ()
+     (define (dual-counter idx)
+       (values idx (+ idx 1)))
+     (define testnet 
+       (network ()
+                (base-ctr ((simple-ctr 1 3)))
+                ((a b) (dual-counter base-ctr))
+                (c ((simple-ctr 10 -1)))
+                (out (- (* a c) b))))
+     (check-equal? (signal-samples testnet 3)
+                   (vector 8 31 48)))
+   
+   (let ()
+     ;; multi-init
+     (define (addall a b c)
+       (values (+ 1 a) (+ 2 b) (+ 3 c)))
+     (define testnet
+       (network ()
+                [(a b c) (addall (prev a) (prev b) (prev c))
+                         #:init (3 18 9)]
+                [d (+ a b c)]))
+     
+     (check-equal? (signal-samples testnet 3)
+                   (vector (+ 4 20 12)
+                           (+ 5 22 15)
+                           (+ 6 24 18))))
+   
+   (let ()
+     ;; multi-init zeros
+     (define (addall a b c)
+       (values (+ 1 a) (+ 2 b) (+ 3 c)))
+     (define testnet
+       (network ()
+                [(a b c) (addall (prev a) (prev b) (prev c))]
+                [d (+ a b c)]))
+     
+     (check-equal? (signal-samples testnet 3)
+                   (vector (+ 1.0 2 3)
+                           (+ 2.0 4 6)
+                           (+ 3.0 6 9))))
+   
+   ;; syntax error:
+   #;(let ()
+     ;; multi-init fail
+     (define (addall a b c)
+       (values (+ 1 a) (+ 2 b) (+ 3 c)))
+     (define testnet
+       (network ()
+                [(a b c) (addall (prev a) (prev b) (prev c))
+                         #:init (1 2)]
+                [d (+ a b c)]))
+     
+       13)
+     
+     
+   
    (let ()
      
      ;; try out new "init"

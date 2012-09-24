@@ -19,7 +19,7 @@
 
 ;; FIR filters
 
-;; fir-filter : (listof (list/c delay amplitude)) -> signal -> signal
+;; fir-filter : (listof (list/c delay amplitude)) -> 1/1/network
 ;; filter the input signal using the delay values and amplitudes given for an FIR filter
 (define (fir-filter params)
   (match params
@@ -28,25 +28,24 @@
        (raise-type-error 'fir-filter "exact integer delays greater than zero" 0 params))
      (unless (andmap real? amplitudes)
        (raise-type-error 'fir-filter "real number amplitudes" 0 params))
-     (lambda (signal)
-       ;; enough to hold delayed and current, rounded up to next power of 2:
-       (let* ([max-delay (up-to-power-of-two (+ 1 (apply max delays)))]
-              ;; set up buffer to delay the signal
-              [delay-buf (make-vector max-delay 0.0)]
-              [next-idx 0])
-         (define (wraparound-add1 idx)
-           (define next (add1 idx))
-           (cond [(<= max-delay next) 0]
-                 [else next]))
-         (lambda (this-val)
-           (vector-set! delay-buf next-idx this-val)
-           (define result
-             (for/fold ([sum 0])
-               ([d (in-list delays)]
-                [a (in-list amplitudes)])
-               (+ sum (* a (vector-ref delay-buf (modulo (- next-idx d) max-delay))))))
-           (set! next-idx (wraparound-add1 next-idx))
-           result)))]
+     ;; enough to hold delayed and current, rounded up to next power of 2:
+     [define max-delay (up-to-power-of-two (+ 1 (apply max delays)))]
+     ;; set up buffer to delay the signal
+     [define delay-buf (make-vector max-delay 0.0)]
+     [define next-idx 0]
+     (define (wraparound-add1 idx)
+       (define next (add1 idx))
+       (cond [(<= max-delay next) 0]
+             [else next]))
+     (lambda (this-val)
+       (vector-set! delay-buf next-idx this-val)
+       (define result
+         (for/fold ([sum 0])
+           ([d (in-list delays)]
+            [a (in-list amplitudes)])
+           (+ sum (* a (vector-ref delay-buf (modulo (- next-idx d) max-delay))))))
+       (set! next-idx (wraparound-add1 next-idx))
+       result)]
     [other (raise-type-error 'fir-filter "(listof (list number number))" 0 params)]))
 
 
@@ -55,7 +54,7 @@
 
 ;; IIR filters
 
-;; iir-filter : (listof (list/c delay amplitude)) -> signal -> signal
+;; iir-filter : (listof (list/c delay amplitude)) -> 1/1/networkt
 ;; filter the input signal using the delay values and amplitudes given for an IIR filter
 ;; the only difference here is that we put the final result in the delay line, rather than
 ;; the input signal.
@@ -66,28 +65,22 @@
        (raise-type-error 'iir-filter "exact integer delays greater than zero" 0 params))
      (unless (andmap real? amplitudes)
        (raise-type-error 'iir-filter "real number amplitudes" 0 params))
-     (lambda (signal)
-       (let* ([max-delay (up-to-power-of-two (+ 1 (apply max delays)))]
-              ;; set up buffer to delay the signal
-              [delay-buf (make-vector max-delay 0.0)]
-              [next-idx 0]
-              ;; ugh... we must be called sequentially:
-              [last-t -1])
-         (lambda (t)
-           (unless (= t (add1 last-t))
-             (error 'fir-filter "called with t=~s, expecting t=~s. Sorry about that limitation." 
-                    t
-                    (add1 last-t)))
-           (let* ([this-val (signal t)]
-                  [new-val (for/fold ([sum this-val])
-                                     ([d (in-list delays)]
-                                      [a (in-list amplitudes)])
-                                     (+ sum (* a (vector-ref delay-buf (modulo (- next-idx d) max-delay)))))])
-             (begin0
-               new-val
-               (vector-set! delay-buf next-idx new-val)
-               (set! last-t (add1 last-t))
-               (set! next-idx (modulo (add1 next-idx) max-delay)))))))]
+     (let* ([max-delay (up-to-power-of-two (+ 1 (apply max delays)))]
+            ;; set up buffer to delay the signal
+            [delay-buf (make-vector max-delay 0.0)]
+            [next-idx 0])
+       (lambda (this-val)
+         ;; could be a lot faster:
+         (let* ([new-val (for/fold ([sum this-val])
+                           ([d (in-list delays)]
+                            [a (in-list amplitudes)])
+                           ;; FIXME: get rid of this modulo:
+                           (+ sum (* a (vector-ref delay-buf 
+                                                   (modulo (- next-idx d) max-delay)))))])
+           (begin0
+             new-val
+             (vector-set! delay-buf next-idx new-val)
+             (set! next-idx (modulo (add1 next-idx) max-delay))))))]
     [other (raise-type-error 'iir-filter "(listof (list number number))" 0 params)]))
 
 ;; lti-filter : rsound (listof (list/c number? number?)) (listof (list/c number? number?)) -> rsound
@@ -124,57 +117,46 @@
 
 ;; we want to be able to change the filter dynamically...
 
-;; the param-signal must accept a time and return three values: the 
-;; fir terms, the iir terms, and the gain. The input and output-tap-len
-;; specify the length of the vectors used for these terms. Then
-;; there's the input signal....
-(define (dynamic-lti-signal param-signal input-tap-len output-tap-len
-                            input-signal)
+;; (nat nat -> 2/1/network)
+;; accepts a tap-length, produces
+;; a network with two inputs: the parameter signal and the input 
+;; signal. The parameter signal must produce a vector of three
+;; things: the input tap vector, the output tap vector, and the gain.
+;; sadly, there's going to be some inevitable checking of vector
+;; bounds here. 
+;; NB: requires input & output taps to be of the same length. This 
+;; is pretty normal.
+(define (dynamic-lti-signal input-tap-len output-tap-len)
   (define input-buf-len (max 1 input-tap-len))
   (define output-buf-len (max 1 output-tap-len))
   ;; enough to hold delayed and current, rounded up to next power of 2:
   (define saved-input-buf (make-flvector input-buf-len))
   (define saved-output-buf (make-flvector output-buf-len))
+  (define (wraparound idx)
+       (cond [(<= max-delay idx) 0]
+             [else idx]))
   (define next-idx 0)
-  ;; ugh... we must be called sequentially:
-  (define last-t -1)
-  (define saved-fir-terms #f)
-  (define saved-iir-terms #f)
-  (define saved-gain #f)
-  (lambda (t)
-    (when (< t (add1 last-t))
-      (error 'fir-filter "called with t=~s, expecting t >= ~s. out of order!." 
-             t
-             (add1 last-t)))
-    (when (< (add1 last-t) t)
-      (fprintf (current-error-port) "forward jump; resetting tap buffers.\n")
-      (for ([i input-buf-len]) (flvector-set! saved-input-buf i 0.0))
-      (for ([i output-buf-len]) (flvector-set! saved-output-buf i 0.0))
-      (set! last-t (sub1 t)))
-    ;; only update the filter parameters every 32 samples
-    (when (= (modulo t filter-param-update-interval) 0)
-      (define-values (fir-terms iir-terms gain) (param-signal t))
-      (unless (and (flvector? fir-terms)
-                   (= (flvector-length fir-terms)
-                      input-tap-len))
-        (error 'dynamic-lti-signal 
-               "expected vector of length ~s for fir-terms, got vector of length ~s"
-               input-tap-len (flvector-length fir-terms)))
-      (unless (and (flvector? iir-terms)
+  (lambda (fir-terms iir-terms gain)
+    ;; don't want to do this check every time...
+    #;(unless (and (flvector? fir-terms)
+                 (= (flvector-length fir-terms)
+                    input-tap-len))
+      (error 'dynamic-lti-signal 
+             "expected vector of length ~s for fir-terms, got vector of length ~s"
+             input-tap-len (flvector-length fir-terms)))
+    ;; don't want to do this check every time....
+    #;(unless (and (flvector? iir-terms)
                    (= (flvector-length iir-terms)
                       output-tap-len))
         (error 'dynamic-lti-signal 
                "expected vector of length ~s for iir-terms, got vector of length ~s"
                output-tap-len (flvector-length iir-terms)))
-      (set! saved-fir-terms fir-terms)
-      (set! saved-iir-terms iir-terms)
-      (set! saved-gain gain))
-    
+  
     (define fir-sum
       (for/fold ([sum 0.0])
         ([i (in-range input-tap-len)])
         (fl+ sum
-             (fl* (flvector-ref saved-fir-terms i)
+             (fl* (flvector-ref fir-terms i)
                   (flvector-ref saved-input-buf 
                                 (modulo (- t i 1) input-buf-len))))))
     (define iir-sum
@@ -184,12 +166,12 @@
              (fl* (flvector-ref saved-iir-terms i)
                   (flvector-ref saved-output-buf 
                                 (modulo (- t i 1) output-buf-len))))))
-    (define next-val (fl* saved-gain (exact->inexact (input-signal t))))
-    (flvector-set! saved-input-buf (modulo t input-buf-len) next-val)
-    (define output-val (fl+ next-val (fl+ fir-sum iir-sum)))
-    (flvector-set! saved-output-buf (modulo t output-buf-len) output-val)
-    (set! last-t (add1 last-t))
-    output-val))
+  (define next-val (fl* saved-gain (exact->inexact (input-signal t))))
+  (flvector-set! saved-input-buf (modulo t input-buf-len) next-val)
+  (define output-val (fl+ next-val (fl+ fir-sum iir-sum)))
+  (flvector-set! saved-output-buf (modulo t output-buf-len) output-val)
+    
+  output-val))
 
 (define max-scale-val 3.0)
 (define min-scale-val 0.00)

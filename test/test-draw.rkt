@@ -53,7 +53,7 @@
 #;(rs-draw rsound-longer #:width 800)
 
 ;; there should be no gap in the waveform:
-(rs-draw (mono-signal->rsound 300 (lambda (i) (* 1.5 (sin (* twopi 147/44100 i)))))
+(rs-draw (signal->rsound 300 (lambda (i) (* 1.5 (sin (* twopi 147/44100 i)))))
                #:title "no gap in waveform")
 
 
