@@ -40,7 +40,9 @@
          prev
          signal?
          signal-+s
-         signal-*s)
+         signal-*s
+         simple-ctr
+         loop-ctr)
 
 (define s16max #x7fff)
 (define -s16max (- s16max))

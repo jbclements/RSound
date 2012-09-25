@@ -126,24 +126,25 @@
 ;; bounds here. 
 ;; NB: requires input & output taps to be of the same length. This 
 ;; is pretty normal.
-(define (dynamic-lti-signal input-tap-len output-tap-len)
-  (define input-buf-len (max 1 input-tap-len))
-  (define output-buf-len (max 1 output-tap-len))
-  ;; enough to hold delayed and current, rounded up to next power of 2:
-  (define saved-input-buf (make-flvector input-buf-len))
-  (define saved-output-buf (make-flvector output-buf-len))
+
+;; this whole thing could be *way* more optimized.
+(define (dynamic-lti-signal tap-len)
+  (unless (< 0 tap-len)
+    (raise-argument-error 'dynamic-lti-signal "number greater than zero" 0 tap-len))
+  (define saved-input-buf (make-flvector tap-len))
+  (define saved-output-buf (make-flvector tap-len))
   (define (wraparound idx)
-       (cond [(<= max-delay idx) 0]
+       (cond [(<= tap-len idx) 0]
              [else idx]))
   (define next-idx 0)
-  (lambda (fir-terms iir-terms gain)
+  (lambda (fir-terms iir-terms gain this-val)
     ;; don't want to do this check every time...
     #;(unless (and (flvector? fir-terms)
-                 (= (flvector-length fir-terms)
-                    input-tap-len))
-      (error 'dynamic-lti-signal 
-             "expected vector of length ~s for fir-terms, got vector of length ~s"
-             input-tap-len (flvector-length fir-terms)))
+                   (= (flvector-length fir-terms)
+                      input-tap-len))
+        (error 'dynamic-lti-signal 
+               "expected vector of length ~s for fir-terms, got vector of length ~s"
+               input-tap-len (flvector-length fir-terms)))
     ;; don't want to do this check every time....
     #;(unless (and (flvector? iir-terms)
                    (= (flvector-length iir-terms)
@@ -151,27 +152,27 @@
         (error 'dynamic-lti-signal 
                "expected vector of length ~s for iir-terms, got vector of length ~s"
                output-tap-len (flvector-length iir-terms)))
-  
+    
     (define fir-sum
       (for/fold ([sum 0.0])
-        ([i (in-range input-tap-len)])
+        ([i (in-range tap-len)])
         (fl+ sum
              (fl* (flvector-ref fir-terms i)
                   (flvector-ref saved-input-buf 
-                                (modulo (- t i 1) input-buf-len))))))
+                                (modulo (- next-idx i 1) tap-len))))))
     (define iir-sum
       (for/fold ([sum 0.0])
-        ([i (in-range output-tap-len)])
+        ([i (in-range tap-len)])
         (fl+ sum
-             (fl* (flvector-ref saved-iir-terms i)
+             (fl* (flvector-ref iir-terms i)
                   (flvector-ref saved-output-buf 
-                                (modulo (- t i 1) output-buf-len))))))
-  (define next-val (fl* saved-gain (exact->inexact (input-signal t))))
-  (flvector-set! saved-input-buf (modulo t input-buf-len) next-val)
-  (define output-val (fl+ next-val (fl+ fir-sum iir-sum)))
-  (flvector-set! saved-output-buf (modulo t output-buf-len) output-val)
-    
-  output-val))
+                                (modulo (- next-idx i 1) tap-len))))))
+    (define next-val (fl* gain (exact->inexact this-val)))
+    (flvector-set! saved-input-buf next-idx next-val)
+    (define output-val (fl+ next-val (fl+ fir-sum iir-sum)))
+    (flvector-set! saved-output-buf next-idx output-val)
+    (set! next-idx (wraparound (add1 next-idx)))
+    output-val))
 
 (define max-scale-val 3.0)
 (define min-scale-val 0.00)
@@ -183,37 +184,42 @@
                                             perceptible-interval))) 
                                        #f))
 
+;; A network that maps scale values into fir/iir vectors 
+(define lpf-sig
+  (lambda (scale)
+    (when (not (<= min-scale-val scale max-scale-val))
+      (error 'dynamic-lpf "scale value ~s not between ~s and ~s"
+             scale
+             min-scale-val
+             max-scale-val))
+    (define table-index (inexact->exact
+                         (round
+                          (/ (- scale min-scale-val)
+                             perceptible-interval))))
+    (define tap-mults
+      (match (vector-ref coefficient-table table-index)
+        [#f (define coefficients (lpf-coefficients scale))
+            (define new-table-entry 
+              (apply flvector 
+                     (map (lambda (x) (* x -1.0))
+                          coefficients)))
+            (vector-set! coefficient-table table-index new-table-entry)
+            new-table-entry]
+        [other other]))
+    (define gain (+ 1.0 (fl- 0.0 (flvector-sum tap-mults))))
+    (values empty-fir-terms
+            tap-mults
+            gain)))
+
+(define empty-fir-terms (make-flvector num-poles 0.0))
+
 ;; dynamic low-pass filter: the first argument is a signal that controls
 ;; the filter cutoff, the second is the signal being filtered.
-(define (lpf/dynamic scale-signal input-signal)
-  (dynamic-lti-signal
-   (lambda (t)
-     (define scale (scale-signal t))
-     (when (not (<= min-scale-val scale max-scale-val))
-       (error 'dynamic-lpf "scale value ~s not between ~s and ~s"
-              scale
-              min-scale-val
-              max-scale-val))
-     (define table-index (inexact->exact
-                          (round
-                           (/ (- scale min-scale-val)
-                              perceptible-interval))))
-     (define tap-mults
-       (match (vector-ref coefficient-table table-index)
-         [#f (define coefficients (lpf-coefficients scale))
-             (define new-table-entry 
-               (apply flvector 
-                      (map (lambda (x) (* x -1.0))
-                           coefficients)))
-             (vector-set! coefficient-table table-index new-table-entry)
-             new-table-entry]
-         [other other]))
-     (define gain (+ 1.0 (fl- 0.0 (flvector-sum tap-mults))))
-     (values (flvector)
-             tap-mults
-             gain))
-   0 4
-   input-signal))
+(define lpf/dynamic
+  
+  (network (lpf-control audio-sig)
+           [(fir-terms iir-terms gain) (lpf-sig lpf-control)]
+           [out ((dynamic-lti-signal 4) fir-terms iir-terms gain audio-sig)]))
 
 (define (flvector-sum vec)
   (for/fold ([sum 0.0]) ([f (in-flvector vec)]) (fl+ sum f)))

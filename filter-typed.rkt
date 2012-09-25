@@ -18,7 +18,8 @@
          up-to-power-of-two
          all-but-n
          product-of
-         sum-of)
+         sum-of
+         num-poles)
 
 
 (: i Complex)
@@ -121,12 +122,13 @@
   (define z-poles (map s-space->z-space s-poles))
   (cdr (roots->coefficients z-poles)))
 
+;; how many poles (more poles is more computationally intensive)
+(define num-poles 4)
+
 ;; constants in the 4-pole chebyshev low-pass filter:
 (: chebyshev-s-poles Poles)
 (define chebyshev-s-poles
   (let ()
-    ;; how many poles (more poles is more computationally intensive)
-    (define num-poles 4)
     ;; higher epsilon gives sharper drop but more ripple in passband
     (define epsilon 1.0)
     ;; the left half of the poles *in s-space*:
@@ -152,14 +154,16 @@
      (: max-delay Index)
      (define max-delay
        (up-to-power-of-two (+ 1 (apply max delays))))
-     (: wraparound (Integer -> Index))
+     (define wraparound-limit (- max-delay 1))
+     (: wraparound (Index -> Index))
      ;; this one only counts up by one, wraps down:
      (define (wraparound idx)
-       (cond [(<= max-delay idx) 0]
-             [else idx]))
+       (cond [(<= wraparound-limit idx) 0]
+             [else (ensure-index (add1 idx))]))
      ;; set up buffer to delay the signal
      (: delay-buf (Vectorof Float))
      (define delay-buf (make-vector max-delay 0.0))
+     (: next-idx Index)
      (define next-idx 0)
      (: delays/t (Listof Nonnegative-Integer))
      (define delays/t 
@@ -190,7 +194,7 @@
                    [else offset-idx]))
            (+ sum 
               (* a (vector-ref delay-buf wrapped)))))
-       (set! next-idx (wraparound (add1 next-idx)))
+       (set! next-idx (wraparound next-idx))
        result)]
     [other (raise-type-error 'fir-filter "(listof (list number number))" 0 params)]))
 

@@ -4,6 +4,7 @@
 (require "../rsound.rkt"
          "../util.rkt"
          "../filter.rkt"
+         "../network.rkt"
          "../filter-typed.rkt"
          rackunit
          racket/flonum)
@@ -14,24 +15,68 @@
 ;; there could be a *lot* of good tests here...
 
 (define the-test-suite
-(test-suite "filter tests"
-(let ()
+(test-suite 
+ "filter tests"
+ (let ()
+   ;; fir-filter
+   (check-exn (lambda (exn) (regexp-match #px"expects argument of type <exact integer delays greater than zero>"
+                                          (exn-message exn)))
+              (lambda () (fir-filter '((-1 34.0)))))
+   
+   (define filter (fir-filter '((0 0.3) (2 0.15))))
+   (check-equal?
+    (signal-samples (network () 
+                             [a ((simple-ctr 0.1 0.01))]
+                             [b (filter a)])
+                    3)
+    
+    (vector 0.03 0.033 (+ 0.036 0.015)))
+   )
+ 
+ (let ()
+   ;; regression; check dynamic-lti vs fir-filter
+   (define (simple-param-signal)
+     (values (flvector 0.0 0.5)
+             (flvector 0.0 0.0)
+             0.3))
+   
+   
+   (check-equal?
+    (signal-samples (network ()
+                             [a ((simple-ctr 0.1 0.01))]
+                             [(f i g) (simple-param-signal)]
+                             [out ((dynamic-lti-signal 2) f i g a)])
+                    3)
+    (signal-samples (network () 
+                             [a ((simple-ctr 0.1 0.01))]
+                             [b ((fir-filter '((0 0.3) (2 0.15))) a)])
+                    3))
+   
+   )
+ (let ()
 
   (check-equal? (real-part/ck -0.9283+2.2938792e-17i) -0.9283)
   (check-equal? (real-part/ck -0.9283-2.2938792e-17i) -0.9283)
   (check-equal? (real-part/ck 0.9283+2.2938792e-17i) 0.9283)
   
-  
-  (define test-sig (indexed-signal (lambda (t) (/ t 500))))
+  (define test-sig (simple-ctr 0 0.002))
   
   (define fir-terms (flvector 0.8 0.2))
-  (define iir-terms (flvector 0.3))
-  (define (param-maker t)
+  (define iir-terms (flvector 0.3 0.0))
+  (define (param-maker)
     (values fir-terms
             iir-terms
             0.7))
+  (define testnet
+    (network ()
+             [(f i g) (param-maker)]
+             [test-sigout (test-sig)]
+             [out 
+              ((dynamic-lti-signal 2)
+               f i g test-sigout)]))
   (let ()
-    (define snd (signal->rsound 10 (dynamic-lti-signal param-maker 2 1 test-sig)))
+    (define snd (signal->rsound 10 
+                                testnet))
     (check-equal? (rs-ith/left snd 0) 0.0)
     (check-= (rs-ith/left snd 1) 0.0014 1e-5)
     
