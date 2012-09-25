@@ -12,6 +12,9 @@
 (provide the-test-suite)
 
 (define i (sqrt -1))
+
+  
+(define test-sig (simple-ctr 0 0.002))
 ;; there could be a *lot* of good tests here...
 
 (define the-test-suite
@@ -59,8 +62,6 @@
   (check-equal? (real-part/ck -0.9283-2.2938792e-17i) -0.9283)
   (check-equal? (real-part/ck 0.9283+2.2938792e-17i) 0.9283)
   
-  (define test-sig (simple-ctr 0 0.002))
-  
   (define fir-terms (flvector 0.8 0.2))
   (define iir-terms (flvector 0.3 0.0))
   (define (param-maker)
@@ -86,33 +87,50 @@
              1e-5)
     3)
   
-  (check-not-exn (lambda () (signal->rsound 10 
-                                            (dynamic-lti-signal 
-                                             (lambda (t)
-                                               (values (flvector) (flvector) 1.0))
-                                             0 0 test-sig))))
+   (define (identity-params) (values (flvector 0.0) (flvector 0.0) 1.0))
+   (check-exn exn:fail?
+              (lambda () (signal->rsound 
+                          10 
+                          (network ()
+                                   [a (test-sig)]
+                                   [(f i g) (identity-params)]
+                                   [out ((dynamic-lti-signal 0) f i g a)]))))
+   (check-not-exn (lambda () (signal->rsound 
+                              10 
+                              (network ()
+                                       [a (test-sig)]
+                                       [(f i g) (identity-params)]
+                                       [out ((dynamic-lti-signal 1) f i g a)]))))
   (check-not-exn
-   (lambda () (signal->rsound 20 (lpf/dynamic (lambda (x) 0.1) test-sig))))
+   (lambda () (signal->rsound 
+               20 
+               (network ()
+                        [a (test-sig)]
+                        [control ((dc-signal 0.1))]
+                        [out (lpf/dynamic control a)]))))
   
   ;; should be the identity on a dc signal (after a while)
   (let ()
-  (define tap-mult-vec (flvector -0.1 -0.2 -0.3 -0.4))
+    (define zero-vec (flvector 0.0 0.0 0.0 0.0))
+    (define tap-mult-vec (flvector -0.1 -0.2 -0.3 -0.4))
   (check-=
-   (rs-ith/right
-    (signal->rsound 200
-         (dynamic-lti-signal
-          (lambda (t)
-            (values (flvector)
-                    tap-mult-vec
-                    2.0))
-          0 4
-          (lambda (t) 0.75)))
+   (signal-nth
+    (network ()
+             [a ((dc-signal 0.75))]
+             [(f i g) ((lambda () (values zero-vec tap-mult-vec 2.0)))]
+             [out ((dynamic-lti-signal 4) f i g a)])
     199)
    0.75
    1e-3))
   
   ;; same test with lpf:
-  (check-= (rs-ith/left
+  (check-= (signal-nth
+            (network ()
+                     [a ((dc-signal 0.5))]
+                     [control ((dc-signal 0.34))]
+                     [out (lpf/dynamic control a)])
+            199)
+           #;(rs-ith/left
             (signal->rsound 200 (lpf/dynamic (lambda (x) 0.34) (lambda (x) 0.5)))
             199)
            0.5
@@ -120,9 +138,13 @@
   
   
   ;; regression testing:
-  (check-= (rs-ith/left
-            (signal->rsound 20 (lpf/dynamic (lambda (x) 0.1) (lambda (t)
-                                                    (/ t 20))))
+  (check-= (signal-nth
+            (network ()
+                     [a ((simple-ctr 1/20 0))]
+                     [control ((dc-signal 0.1))]
+                     [out (lpf/dynamic control a)])
+            #;(lpf/dynamic (lambda (x) 0.1) (lambda (t)
+                                            (/ t 20)))
             19)
            0.0218
            1e-4)

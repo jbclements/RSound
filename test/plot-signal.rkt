@@ -3,7 +3,8 @@
 (require rackunit
          plot
          "../network.rkt"
-         "../util.rkt")
+         "../util.rkt"
+         "../filter.rkt")
 
 ;; for interactive testing, right now.
 
@@ -26,3 +27,10 @@
 
 (plot-signal (raw-sine-wave 882 44100))
 (plot-signal (sine-wave 882))
+
+(plot-signal 
+   (network ()
+            [a ((simple-ctr 1/20 0))]
+            [control ((dc-signal 0.1))]
+            [out (lpf/dynamic control a)])
+   #:max 400)
