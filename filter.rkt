@@ -198,23 +198,13 @@
                              perceptible-interval))))
     (define results
       (match (vector-ref coefficient-table table-index)
-        [#f (define coefficients (lpf-coefficients scale))
-            (define gain (/ (apply + coefficients)
-                            (apply + zeros-at-negative-one)))
-            (define tap-multipliers 
-              (apply flvector 
-                     (map (lambda (x) (* x -1.0))
-                          (cdr coefficients))))
-            (define new-table-entry 
-              (vector fixed-fir-terms tap-multipliers gain))
-            (vector-set! coefficient-table table-index new-table-entry)
-            new-table-entry]
+        [#f (define result-vec (lpf-tap-vectors scale))
+            (vector-set! coefficient-table table-index result-vec)
+            result-vec]
         [other other]))
     (values (vector-ref results 0)
             (vector-ref results 1)
             (vector-ref results 2))))
-
-(define fixed-fir-terms (apply flvector (cdr zeros-at-negative-one)))
 
 ;; dynamic low-pass filter: the first argument is a signal that controls
 ;; the filter cutoff, the second is the signal being filtered.

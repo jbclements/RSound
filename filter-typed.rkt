@@ -3,6 +3,8 @@
 ;; the part of filter.rkt that can easily be implemented using 
 ;; typed racket
 
+(require racket/flonum)
+
 (require/typed "rsound.rkt"
                [default-sample-rate (-> Real)])
 
@@ -13,8 +15,11 @@
          poles&zeros->poly
          coefficient-sets->poly
          roots->coefficients
+         chebyshev-s-poles
+         s-space->z-space
          real-part/ck
          lpf-coefficients
+         lpf-tap-vectors
          up-to-power-of-two
          all-but-n
          product-of
@@ -51,20 +56,23 @@
     (poly z)))
 
 ;; struggling with the type here...
-;; compute the magnitude of the response in decibels
-(: response/mag (Poly -> Frequency -> Real))
-(define ((response/mag poly) frequency)
+;; compute the magnitude of the response in decibels (or just amplitude)
+(: response/mag (Poly Boolean -> Frequency -> Real))
+(define ((response/mag poly db?) frequency)
   (define mag (exact->inexact
                (magnitude ((response/raw poly) frequency))))
-  ;; log-based, cap at -100 db, square to get power
-  #;(max -100 (* 10 (/ (log (expt mag 2)) (log 10))))
   ;; equivalent to:
   ;; FIXME: ensure-positive not required in later versions...
+  (cond [db? (mag->db mag)]
+        [else mag]))
+
+;; convert a magnitude into decibels
+(: mag->db (Inexact-Real -> Real))
+(define (mag->db mag)
   (* 10 (/ (ann (log (ann (filter-out-nan (max 1.0e-6 mag))
                           Positive-Real))
                 Real)
            (/ (log 10) 2))))
-
 
 
 ;; given a set of zeros, compute the corresponding
@@ -102,7 +110,7 @@
 
 ;; given a set of poles or zeros, compute the corresponding
 ;; IIR feedback coefficients.
-(: roots->coefficients (Z-Plane-Points -> Coefficients))
+(: roots->coefficients (Z-Plane-Points -> (Listof Flonum)))
 (define (roots->coefficients z-plane-points)
   (let ([neg-points (map - z-plane-points)])
   (reverse
@@ -117,7 +125,7 @@
 
 ;; given a scale, produce a 4-pole chebyshev low-pass filter, returning
 ;; iir coefficients
-(: lpf-coefficients (Real -> Coefficients))
+(: lpf-coefficients (Real -> (Listof Flonum)))
 (define (lpf-coefficients scale)
   (define s-poles (map (lambda: ([x : Complex])
                          (* scale x))
@@ -125,19 +133,38 @@
   (define z-poles (map s-space->z-space s-poles))
   (roots->coefficients z-poles))
 
+;; given a scale, produce a vector containing fir and iir tap mults
+;; and gain
+(: lpf-tap-vectors (Real -> (Vector FlVector FlVector Real)))
+(define (lpf-tap-vectors scale)
+  (define coefficients (lpf-coefficients scale))
+  (define gain (/ (apply + coefficients)
+                  zeros-at-negative-one/sum))
+  (define tap-multipliers 
+    (apply flvector 
+           (map (lambda: ([x : Flonum]) (* x -1.0))
+                (cdr coefficients))))
+  (vector zeros-at-negative-one/flvec tap-multipliers gain))
+
 ;; how many poles (more poles is more computationally intensive)
 (define num-poles 4)
 
+;; without the zeros at -1.
+(define no-zeros (list 1.0 0.0 0.0 0.0 0.0))
+(define no-zeros/sum 1.0)
+(define no-zeros/flvec (apply flvector (cdr no-zeros)))
 ;; default-fir coefficients
 ;; this puts four zeros at -1 in the Z-plane => nyquist freq.
 (define zeros-at-negative-one (list 1.0 4.0 6.0 4.0 1.0))
+(define zeros-at-negative-one/sum (apply + zeros-at-negative-one))
+(define zeros-at-negative-one/flvec (apply flvector (cdr zeros-at-negative-one)))
 
 ;; constants in the 4-pole chebyshev low-pass filter:
 (: chebyshev-s-poles Poles)
 (define chebyshev-s-poles
   (let ()
     ;; higher epsilon gives sharper drop but more ripple in passband
-    (define epsilon 1.0)
+    (define epsilon 0.5)
     ;; the left half of the poles *in s-space*:
     (define left-half
       (for/list: : (Listof Complex) 
@@ -249,14 +276,15 @@
 
 ;; given a number, check that it's close to real, return the
 ;; real number
-(: real-part/ck (Complex -> Real))
+(: real-part/ck (Complex -> Flonum))
 (define (real-part/ck i)
   (define angl (angle i))
   (define wrapped-angle (cond [(< angl (- (/ pi 2))) (+ angl (* 2 pi))]
                               [else angl]))
-  (cond [(< (abs wrapped-angle) angle-epsilon) (magnitude i)]
+  (cond [(< (abs wrapped-angle) angle-epsilon) 
+         (real->double-flonum (magnitude i))]
         [(< (abs (- pi wrapped-angle)) angle-epsilon)
-         (- (magnitude i))]
+         (- (real->double-flonum (magnitude i)))]
         [else (error 'real-part/ck "angle ~s of complex number ~s is not close to zero or pi." wrapped-angle i)]))
 (define angle-epsilon 1e-5)
 

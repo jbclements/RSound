@@ -4,7 +4,8 @@
          "../filter.rkt"
          "../filter-typed.rkt"
          racket/flonum
-         rackunit)
+         rackunit
+         plot)
 
 
 ;; 100-pole comb
@@ -78,8 +79,8 @@
   '(1 -3.932065224332497 5.808146644839259 -3.8196712238297166 0.9436069610061315))
  0 22050)
 
-(lpf-response 0.1 0 22050)
-(lpf-response 0.01 0 22050)
+(lpf-response-plot 0.1 0 22050)
+(lpf-response-plot 0.01 0 22050)
 
 ;; this one shows that lpf-sig is doing something sane:
 ;; this graph should have steep rolloff at about 3000 Hz,
@@ -96,17 +97,139 @@
    0
    22050))
 
-(define iir-terms
-  (reverse
-   (list 0.8730817302
-         -3.5926648631
-         5.5641839804
-         -3.8444945434
-         1)))
+;; okay, let's see if these filters are actually doing what they're supposed to.
 
 
-(response-plot
-(coefficient-sets->poly 
-    (list 1 4 6 4 1)
-    iir-terms)
-0 22050)
+(define reference-s-poles-500
+  (list 
+   -0.0099444612+0.0700835358i
+   -0.0240080532+0.0290295510i
+   -0.0240080532-0.0290295510i
+   -0.0099444612-0.0700835358i)
+)
+
+(define reference-s-poles-1000
+  (list
+   -0.0199142092+0.1403452799i
+   -0.0480771539+0.0581329184i
+   -0.0480771539-0.0581329184i
+   -0.0199142092-0.1403452799i
+   
+   )
+  )
+
+(define reference-s-poles-11025
+  (list
+   -0.2790719918+1.9667583290i
+   -0.6737393875+0.8146579738i
+   -0.6737393875-0.8146579738i
+   -0.2790719918-1.9667583290i
+
+   ))
+
+(define reference-s-poles-1500
+  (list
+   -0.0299347885+0.2109652578i
+   -0.0722689725+0.0873846710i
+   -0.0722689725-0.0873846710i
+   -0.0299347885-0.2109652578i))
+
+(define reference-s-poles-1000-bigripple
+ (list
+  -0.0087239785+0.1335251798i
+  -0.0210615472+0.0553079404i
+  -0.0210615472-0.0553079404i
+  -0.0087239785-0.1335251798i
+  ))
+
+
+(define (cplx->xy p)
+  (vector (real-part p) (imag-part p)))
+
+(plot
+ (mix 
+  (points 
+   (map (lambda (cplx)
+          (vector (real-part cplx) (imag-part cplx)))
+        reference-s-poles-500))
+  (points 
+   (map (lambda (cplx)
+          (vector (real-part cplx) (imag-part cplx)))
+        reference-s-poles-1000))
+  (points 
+   (map (lambda (cplx)
+          (vector (real-part cplx) (imag-part cplx)))
+        reference-s-poles-1500))
+  (points 
+   (map (lambda (cplx)
+          (vector (real-part cplx) (imag-part cplx)))
+        reference-s-poles-11025)
+   #:color "blue")
+  (points
+   (map (lambda (cplx)
+          (define multiplied (* 11.025 1.3 0.1425 cplx))
+          (vector (real-part multiplied) (imag-part multiplied)))
+        chebyshev-s-poles)
+   #:color "red")
+  )
+ #:x-min -3
+ #:x-max 3
+ #:y-min -3
+ #:y-max 3)
+
+(define reference-z-poles-1000
+  (map s-space->z-space reference-s-poles-1000))
+
+(define reference-z-poles-11025
+  (map s-space->z-space reference-s-poles-11025))
+
+(define reference-z-poles-direct-1000
+  (list
+   0.9707680768+0.1369305667i
+   0.9514791950+0.0553910679i
+   0.9514791950-0.0553910679i
+   0.9707680768-0.1369305667i
+   ))
+
+(define reference-z-poles-direct-11025
+  (list
+   0.0059565954+0.8681048776i
+   0.3689458180+0.4171022170i
+   0.3689458180-0.4171022170i
+   0.0059565954-0.8681048776i
+   ))
+
+
+
+(plot 
+ (mix
+  (points
+   (map cplx->xy reference-z-poles-direct-1000))
+  (points
+   (map cplx->xy reference-z-poles-1000)
+   #:color "red")
+  (parametric
+   (lambda (t)
+     (vector (cos t) (sin t)))
+   0 
+   (* 2 pi)))
+ #:x-min -1
+ #:x-max 1
+ #:y-min -1
+ #:y-max 1
+ )
+
+
+(lpf-response-plot 0.142 0 22050 #:db #f)
+(lpf-response-plot 1.0 #;(* 2 pi 0.25) 0 22050 #:db #f)
+(lpf-response-plot (* 11.025 1.325 0.142) 0 22050 #:db #f)
+
+(define coeff (roots->coefficients reference-z-poles-11025))
+
+(define fir-terms (map (lambda (x) (/ x 16.0))(list 1.0 4.0 6.0 4.0 1.0)))
+(define iir-terms coeff)
+(define fun 
+  (coefficient-sets->poly
+   fir-terms
+   iir-terms))
+(response-plot fun 0 22050 #:db #f)

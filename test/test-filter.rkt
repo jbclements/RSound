@@ -57,9 +57,16 @@
    
    ;; test ordering of terms in dynamic-lti-filter
    
-   #;(signal-samples (network ()
-                            [a ((simple-ctr 0.1 0.01))]
-                            []))
+   (check-equal?
+    (signal-samples 
+     (network ()
+              [a ((simple-ctr 10 1))]
+              [out ((dynamic-lti-signal 4) (flvector 0.1 0.0 0.0 0.0)
+                                           (flvector 0.0 0.0 0.0 0.5)
+                                           1.0
+                                           a)])
+                    6)
+    (vector 10.0 12.0 13.1 14.2 20.3 22.4))
    
    )
  (let ()
@@ -142,12 +149,6 @@
            0.5
            1e-3)
   
-  
-   #;(let ()
-     (define-values (f i g) (lpf-sig 0.1))
-     (coefficient-sets->poly 
-      (cons 1.0 (flvector->list f))
-      (cons 1.0 (flvector->list i))))
   ;; regression testing:
   (check-= (signal-nth
             (network ()
