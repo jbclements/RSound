@@ -23,14 +23,10 @@
 ;; plot the frequency response of a low-pass filter
 (define (lpf-response scale min-freq max-freq)
   (define fun 
-    (response/mag 
-     (coefficients->poly 
-      (cons 1.0 (map (lambda (x) (* x -1.0))
-                     (lpf-coefficients 1.0))))))
-  (plot (line (lambda (x) (fun x)))
-        #:x-min min-freq
-        #:x-max max-freq
-        #:width 600))
+    (coefficient-sets->poly
+     '(1 4 6 4 1)
+     (lpf-coefficients scale)))
+  (response-plot fun min-freq max-freq))
 
 
 

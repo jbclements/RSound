@@ -19,7 +19,8 @@
          all-but-n
          product-of
          sum-of
-         num-poles)
+         num-poles
+         zeros-at-negative-one)
 
 
 (: i Complex)
@@ -84,13 +85,15 @@
 ;; return the corresponding transfer function.
 (: poles&zeros->poly (Poles Zeros -> Poly))
 (define (poles&zeros->poly poles zeros)
-  (coefficient-sets->poly (roots->coefficients poles)
-                          (roots->coefficients zeros)))
+  (coefficient-sets->poly (roots->coefficients zeros)
+                          (roots->coefficients poles)))
 
-;; given a list of feedback coefficients and a list of feedforward
+;; given a list of feed-forward coefficients and a list of feedback
 ;; coefficients, return the corresponding transfer function
+;; accepts the coefficients of the transfer function; don't clip
+;; off the first one or negate the latter coefficients of the feedback terms.
 (: coefficient-sets->poly (Coefficients Coefficients -> Poly))
-(define (coefficient-sets->poly fb-coefficients ff-coefficients)
+(define (coefficient-sets->poly ff-coefficients fb-coefficients)
   (let ([feedback-poly (coefficients->poly fb-coefficients)]
         [feedforward-poly (coefficients->poly ff-coefficients)])
     (lambda (x)
@@ -120,10 +123,14 @@
                          (* scale x))
                        chebyshev-s-poles))
   (define z-poles (map s-space->z-space s-poles))
-  (cdr (roots->coefficients z-poles)))
+  (roots->coefficients z-poles))
 
 ;; how many poles (more poles is more computationally intensive)
 (define num-poles 4)
+
+;; default-fir coefficients
+;; this puts four zeros at -1 in the Z-plane => nyquist freq.
+(define zeros-at-negative-one (list 1.0 4.0 6.0 4.0 1.0))
 
 ;; constants in the 4-pole chebyshev low-pass filter:
 (: chebyshev-s-poles Poles)

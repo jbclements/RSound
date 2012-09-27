@@ -137,6 +137,11 @@
            1e-3)
   
   
+   #;(let ()
+     (define-values (f i g) (lpf-sig 0.1))
+     (coefficient-sets->poly 
+      (cons 1.0 (flvector->list f))
+      (cons 1.0 (flvector->list i))))
   ;; regression testing:
   (check-= (signal-nth
             (network ()
@@ -149,7 +154,14 @@
            0.0218
            1e-4)
   
-
+(check-= ((coefficients->poly '(3.0 1.0 9.0)) 6.0+0.0i) ; 3(6^2)+1(6)+9
+         123
+         1e-7)
+              
+(let ()
+  (define poly (coefficient-sets->poly '(1 2) '(1 -4)))
+  (check-= (poly 0) -1/2 1e-7))
+   
   ;; OLD TESTS:
   
   ;; FIR-FILTER
@@ -210,11 +222,14 @@
 (check-= (product-of '(1.0+0.0i 2.0+0.0i 3.0+0.0i 4.0+0.0i)) 24 0.0)
 (check-= (sum-of '(1.0+0.0i 2.0+0.0i 3.0+0.0i 4.0+0.0i)) 10 0.0)
 
-(check-= ((coefficients->poly '(3.0 1.0 9.0)) 6.0+0.0i)
+(check-= ((coefficients->poly '(3.0 1.0 9.0)) 6.0+0.0i) ; 3(6^2)+1(6)+9
          123
          1e-7)
               
-
+(let ()
+  (define poly (coefficient-sets->poly '(1 2) '(1 -4)))
+  (check-= (poly 0) -1/4 1e-7))
+   
 
 )))
 

@@ -196,22 +196,25 @@
                          (round
                           (/ (- scale min-scale-val)
                              perceptible-interval))))
-    (define tap-mults
+    (define results
       (match (vector-ref coefficient-table table-index)
         [#f (define coefficients (lpf-coefficients scale))
-            (define new-table-entry 
+            (define gain (/ (apply + coefficients)
+                            (apply + zeros-at-negative-one)))
+            (define tap-multipliers 
               (apply flvector 
                      (map (lambda (x) (* x -1.0))
-                          coefficients)))
+                          (cdr coefficients))))
+            (define new-table-entry 
+              (vector fixed-fir-terms tap-multipliers gain))
             (vector-set! coefficient-table table-index new-table-entry)
             new-table-entry]
         [other other]))
-    (define gain (+ 1.0 (fl- 0.0 (flvector-sum tap-mults))))
-    (values empty-fir-terms
-            tap-mults
-            gain)))
+    (values (vector-ref results 0)
+            (vector-ref results 1)
+            (vector-ref results 2))))
 
-(define empty-fir-terms (make-flvector num-poles 0.0))
+(define fixed-fir-terms (apply flvector (cdr zeros-at-negative-one)))
 
 ;; dynamic low-pass filter: the first argument is a signal that controls
 ;; the filter cutoff, the second is the signal being filtered.
