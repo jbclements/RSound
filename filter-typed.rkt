@@ -123,12 +123,13 @@
       (sum-of (map product-of (all-but-n exponent neg-points))))))))
 
 
-;; given a scale, produce a 4-pole chebyshev low-pass filter, returning
-;; iir coefficients
+;; given a cutoff in radians, produce a 4-pole chebyshev low-pass filter, returning
+;; iir coefficient
 (: lpf-coefficients (Real -> (Listof Flonum)))
 (define (lpf-coefficients scale)
+  (define pre-warped (* 2.0 (tan (/ scale 0.5))))
   (define s-poles (map (lambda: ([x : Complex])
-                         (* scale x))
+                         (* pre-warped x))
                        chebyshev-s-poles))
   (define z-poles (map s-space->z-space s-poles))
   (roots->coefficients z-poles))
@@ -241,8 +242,12 @@
 
 
 ;; convert s-space value to z-space value
+;; yes! Bilinear transform seems to work.
 (: s-space->z-space (Complex -> Complex))
-(define (s-space->z-space pole) (exp pole))
+(define (s-space->z-space pole) 
+  #;(exp pole)
+  (/ (+ 1.0 (/ pole 2.0))
+     (- 1.0 (/ pole 2.0))))
 
 
 ;; sum-of : (listof number) -> number

@@ -220,9 +220,9 @@
  )
 
 
-(lpf-response-plot 0.142 0 22050 #:db #f)
-(lpf-response-plot 1.0 #;(* 2 pi 0.25) 0 22050 #:db #f)
-(lpf-response-plot (* 11.025 1.325 0.142) 0 22050 #:db #f)
+;(lpf-response-plot 0.142 0 22050 #:db #f)
+;(lpf-response-plot 1.0 #;(* 2 pi 0.25) 0 22050 #:db #f)
+(lpf-response-plot 0.8 0 22050 #:db #f)
 
 (define coeff (roots->coefficients reference-z-poles-11025))
 
@@ -232,4 +232,12 @@
   (coefficient-sets->poly
    fir-terms
    iir-terms))
-(response-plot fun 0 22050 #:db #f)
+(response-plot fun 0 22050)
+
+(plot (function
+       (lambda (omega)
+         (* 2 (tan (/ omega 2)))))
+      #:x-min (- pi)
+      #:x-max pi
+      #:y-max 50
+      #:y-min -50)
