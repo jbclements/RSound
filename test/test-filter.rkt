@@ -55,6 +55,12 @@
                              [b ((fir-filter '((0 0.3) (2 0.15))) a)])
                     3))
    
+   ;; test ordering of terms in dynamic-lti-filter
+   
+   #;(signal-samples (network ()
+                            [a ((simple-ctr 0.1 0.01))]
+                            []))
+   
    )
  (let ()
 
