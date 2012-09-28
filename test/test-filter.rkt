@@ -149,17 +149,7 @@
            0.5
            1e-3)
   
-  ;; regression testing:
-  (check-= (signal-nth
-            (network ()
-                     [a ((simple-ctr 1/20 0))]
-                     [control ((dc-signal 0.1))]
-                     [out (lpf/dynamic control a)])
-            #;(lpf/dynamic (lambda (x) 0.1) (lambda (t)
-                                            (/ t 20)))
-            19)
-           0.0218
-           1e-4)
+  
   
 (check-= ((coefficients->poly '(3.0 1.0 9.0)) 6.0+0.0i) ; 3(6^2)+1(6)+9
          123
@@ -176,28 +166,38 @@
 (define (mush x) (/ (round (* x s16max)) s16max))
 
 (let* ([my-filter (fir-filter '((0 1.0) (13 0.2) (5 0.1)))]
-       [test-sound (signal->rsound 100 (my-filter (lambda (x) (/ x 500))))])
-  (check-= (rs-ith/right test-sound 0) 0 1e-7)
-  (check-= (rs-ith/right test-sound 1) (mush 1/500) 1e-7)
-  (check-= (rs-ith/right test-sound 4) (mush 4/500) 1e-7)
-  (check-= (rs-ith/right test-sound 5) (mush (+ 5/500 0/5000)) 1e-7)
-  (check-= (rs-ith/right test-sound 6) (mush (+ 6/500 1/5000)) 1e-7)
-  (check-= (rs-ith/right test-sound 12) (mush (+ 12/500 7/5000)) 1e-7)
-  (check-= (rs-ith/left test-sound 78) (mush (+ 78/500 73/5000 65/2500)) 1e-7))
+       [test-sound 
+        (signal-samples
+         (network ()
+                  [a ((simple-ctr 0 1/500))]
+                  [out (my-filter a)])
+         79)])
+  (check-= (vector-ref test-sound 0) 0 1e-7)
+  (check-= (vector-ref test-sound 1) 1/500 1e-7)
+  (check-= (vector-ref test-sound 4) 4/500 1e-7)
+  (check-= (vector-ref test-sound 5) (+ 5/500 0/5000) 1e-7)
+  (check-= (vector-ref test-sound 6) (+ 6/500 1/5000) 1e-7)
+  (check-= (vector-ref test-sound 12) (+ 12/500 7/5000) 1e-7)
+  (check-= (vector-ref test-sound 78) (+ 78/500 73/5000 65/2500) 1e-7))
 
 ;; IIR-FILTER
 
 (let* ([my-filter (iir-filter '((13 0.2) (5 0.1)))]
-       [test-sound (signal->rsound 100 (my-filter (lambda (x) (/ x 500))))])
-  (check-= (rs-ith/right test-sound 0) 0 1e-7)
-  (check-= (rs-ith/right test-sound 1) (mush 1/500) 1e-7)
-  (check-= (rs-ith/right test-sound 4) (mush 4/500) 1e-7)
-  (check-= (rs-ith/right test-sound 5) (mush (+ 5/500 0/5000)) 1e-7)
-  (check-= (rs-ith/right test-sound 6) (mush (+ 6/500 1/5000)) 1e-7)
-  (check-= (rs-ith/right test-sound 10) (mush (+ 10/500 5/5000)) 1e-7)
+       [test-sound
+        (signal-samples 
+         (network ()
+                  [a ((simple-ctr 0 1/500))]
+                  [out (my-filter a)])
+         20)])
+  (check-= (vector-ref test-sound 0) 0 1e-7)
+  (check-= (vector-ref test-sound 1) 1/500 1e-7)
+  (check-= (vector-ref test-sound 4) 4/500 1e-7)
+  (check-= (vector-ref test-sound 5) (+ 5/500 0/5000) 1e-7)
+  (check-= (vector-ref test-sound 6) (+ 6/500 1/5000) 1e-7)
+  (check-= (vector-ref test-sound 10) (+ 10/500 5/5000) 1e-7)
   ;; now the IIR starts to behave differently:
-    (check-= (rs-ith/right test-sound 11) (mush (+ 11/500 (* 1/10 (+ 6/500 1/5000)))) 1e-7)
-  (check-= (rs-ith/right test-sound 12) (mush (+ 12/500 (* 1/10 (+ 7/500 2/5000)))) 1e-7))
+  (check-= (vector-ref test-sound 11) (+ 11/500 (* 1/10 (+ 6/500 1/5000))) 1e-7)
+  (check-= (vector-ref test-sound 12) (+ 12/500 (* 1/10 (+ 7/500 2/5000))) 1e-7))
 
 
   (define (complex-within a b tolerance)
@@ -235,7 +235,7 @@
               
 (let ()
   (define poly (coefficient-sets->poly '(1 2) '(1 -4)))
-  (check-= (poly 0) -1/4 1e-7))
+  (check-= (poly 0) -1/2 1e-7))
    
 
 )))
