@@ -48,6 +48,19 @@
    (check-= (rs-ith/left/s16 r 27) 
             (round (* s16max (* 0.2 (sin (* twopi 882 27/44100))))) 0.0)
    
+   (let ()
+     (define r (make-tone 440 0.2 (default-sample-rate)))
+     
+     (check-equal? (rs-ith/left/s16 r 0) 0)
+     (check-= (signal-nth (sine-wave 440) 427) 
+              (sin (* twopi 440 427/44100))
+              1e-4)
+     (check-= (signal-nth (raw-sine-wave 440 44100) 427) 
+              (sin (* twopi 440 427/44100))
+              1e-4)
+   (check-= (rs-ith/left/s16 r 427) 
+            (round (* s16max (* 0.2 (sin (* twopi 440 427/44100))))) 0.0))
+   
    ;; non-default sample-rate:
    (let ([r (parameterize ([default-sample-rate 3420])
               (make-tone 882 0.2 1000))])

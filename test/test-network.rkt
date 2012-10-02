@@ -143,7 +143,7 @@
      (check-equal? (sigfun) 0)
      (check-equal? (sigfun) 14)
      (check-equal? (sigfun) 28)
-     (check-equal? (sigfun) 0))
+     (check-equal? (sigfun) 8))
    
    (check-equal? (signal-nth (simple-ctr 34 14) 1) 48)
    
