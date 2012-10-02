@@ -20,7 +20,9 @@
 (define ts empty)
 (define lens empty)
 
-(define (simple-signal/block/s16 pointer frames t)
+(define t 0)
+(define (simple-signal/block/s16 pointer frames)
+  (set! ts (cons t ts))
   (define sample (* t channels))
   (define samples (* frames channels))
   (define copy-source (modulo sample sine-wave-len))
@@ -31,7 +33,8 @@
         (memset pointer 0 (* s16-size samples))
         (s16buffer-add!/c pointer
                           (ptr-add data-ptr (* s16-size copy-source))
-                          samples))))
+                          samples)))
+  (set! t (+ t frames)))
 
 
 
@@ -41,6 +44,7 @@
 (stop)
 
 (printf "playing signal for 3 seconds w/ explicit buffer-time\n")
+(set! t 0)
 (signal/block-play/unsafe simple-signal/block/s16 44100 #:buffer-time 0.1)
 (sleep 3)
 (stop)

@@ -41,12 +41,32 @@
      (check-= (signal-nth (square-wave 3) 167)  1.0 1e-4))
    
    ;; make-tone
-   (define r (make-tone 882 0.2 (default-sample-rate)))
+   (define r (make-tone 882 0.2 44100))
    
    (check-equal? (rs-ith/left/s16 r 0) 0)
    (check-equal? (rs-ith/right/s16 r 50) 0)
    (check-= (rs-ith/left/s16 r 27) 
             (round (* s16max (* 0.2 (sin (* twopi 882 27/44100))))) 0.0)
+   ;; errors late:
+   (check-= (rs-ith/left/s16 r 44099)
+            (round (* s16max (* 0.2 (sin (* twopi 882 44099/44100)))))
+            1e-7)
+   (let ()
+   ;; errors crop up only on certain frequencies:
+   (define r (make-tone 440 0.2 44100))
+   
+   (check-equal? (rs-ith/left/s16 r 0) 0)
+   (check-= (rs-ith/left/s16 r 27) 
+            (round (* s16max (* 0.2 (sin (* twopi 440 27/44100))))) 0.0)
+   ;; errors late:
+     (define (small x) (< x 1e-7))
+     (for ([i 44100])
+       (unless (small 
+                (abs
+                 (- (rs-ith/left/s16 r i)
+                    (round (* s16max (* 0.2 (sin (* twopi 440 (/ i 44100)))))))))
+         (error 'uhoh "panic!: ~s" i))))
+   
    
    (let ()
      (define r (make-tone 440 0.2 (default-sample-rate)))
