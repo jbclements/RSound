@@ -56,19 +56,15 @@
   (define playing-vec (vector))
   (define last-t 0)
   (define (get-last-t) last-t)
-  (define (signal/block cpointer frames t)
+  (define (signal/block cpointer frames)
+    (define t last-t)
     (when (< frames 0)
       (error 'sequencer "callback called with frames < 0: ~e\n" frames))
-    (define new-last-t (+ frames t))
-    (when (< new-last-t last-t)
-      (error 'sequencer "new value of last-t ~e is less than old value ~e."
-             new-last-t
-             last-t))
-    (set! last-t new-last-t)
+    (set! last-t (+ frames t))
     ;; remove sounds that end before the start:
     (define sounds-removed? (clear-ended-sounds playing t))
     ;; add sounds that start before the end:
-    (define sounds-added? (add-new-sounds unplayed playing t (+ t frames)))
+    (define sounds-added? (add-new-sounds unplayed playing t last-t))
     (when (or sounds-removed? sounds-added?)
       (set! playing-vec (heap->vector playing)))
     (combine-onto! cpointer t frames playing-vec))

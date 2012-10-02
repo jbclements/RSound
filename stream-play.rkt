@@ -4,6 +4,8 @@
          "./sequencer.rkt")
 
 ;; a stream-based sound player built on top of the sequencer.
+;; this solves problems on platforms such as windows that don't
+;; like it when you open lots of streams.
 
 (provide play/s
          play/s/f
