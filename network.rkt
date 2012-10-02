@@ -190,8 +190,9 @@
 (define (loop-ctr len skip)
   (define limit-val (- len skip))
   (define (increment p)
-    (cond [(< p limit-val) (+ p skip)]
-          [else 0]))
+    (define next-p (+ p skip))
+    (cond [(< next-p len) next-p]
+          [else (- next-p len)]))
   (network ()
            (out (increment (prev out)) #:init (- skip))))
 
