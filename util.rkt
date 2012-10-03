@@ -272,8 +272,11 @@ rsound-max-volume
                               raw-sawtooth-approx-wave))
 
 ;; pulse waves
+(define pulse-wave
+  (network (duty-cycle pitch)
+           [angle (+ (prev angle) (* pitch srinv))]))
 
-(define ((pulse-wave duty-cycle) pitch sample-rate)
+#;(define ((pulse-wave duty-cycle) pitch sample-rate)
   (when (< (/ sample-rate 2) pitch)
     (raise-argument-error 'raw-pulse-wave 
                           "pitch <= half the sample rate" 0 pitch sample-rate))
