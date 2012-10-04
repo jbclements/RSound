@@ -82,7 +82,6 @@ rsound-max-volume
          midi-note-num->pitch
          ;; for testing:
          raw-sine-wave
-         raw-square-wave
          raw-sawtooth-wave
          binary-logn
          )
@@ -188,20 +187,23 @@ rsound-max-volume
 ;; given a raw function, produce a table-based version of it
 ;; (nat nat -> signal) -> (nat nat -> signal)
 (define (make-checked-wave-fun raw-wave-fun)
-  (let* ([table (build-wavetable raw-wave-fun)]
-         [table-based-fun (make-table-based-wavefun table)]
-         [table-sr (default-sample-rate)])
+  (let* ([table (build-wavetable raw-wave-fun SR)]
+         [table-based-fun (make-table-based-wavefun table)])
     (lambda (pitch)
       (when (= 0 pitch)
         (raise-type-error 'wave-fun "nonzero number" 0 pitch))
-      (cond [(and (integer? pitch)
-                  (= (default-sample-rate) table-sr))
-             (table-based-fun (inexact->exact pitch) (default-sample-rate))]
+      (cond [(integer? pitch)
+             (table-based-fun (inexact->exact pitch))]
             [else
-             (raw-wave-fun pitch (default-sample-rate))]))))
+             (raw-wave-fun pitch)]))))
 
 
 ;; SIGNAL FUNCTIONS
+
+;; these will assume a fixed sample rate, to speed computation:
+
+(define SR (exact->inexact (default-sample-rate)))
+(define SRINV (/ 1.0 SR))
 
 ;; dc-signal : number -> signal
 (define (dc-signal volume)
@@ -217,8 +219,8 @@ rsound-max-volume
 
 ;; raw-sine-wave : number number -> signal
 ;; given a pitch and a sample rate, produce a sine wave signal
-(define (raw-sine-wave pitch sample-rate)
-  (define tpisrp (exact->inexact (* 2 pi (/ 1 sample-rate) pitch)))
+(define (raw-sine-wave pitch)
+  (define tpisrp (exact->inexact (* 2 pi SRINV pitch)))
   (network ()
            (angle ((simple-ctr 0.0 tpisrp)))
            (out (sin angle))))
@@ -227,12 +229,12 @@ rsound-max-volume
 
 ;; SYNTHESIS OF THREE-PARTIAL SINE
 
-(define (raw-harm3-wave pitch sample-rate)
+(define (raw-harm3-wave pitch)
   (let ([scalar1 (* twopi pitch)]
         [scalar2 (* twopi 2 pitch)]
         [scalar3 (* twopi 3 pitch)])
     (network ()
-             (ctr ((simple-ctr 0 (/ 1.0 sample-rate))))
+             (ctr ((simple-ctr 0 SRINV)))
              (out (+ (sin (* scalar1 ctr))
                      (* 0.5 (sin (* scalar2 ctr)))
                      (* 0.25 (sin (* scalar3 ctr))))))))
@@ -242,11 +244,13 @@ rsound-max-volume
 ;; SYNTHESIS OF TRIANGULAR WAVES:
 
 
-(define (raw-sawtooth-wave pitch sample-rate)
-  (when (< sample-rate pitch)
-    (raise-argument-error 'raw-sawtooth-wave "pitch lower than sample-rate"
-                          0 pitch sample-rate))
-  (define scalar (exact->inexact (* 2 (* pitch (/ 1 sample-rate)))))
+(define (raw-sawtooth-wave pitch)
+  (when (< (/ SR 2) pitch)
+    (raise-argument-error 
+     'raw-sawtooth-wave 
+     (format "pitch lower than ~s Hz" (/ SR 2))
+     0 pitch))
+  (define scalar (exact->inexact (* 2 (* pitch SRINV))))
   (define (increment p)
     (define next (fl+ p scalar))
     (cond [(< next 1.0) next]
@@ -260,8 +264,8 @@ rsound-max-volume
 ;; a memoized 20-term sawtooth; it'll be slow if you don't hit the 
 ;; wavetable.
 (define sawtooth-terms 20)
-(define (raw-sawtooth-approx-wave pitch sample-rate)
-  (let ([scalar (exact->inexact (* twopi (* pitch (/ 1 sample-rate))))])
+(define (raw-sawtooth-approx-wave pitch)
+  (let ([scalar (exact->inexact (* twopi (* pitch SRINV)))])
     (indexed-signal
      (lambda (i) 
       (for/fold ([sum 0.0])
@@ -275,6 +279,8 @@ rsound-max-volume
 (define pulse-wave
   (network (duty-cycle pitch)
            [angle (+ (prev angle) (* pitch srinv))]))
+
+(define srinv (/ 1.0 (default-sample-rate)))
 
 #;(define ((pulse-wave duty-cycle) pitch sample-rate)
   (when (< (/ sample-rate 2) pitch)
@@ -292,8 +298,9 @@ rsound-max-volume
 
 ;; square waves
 
-(define raw-square-wave (pulse-wave 1/2))
-(define square-wave (make-checked-wave-fun raw-square-wave))
+(define square-wave 
+  (network (pitch)
+           [out (pulse-wave 0.5 pitch)]))
 
 
 ;;fader : frames -> signal
