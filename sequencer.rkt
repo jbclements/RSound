@@ -136,7 +136,6 @@
                [else added?])])))
 
 
-;; oops; module+ isn't released, yet:
 (module+ test
 
   (require rackunit)
