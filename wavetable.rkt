@@ -23,6 +23,11 @@
 ;; how much slower would it be with interpolation?
 ;; flvector -> number number -> signal
 (define ((make-table-based-wavefun vec) pitch sample-rate)
+  (unless (<= (flvector-length vec) wavetable-build-sample-rate)
+    (raise-argument-error 'make-table-based-wavefun
+                          (format "wavetable vector of length ~s"
+                                  wavetable-build-sample-rate)
+                          0 vec))
   (define relative-pitch (* pitch (/ wavetable-build-sample-rate sample-rate)))
   (define skip-rate (inexact->exact (round relative-pitch)))
   (define index-net (loop-ctr wavetable-build-sample-rate skip-rate))

@@ -3,6 +3,7 @@
 (require "../rsound.rkt"
          "../util.rkt"
          "../network.rkt"
+         "plot-signal.rkt"
          rackunit
          rackunit/text-ui
          (for-syntax syntax/parse))
@@ -15,79 +16,74 @@
  (let ()
    ;; non-table-based-sine-wave and square wave
    
-   (check-= (signal-nth (raw-sine-wave 4 44100) 0) 0 1e-4)
-   (check-= (signal-nth (raw-sine-wave 4 44100) 13) (sin (* 2 pi 13/44100 4)) 1e-4)
+   ;; GRR! OFF BY ONE:
+   (check-= (signal-nth (fixed-inputs sine-wave 4) 0)
+            (sin (* 2 pi 1/44100 4))
+            1e-4)
+   (check-= (signal-nth (fixed-inputs sine-wave 4) 13)
+            (sin (* 2 pi 14/44100 4)) 1e-4)
    
-   (check-= (signal-nth (raw-square-wave 2 500) 0) 1.0 1e-4)
-   (check-= (signal-nth (raw-square-wave 2 500) 10) 1.0 1e-4)
-   (check-= (signal-nth (raw-square-wave 2 500) 124) 1.0 1e-4)
-   (check-= (signal-nth (raw-square-wave 2 500) 125) -1.0 1e-4)
-   (check-= (signal-nth (raw-square-wave 2 500) 249) -1.0 1e-4)
-   (check-= (signal-nth (raw-square-wave 2 500) 250)  1.0 1e-4)
-   (check-= (signal-nth (raw-square-wave 3 500) 166) -1.0 1e-4)
-   (check-= (signal-nth (raw-square-wave 3 500) 167)  1.0 1e-4)
+   (define sw (fixed-inputs square-wave 2))
+   (check-= (signal-nth sw 0) 1.0 1e-4)
+   (check-= (signal-nth sw 10) 1.0 1e-4)
+   ;; goes one early, because the signal doesn't start counting at zero....
+   (check-= (signal-nth sw 11023) 1.0 1e-4)
+   (check-= (signal-nth sw 11024) 0.0 1e-4)
+   (check-= (signal-nth sw 22048) 0.0 1e-4)
+   (check-= (signal-nth sw 22049) 1.0 1e-4)
    
-   ;; table-based sine wave and square wave
-   (check-= (signal-nth (sine-wave 4) 0) 0 1e-4)
    
-   (parameterize ([default-sample-rate 500])
-     (check-= (signal-nth (square-wave 2) 0) 1.0 1e-4)
-     (check-= (signal-nth (square-wave 2) 10) 1.0 1e-4)
-     (check-= (signal-nth (square-wave 2) 124) 1.0 1e-4)
-     (check-= (signal-nth (square-wave 2) 125) -1.0 1e-4)
-     (check-= (signal-nth (square-wave 2) 249) -1.0 1e-4)
-     (check-= (signal-nth (square-wave 2) 250)  1.0 1e-4)
-     (check-= (signal-nth (square-wave 3) 166) -1.0 1e-4)
-     (check-= (signal-nth (square-wave 3) 167)  1.0 1e-4))
+   ;; these don't work, because our signals now assume 
+   ;; a fixed sample rate of 44.1KHz.
+   #;(parameterize ([default-sample-rate 500])
+     (define sw (fixed-inputs square-wave 2))
+     (check-= (signal-nth sw 0) 1.0 1e-4)
+     (check-= (signal-nth sw 10) 1.0 1e-4)
+     (check-= (signal-nth sw 124) 1.0 1e-4)
+     (check-= (signal-nth sw 125) -1.0 1e-4)
+     (check-= (signal-nth sw 249) -1.0 1e-4)
+     (check-= (signal-nth sw 250)  1.0 1e-4)
+     (check-= (signal-nth sw 166) -1.0 1e-4)
+     (check-= (signal-nth sw 167)  1.0 1e-4))
    
    ;; make-tone
    (define r (make-tone 882 0.2 44100))
    
-   (check-equal? (rs-ith/left/s16 r 0) 0)
-   (check-equal? (rs-ith/right/s16 r 50) 0)
+   ;; off by one!
+   (check-= (rs-ith/left/s16 r 0) 
+            (round (* s16max (* 0.2 (sin (* twopi 882 1/44100))))) 0.0)
+   (check-equal? (rs-ith/right/s16 r 49) 0)
    (check-= (rs-ith/left/s16 r 27) 
-            (round (* s16max (* 0.2 (sin (* twopi 882 27/44100))))) 0.0)
+            (round (* s16max (* 0.2 (sin (* twopi 882 28/44100))))) 0.0)
    ;; errors late:
-   (check-= (rs-ith/left/s16 r 44099)
+   (check-= (rs-ith/left/s16 r 44098)
             (round (* s16max (* 0.2 (sin (* twopi 882 44099/44100)))))
             1e-7)
    (let ()
    ;; errors crop up only on certain frequencies:
    (define r (make-tone 440 0.2 44100))
    
-   (check-equal? (rs-ith/left/s16 r 0) 0)
+     (check-= (rs-ith/left/s16 r 0)
+              (round (* s16max (* 0.2 (sin (* twopi 440 1/44100))))) 0.0)
    (check-= (rs-ith/left/s16 r 27) 
-            (round (* s16max (* 0.2 (sin (* twopi 440 27/44100))))) 0.0)
+            (round (* s16max (* 0.2 (sin (* twopi 440 28/44100))))) 0.0)
    ;; errors late:
      (define (small x) (< x 1e-7))
      (for ([i 44100])
        (unless (small 
                 (abs
                  (- (rs-ith/left/s16 r i)
-                    (round (* s16max (* 0.2 (sin (* twopi 440 (/ i 44100)))))))))
-         (error 'uhoh "panic!: ~s" i))))
-   
-   
-   (let ()
-     (define r (make-tone 440 0.2 (default-sample-rate)))
-     
-     (check-equal? (rs-ith/left/s16 r 0) 0)
-     (check-= (signal-nth (sine-wave 440) 427) 
-              (sin (* twopi 440 427/44100))
-              1e-4)
-     (check-= (signal-nth (raw-sine-wave 440 44100) 427) 
-              (sin (* twopi 440 427/44100))
-              1e-4)
-   (check-= (rs-ith/left/s16 r 427) 
-            (round (* s16max (* 0.2 (sin (* twopi 440 427/44100))))) 0.0))
-   
+                    (round (* s16max (* 0.2 (sin (* twopi 440 (/ (add1 i) 44100)))))))))
+         (error 'uhoh "failure on sample # ~s" i))))
+
+   ;; can't do this any more...
    ;; non-default sample-rate:
-   (let ([r (parameterize ([default-sample-rate 3420])
+   #;(let ([r (parameterize ([default-sample-rate 3420])
               (make-tone 882 0.2 1000))])
      (check-equal? (rsound-sample-rate r) 3420)
      ;; serious inexactness results from rounding in wavetables:
      (check-= (rs-ith/left/s16 r 27) 
-              (round (* s16max (* 0.2 (sin (* twopi 882 27/3420))))) 4.0))
+              (round (* s16max (* 0.2 (sin (* twopi 882 28/44100))))) 4.0))
    
 
    
@@ -162,7 +158,7 @@
    ;; memoizing
    
    (let ([s1 (signal->rsound 200 (signal-*s (list (dc-signal 0.5) 
-                                                  (sine-wave 100))))]
+                                                  (fixed-inputs sine-wave 100))))]
          [s2 (time (make-tone 100 0.5 441000))]
          [s3 (time (make-tone 100 0.5 441000))])
      (check-= (rs-ith/right/s16 s1 73)

@@ -10,6 +10,7 @@
          signal-+s
          (struct-out network/s)
          (contract-out [network-init (-> network/c procedure?)])
+         fixed-inputs
          loop-ctr
          simple-ctr
          signal-samples
@@ -39,9 +40,6 @@
 
 
 ;; maker: (-> (arg ... -> result ...))
-
-;; ah, fergeddit; I'm going with zero inits for prevs.
-
 
 (define-syntax prev (syntax-rules ()))
 
@@ -166,6 +164,13 @@
   (or (and (network/s? f) (= (network/s-ins f) 0))
       (and (procedure? f) (procedure-arity-includes? f 0))))
 
+;; take a network with inputs and a set of fixed 
+;; inputs and return a new signal closed over those inputs
+(define-syntax (fixed-inputs stx)
+  (syntax-parse stx
+    [(_ net arg ...)
+     #'(network () [out (net arg ...)])]))
+
 
 ;; multiply the signals together:
 (define (signal-*s los)
@@ -201,9 +206,6 @@
   (network ()
            (out (+ skip (prev out)) #:init (- init skip))))
 
-
-(struct unforgeable/s ())
-(define unforgeable (unforgeable/s))
 
 ;; a vector containing the first 'n' samples of a signal
 (define (signal-samples signal n)

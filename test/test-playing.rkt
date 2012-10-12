@@ -47,7 +47,7 @@
 (sleep 1)
 
 (printf "\nplaying a signal\n")
-(signal-play (sine-wave 440))
+(signal-play (fixed-inputs sine-wave 440))
 (sleep 1)
 (stop)
 (sleep 1)

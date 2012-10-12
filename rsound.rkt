@@ -37,6 +37,7 @@
                      rs-play/helper
                      rs-mutator)
          network
+         fixed-inputs
          prev
          signal?
          signal-+s
@@ -57,7 +58,7 @@
 ;; for students. 
 ;; ... actually, I'm just going to make it a constant, to
 ;; speed things up.
-(define default-sample-rate 44100)
+(define default-sample-rate (make-parameter 44100))
 
 ;; an rsound (racket sound) provides a representation for sounds 
 ;; that leaves them packed as C data. For the moment, it's 
