@@ -37,6 +37,7 @@
                      rs-play/helper
                      rs-mutator)
          network
+         fixed-inputs
          prev
          signal?
          signal-+s

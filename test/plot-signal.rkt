@@ -6,6 +6,7 @@
          "../util.rkt"
          "../filter.rkt")
 
+(provide plot-signal plot-signals)
 ;; for interactive testing, right now.
 
 (define (plot-signal signal #:max [max-idx 30])
@@ -21,6 +22,7 @@
          (vector i (sigfun))))))
   (plot (apply mix datas)))
 
+#|
 (plot-signals (list (raw-sine-wave 882 44100)
                     (sine-wave 882)))
 
@@ -34,3 +36,4 @@
             [control ((dc-signal 0.1))]
             [out (lpf/dynamic control a)])
    #:max 400)
+|#
