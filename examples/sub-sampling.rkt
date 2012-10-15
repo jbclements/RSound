@@ -11,7 +11,7 @@
 
 #;(play song-chunk)
 
-(define msr mono-signal->rsound)
+(define msr signal->rsound)
 
 (define (quantize q num)
   (/ (/ (floor (* q (* num 32768.0))) q) 32768.0))
