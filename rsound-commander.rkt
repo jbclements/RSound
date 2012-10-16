@@ -1,6 +1,6 @@
 #lang racket
 
-(require (planet clements/portaudio:3)
+(require (planet clements/portaudio:3:1)
          (only-in ffi/unsafe cpointer? ptr-set! _sint16)
          ffi/vector
          racket/async-channel)
@@ -93,11 +93,17 @@
       (ptr-set! ptr _sint16 (add1 sample-num) sample)))
   signal/block/unsafe)
 
-
+;; set default buffer time
 (define default-buffer-time 
   (case (system-type)
     [(windows) 0.06]
     [(macosx unix) 0.05]))
+
+;; set default API on windows to be WASAPI....
+(case (system-type)
+  [(windows) (host-api 'paWASAPI)]
+  [else #f])
+
 
 ;; CONVERSIONS
 

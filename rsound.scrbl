@@ -34,6 +34,15 @@ the @emph{loudest possible sine wave} that can be represented. So please set you
 and be careful with the headphones. Maybe there should be a parameter that controls the clipping 
 volume. Hmm.
 
+@section{A NOTE ABOUT WINDOWS}
+
+Windows is a bit of a pain for developers. If you're having trouble hearing sounds under 
+windows (high latency, or "Invalid Device" errors), try running @racket[diagnose-sound-playing].
+
+@defproc[(diagnose-sound-playing) void?]{
+ Tries playing a short tone using all of the available APIs and several plausible sample rates.
+ It tries to offer a helpful message, along with the test.}
+
 @section{Sound Control}
 
 These procedures start and stop playing sounds and loops.
