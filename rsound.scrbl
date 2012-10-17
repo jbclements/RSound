@@ -173,27 +173,96 @@ These procedures allow the creation, analysis, and manipulation of rsounds.
 @defproc[(rs-scale (scalar nonnegative-number?) (rsound rsound?)) rsound?]{
  Scale the given sound by multiplying all of its samples by the given scalar.}
 
-@section{Signals}
+@section{Signals and Networks}
 
-A signal is a function of no arguments that produces real numbers in the range @racket[-1.0] to @racket[1.0]. There
-are several built-in functions that produce signals.
+For signal processing, RSound adopts a dataflow-like paradigm. Networks represent
+interconnected signal-processing nodes, and produce streams of values. They can be
+connected together using a number of primitives, including the @racket[network]
+syntactic form. Networks that have no inputs are called @deftech{signals}.
 
-@defproc[(sine-wave [frequency nonnegative-number?]) signal?]{
+Here's a trivial signal:
+
+@racketblock[
+(network ()
+         [out (+ 1 2)])]
+
+This is the signal that always produces 3.
+
+Here's another one, that counts upward:
+
+@racketblock[
+(define counter/sig
+  (network ()
+           [counter (+ 1 (prev counter))]))]
+
+The @racket[prev] form is special, and is used to refer to the prior value of the
+signal component.
+
+Here's another example, that adds together two sine waves, at 34 Hz and 46 Hz, assuming 
+a sample rate of 44.1KHz:
+
+@racketblock[
+(define sum-of-sines
+  (network ()
+           [a (sine-wave 34)]
+           [b (sine-wave 46)]
+           [out (+ a b)]))]
+
+Several things to note:
+@itemlist[@item{a network can have many clauses; each clause contains a name and a right-hand-side.}
+           @item{a right-hand-side must be an application, either of a primitive function or of a network.}
+           @item{the last clause is used as the output, regardless of its name.}
+           @item{clauses can produce multiple values; in this case, the name is replaced by a parenthesized list.}
+          ]
+
+A clause may also have an optional @racket[#:init] clause, specifying its initial value.  This is important when
+a clause occurs in a @racket[prev] clause.
+
+In order to use a signal with @racket[signal-play], it should produce a real number in the range @racket[-1.0] to @racket[1.0].
+
+Here's an example that uses one sine-wave (often called an "LFO") to control the pitch of another one:
+
+@racketblock[
+(define vibrato-tone
+  (network ()
+           [lfo (sine-wave 2)]
+           [sin (sine-wave (+ 400 (* 50 lfo)))]
+           [out (* 0.1 sin)]))
+(signal-play vibrato-tone)
+(sleep 5)
+(stop)
+]
+
+There are many built-in signals. Note that these are documented as 
+though they were procedures, but they're not; they can be used in
+a procedure-like way in network clauses. Otherwise, they will behave
+as opaque values; you can pass them to various signal functions, etc.
+
+Also note that all of these assume a fixed sample rate of 44.1 KHz.
+
+@defproc[#:kind "signal"
+                (sine-wave [frequency nonnegative-number?]) real?]{
  Produces a signal representing a sine wave of the given
  frequency, at the default sample rate, of amplitude 1.0.}
 
-@defproc[(sawtooth-wave [frequency nonnegative-number?]) signal?]{
+@defproc[#:kind "signal"
+                (sawtooth-wave [frequency nonnegative-number?]) real?]{
  Produces a signal representing a naive sawtooth wave of the given
  frequency, of amplitude 1.0. Note that since this is a simple -1.0 up to 1.0 sawtooth wave, it's got horrible 
  aliasing all over the spectrum.}
 
-@defproc[(square-wave [frequency nonnegative-number?] [sample-rate nonnegative-number?]) signal?]{
+@defproc[#:kind "signal"
+                (square-wave [frequency nonnegative-number?]) real?]{
  Produces a signal representing a naive square wave of the given
- frequency, of amplitude 1.0, at the default sample rate. 
- Note that since this is a simple 1/-1 square wave, it's got horrible 
+ frequency, of amplitude 1.0, at the default sample rate. It alternates
+ between 1.0 and 0.0, which makes it more useful in, e.g., gating 
+ applications.
+ 
+ Also note that since this is a simple 1/-1 square wave, it's got horrible 
  aliasing all over the spectrum.}
 
-@defproc[(dc-signal [amplitude real?]) signal?]{
+@defproc[#:kind "signal"
+                (dc-signal [amplitude real?]) real?]{
  Produces a constant signal at @racket[amplitude]. Inaudible unless used to multiply by
  another signal.}
 
@@ -203,37 +272,26 @@ In order to listen to them, you can transform them into rsounds, or play them di
  Builds a sound of length @racket[frames] at the default sample-rate by calling 
  @racket[signal] with integers from 0 up to @racket[frames]-1. The result should be an inexact 
  number in the range @racket[-1.0] to @racket[1.0]. Values outside this range are clipped.
- Both channels are identical. 
+ Both channels are identical.
  
  Here's an example of using it:
- 
+
  @racketblock[
-(define samplerate 44100)
-(define sr/inv (/ 1 samplerate))
+(define sig1
+  (network ()
+           [a (sine-wave 560)]
+           [out (* 0.1 a)]))
 
-;; FIXME!
-(define (sig1 t)
-  (* 0.1 (sin (* t 560 twopi sr/inv))))
-
-(define r (signal->rsound (* samplerate 4) sig1))
+(define r (signal->rsound 44100 sig1))
 
 (play r)]
- 
- Alternatively, we could use @racket[sine-wave] to achieve the same result:
- 
- @racketblock[
-(define samplerate (default-sample-rate))
-
-(define r (signal->rsound (* samplerate 4) (rs-scale 0.1 (sine-wave 560 samplerate))))
-
-(play r)]}
-                                                  
-                                                  
 
 @defproc[(signals->rsound (frames nonnegative-integer?) 
-                             (left-fun signal?) (right-fun signal?)) rsound?]{
- Builds a stereo sound of length @racket[frames] by calling 
- @racket[left-fun] and @racket[right-fun] 
+                             (left-sig signal?) (right-sig signal?)) rsound?]{
+ Builds a stereo sound of length @racket[frames] by using
+ @racket[left-sig] and @racket[right-sig] to generate the
+ samples for the left and right channels.
+ 
  with integers from 0 up to @racket[frames]-1. The result should be an inexact 
  number in the range @racket[-1.0] to @racket[1.0]. Values outside this range are clipped.}
                                                                              

@@ -1,6 +1,7 @@
 #lang racket
 
-(require (for-syntax syntax/parse))
+(require (for-syntax syntax/parse)
+         racket/stxparam)
 
 
 (provide network
@@ -41,113 +42,107 @@
 
 ;; maker: (-> (arg ... -> result ...))
 
-(define-syntax prev (syntax-rules ()))
+(define-syntax-parameter prev (lambda (stx)
+                                #'(error "can't use prev outside of a network definition")))
 
 ;; this is the cleaned-up version. It insists on having a sequence of ids for the out-names
 (define-syntax (network/inr stx)
   (define-syntax-class network-clause
     #:description "network/inr clause"
-    (pattern ((out:id ...) (node:expr input:node-in ...) (init:expr ...))))
-  (define-syntax-class node-in
-    #:description "network/inr node input"
-    #:literals (prev)
-    (pattern (prev in-ref:id))
-    (pattern in:expr))
+    (pattern ((out:id ...) (node:expr input:expr ...))))
   (syntax-parse stx
     [(_ (in:id ...)
         clause:network-clause ...+)
      (define num-ins (length (syntax->list #'(in ...))))
-     (define num-clauses (length (syntax->list #'(clause ...))))
      (define lhses (syntax->list #'((clause.out ...) ...)))
-     (define last-out 
-       (syntax-parse (car (reverse lhses))
-         [(out:id) #'out]
-         [(out:id out2:id ...+) #'(values out out2 ...)]))
+     (define num-outs (length (syntax->list (car (reverse lhses)))))
      (define lhses/flattened (syntax->list #'(clause.out ... ...)))
-     (define (rewrite/l input-list)
-       (map rewrite (syntax->list input-list)))
-     ;; rewrite occurrences of "prev" into vector references
-     (define (rewrite in)
-       (syntax-parse in
-         #:literals (prev)
-         [(prev in:id) #`(vector-ref saves-vec #,(find-idx #'in))]
-         [other:expr #'other]))
-     ;; extract inits; in the case of multi-inits, this may involve
-     ;; extra work.
-     (define (extract-inits clause-info)
-       (syntax-parse clause-info
-         [((id:id ...) (init:expr ...))
-          (define out-len (length (syntax->list #'(id ...))))
-          (define init-len (length (syntax->list #'(init ...))))
-          (cond [(= out-len init-len) #'(init ...)]
-                [(and (< 1 out-len) (= init-len 0))
-                 ;; auto-default:
-                 (for/list ([i out-len]) #'0.0)]
-                [else (error 'network
-                             "expected init list of length ~a, got ~e"
-                             out-len 
-                             (map syntax->datum
-                                  (syntax->list #'(init ...))))])]))
-     (define (find-idx id)
-       (let loop ([lhses lhses/flattened]
-                  [i 0])
-         (cond [(null? lhses) 
-                (error 'network
-                       "expected prev to name an output node, got: ~s"
-                       id)]
-               [(free-identifier=? id (car lhses))
-                #`(quote #,i)]
-               [else (loop (cdr lhses) (add1 i))])))
-     (with-syntax ([(signal-proc ...)
-                    (generate-temporaries #'(clause ...))]
-                   [((arg ...) ...)
-                    (map rewrite/l (syntax->list
-                                    #'((clause.input ...) ...)))]
-                   [(idx ...)
-                    (for/list ([i (in-range (length lhses/flattened))])
-                      #`(quote #,i))]
-                   [(lhs ...) lhses/flattened]
-                   [((init ...) ...) (map extract-inits
-                                    (syntax->list
-                                     #'(((clause.out ...)
-                                         (clause.init ...))
-                                        ...)))])
+     (with-syntax
+         ([(saved-val ...) (generate-temporaries lhses/flattened)]
+          [(signal-proc ...) (generate-temporaries #'(clause ...))]
+          [(lhs ...) lhses/flattened]
+          [last-out
+           (syntax-parse (car (reverse lhses))
+             [(out:id) #'out]
+             [(out:id out2:id ...+) #'(values out out2 ...)])])
        (with-syntax 
-           ([maker
-             #`(lambda ()
-                 (define saves-vec
-                   (vector init ... ...))
-                 (define signal-proc (network-init clause.node))
-                 ...
-                 (lambda (in ...)
-                   (let*-values ([(clause.out ...) (signal-proc arg ...)]
-                         ...)
-                     (begin
-                       (vector-set! saves-vec idx lhs)
-                       ...)
-                     #,last-out)))])
-         #`(network/s (quote #,num-ins) 1 maker)))])
-  )
+           (;; this one just reduces to the init:
+            [init-prev
+             #`(lambda (stx)
+                 (syntax-parse stx
+                   #:literals (prev)
+                   [(_ id init) #'init]))]
+            ;; this one does a lookup:
+            ;; NB: TOTALLY SCARY MACRO STUFF HERE: this is 
+            ;; expanding into a macro definition. The macro
+            ;; definition that goes into the code doesn't
+            ;; have any dots in it.
+            [lookup-prev
+             #'(lambda (stx)
+                 (syntax-case stx (lhs ...)
+                   [(_ lhs init) #'saved-val] 
+                   ...))]
+            ;; the body of the function is the same for each one,
+            ;; just nested inside a different syntax-parameterize
+            [fun-body
+             #`(let*-values ([(clause.out ...) (signal-proc 
+                                                clause.input ...)]
+                             ...)
+                 (begin
+                   (set! saved-val lhs)
+                   ...)
+                 last-out)])
+         (with-syntax
+             ([maker
+               #`(lambda ()
+                   (define saved-val #f)
+                   ...
+                   (define signal-proc (network-init clause.node))
+                   ...
+                   ;; this one should be used only after the saved-vals
+                   ;; are initialized
+                   (define (later-times-fun in ...)
+                     ;; in this one, "prev" should do a lookup
+                     (syntax-parameterize
+                      ([prev lookup-prev])
+                      fun-body))
+                   (define (first-time-fun in ...)
+                     ;; mutate myself into the later-times-fun...
+                     (set! first-time-fun later-times-fun)
+                     ;; in this one, "prev" should just insert the init vals
+                     (syntax-parameterize
+                      ([prev init-prev])
+                      fun-body))
+                   (lambda (in ...)
+                     (first-time-fun in ...)))])
+           #`(network/s (quote #,num-ins) 
+                        (quote #,num-outs)
+                        maker))))]))
 
 (define-syntax (network stx)
+  (define-syntax-class oneormoreids
+    #:description "id or (id ...)"
+    (pattern out:id)
+    (pattern (outs:id ...)))
+  (define-syntax-class rhs
+    #:description "network clause rhs"
+    #:literals (prev)
+    (pattern (prev named:id init:expr))
+    (pattern (node:expr input:expr ...))
+    (pattern input:expr))
   (define-syntax-class network-clause
     #:description "network clause"
-    (pattern (out1:id (node:expr input:node-in ...) (~optional (~seq #:init init:expr) #:defaults ([init #'0]))))
-    (pattern ((out*:id ...) (node:expr input:node-in ...)
-                            (~optional (~seq #:init init*:expr ...)
-                                       #:defaults ([(init* 1) null])))))
-  (define-syntax-class node-in
-    #:description "network node input"
     #:literals (prev)
-    (pattern (prev in-ref:id))
-    (pattern in:expr))
+    (pattern (outs:oneormoreids rhs:rhs)))
+  ;; right here: split rewrite into two functions!
   (define (rewrite clause)
     (syntax-parse clause
-      [(out1:id  (node:expr input:node-in ...)
-                 (~optional (~seq #:init init:expr) #:defaults ([init #'0])))
-       #'((out1) (node input ...) (init))]
-      [((out*:id ...) (node:expr input:node-in ...) (~optional (~seq #:init (init:expr ...)) #:defaults ([(init 1) null])))
-       #'((out* ...) (node input ...) (init ...))]))
+      [(out1a:id  (node:expr input:expr ...))
+       #'((out1a) (node input ...))]
+      [(out1b:id  node:expr)
+       #'((out1b) ((lambda (x) x) node))]
+      [((out*a:id ...) (node:expr input:expr ...))
+       #'((out*a ...) (node input ...))]))
   (syntax-parse stx
     [(_ (in:id ...)
         clause:network-clause ...+)
@@ -198,13 +193,17 @@
     (cond [(< next-p len) next-p]
           [else (- next-p len)]))
   (network ()
-           (out (increment (prev out)) #:init (- skip))))
+           [a ((lambda (x) x) (prev b 0))]
+           [b (+ 1 a)]
+           [out a]))
 
 ;; a signal that simply starts at "init"  and adds "skip"
 ;; each time
 (define (simple-ctr init skip)
   (network ()
-           (out (+ skip (prev out)) #:init (- init skip))))
+           [a ((lambda (x) x)(prev b 0))]
+           [b (+ skip a)]
+           [out a]))
 
 
 ;; a vector containing the first 'n' samples of a signal
@@ -218,3 +217,84 @@
   (for ([i n]) (sigfun))
   (sigfun))
 
+
+
+
+#|
+
+     #;(define num-clauses (length (syntax->list #'(clause ...))))
+     #;(define lhses (syntax->list #'((clause.out ...) ...)))
+     #;(define last-out 
+       (syntax-parse (car (reverse lhses))
+         [(out:id) #'out]
+         [(out:id out2:id ...+) #'(values out out2 ...)]))
+     #;(define lhses/flattened (syntax->list #'(clause.out ... ...)))
+     (define (rewrite/l input-list)
+       (map rewrite (syntax->list input-list)))
+     ;; rewrite occurrences of "prev" into vector references
+     (define (rewrite in)
+       (syntax-parse in
+         #:literals (prev)
+         [(prev in:id) #`(vector-ref saves-vec #,(find-idx #'in))]
+         [other:expr #'other]))
+     ;; extract inits; in the case of multi-inits, this may involve
+     ;; extra work.
+     (define (extract-inits clause-info)
+       (syntax-parse clause-info
+         [((id:id ...) (init:expr ...))
+          (define out-len (length (syntax->list #'(id ...))))
+          (define init-len (length (syntax->list #'(init ...))))
+          (cond [(= out-len init-len) #'(init ...)]
+                [(and (< 1 out-len) (= init-len 0))
+                 ;; auto-default:
+                 (for/list ([i out-len]) #'0.0)]
+                [else (error 'network
+                             "expected init list of length ~a, got ~e"
+                             out-len 
+                             (map syntax->datum
+                                  (syntax->list #'(init ...))))])]))
+
+
+
+
+     (define (find-idx id)
+       (let loop ([lhses lhses/flattened]
+                  [i 0])
+         (cond [(null? lhses) 
+                (error 'network
+                       "expected prev to name an output node, got: ~s"
+                       id)]
+               [(free-identifier=? id (car lhses))
+                #`(quote #,i)]
+               [else (loop (cdr lhses) (add1 i))])))
+
+
+     (with-syntax ([(signal-proc ...)
+                    (generate-temporaries #'(clause ...))]
+                   [((arg ...) ...)
+                    (map rewrite/l (syntax->list
+                                    #'((clause.input ...) ...)))]
+                   [(idx ...)
+                    (for/list ([i (in-range (length lhses/flattened))])
+                      #`(quote #,i))]
+                   [(lhs ...) lhses/flattened]
+                   [((init ...) ...) (map extract-inits
+                                    (syntax->list
+                                     #'(((clause.out ...)
+                                         (clause.init ...))
+                                        ...)))])
+       (with-syntax 
+           ([maker
+             #`(lambda ()
+                 (define saves-vec
+                   (vector init ... ...))
+                 (define signal-proc (network-init clause.node))
+                 ...
+                 (lambda (in ...)
+                   (let*-values ([(clause.out ...) (signal-proc arg ...)]
+                         ...)
+                     (begin
+                       (vector-set! saves-vec idx lhs)
+                       ...)
+                     #,last-out)))])
+         #`(network/s (quote #,num-ins) 1 maker)))|#
