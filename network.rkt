@@ -135,6 +135,17 @@
     #:literals (prev)
     (pattern (outs:oneormoreids rhs:rhs)))
   ;; right here: split rewrite into two functions!
+  (define (ensure-parens ids)
+    (syntax-parse ids
+      [out:id #'(out)]
+      [(outs:id ...) #'(outs ...)]))
+  ;; stick the identity function in to avoid disrupting certain forms:
+  (define (maybe-wrap rhs)
+    (syntax-parse rhs
+      #:literals (prev)
+      [(prev named:id init:expr) #'((lambda (x) x) (prev named init))]
+      [(node:expr input:expr ...) #'(node input ...)]
+      [node:expr #'((lambda (x) x) node)]))
   (define (rewrite clause)
     (syntax-parse clause
       [(out1a:id  (node:expr input:expr ...))
@@ -146,10 +157,12 @@
   (syntax-parse stx
     [(_ (in:id ...)
         clause:network-clause ...+)
-     (with-syntax ([(new-clause ...)
-                    (map rewrite (syntax->list #'(clause ...)))])
+     (with-syntax ([((outs ...) ...)
+                    (map ensure-parens (syntax->list #'(clause.outs ...)))]
+                   [(rhs ...)
+                    (map maybe-wrap (syntax->list #'(clause.rhs ...)))])
        #'(network/inr (in ...)
-                      new-clause ...))])
+                      [(outs ...) rhs] ...))])
   )
 
 
@@ -193,15 +206,15 @@
     (cond [(< next-p len) next-p]
           [else (- next-p len)]))
   (network ()
-           [a ((lambda (x) x) (prev b 0))]
-           [b (+ 1 a)]
+           [a (prev b 0)]
+           [b (increment a)]
            [out a]))
 
 ;; a signal that simply starts at "init"  and adds "skip"
 ;; each time
 (define (simple-ctr init skip)
   (network ()
-           [a ((lambda (x) x)(prev b 0))]
+           [a (prev b init)]
            [b (+ skip a)]
            [out a]))
 

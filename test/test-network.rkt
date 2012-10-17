@@ -22,7 +22,7 @@
 
 (define variable-pitch-oscillator
   (network (incr)
-           [angle (cyclic-angle incr (prev angle))]
+           [angle (cyclic-angle incr (prev angle 0.0))]
            [wave (lookup angle)]))
 
 (define mynet
@@ -42,7 +42,7 @@
      ;; test case that exposes an old bug:
      (define testnet
        (network ()
-                (offby1 (+ 10 (prev offby1)))
+                (offby1 (+ 10 (prev offby1 0)))
                 (out ((lambda (i) i) (sub1 offby1)))))
      
      (define a (network-init testnet))
@@ -51,6 +51,12 @@
      (check-equal? (a) 19)
      
      )
+   
+   (check-equal? 
+    (signal-samples (network ()
+                             (out ((simple-ctr 10 -1))))
+                    3)
+    (vector 10 9 8))
    
    (let ()
      (define testnet 
@@ -82,8 +88,7 @@
        (values (+ 1 a) (+ 2 b) (+ 3 c)))
      (define testnet
        (network ()
-                [(a b c) (addall (prev a) (prev b) (prev c))
-                         #:init (3 18 9)]
+                [(a b c) (addall (prev a 3) (prev b 18) (prev c 9))]
                 [d (+ a b c)]))
      
      (check-equal? (signal-samples testnet 3)
@@ -97,13 +102,13 @@
        (values (+ 1 a) (+ 2 b) (+ 3 c)))
      (define testnet
        (network ()
-                [(a b c) (addall (prev a) (prev b) (prev c))]
+                [(a b c) (addall (prev a 0) (prev b 0) (prev c 0))]
                 [d (+ a b c)]))
      
      (check-equal? (signal-samples testnet 3)
-                   (vector (+ 1.0 2 3)
-                           (+ 2.0 4 6)
-                           (+ 3.0 6 9))))
+                   (vector (+ 1 2 3)
+                           (+ 2 4 6)
+                           (+ 3 6 9))))
    
    ;; syntax error:
    #;(let ()
@@ -125,7 +130,7 @@
      ;; try out new "init"
      (define testnet
        (network ()
-                (a (add1 (prev a)) #:init 147)
+                (a (add1 (prev a 147)))
                 (b (+ a a))))
      
      (define a (network-init testnet))
@@ -154,7 +159,7 @@
    (check-equal? (signal? (lambda () 14)) #t)
    (check-equal? (signal? (lambda (x y) 14)) #f)
    (check-equal? (signal? (lambda args 14)) #t)
-   (check-equal? (signal? (network () (out ((lambda (x) x) 3)))) #t)
+   (check-equal? (signal? (network () (out 3))) #t)
    
    ;; signal-+s
    
