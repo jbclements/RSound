@@ -27,6 +27,7 @@ rsound-max-volume
          rs-map/idx
          rs-scale
          resample
+         resample/interp
          clip
          rs-mult
          twopi
@@ -154,6 +155,33 @@ rsound-max-volume
                      left
                      right)))
 
+;; given a factor and a sound, resample the sound (using linear interpolation)
+;; to obtain a new one. Using e.g. factor of 2 will make the sound one
+;; octave higher and half as long.
+(define (resample/interp factor sound)
+  (define new-sound-len 
+    (inexact->exact (floor (/ (rs-frames sound) factor))))
+  (define (the-sig extractor)
+    (lambda (i)
+      (define virtual-source-sample (min (sub1 (rs-frames sound))
+                                         (* factor i)))
+      (define lower-index (inexact->exact (floor virtual-source-sample)))
+      (define fractional-part (- virtual-source-sample lower-index))
+      (cond [(= fractional-part 0) (extractor sound lower-index)]
+            [else (+ (* (- 1.0 fractional-part) (extractor sound lower-index))
+                     (* fractional-part (extractor sound (add1 lower-index))))])))
+  (define left 
+    (indexed-signal (the-sig rs-ith/left)))
+  (define right
+    (indexed-signal (the-sig rs-ith/right)))
+  (parameterize ([default-sample-rate 
+                   (rsound-sample-rate sound)])
+    (signals->rsound new-sound-len
+                     left
+                     right)))
+
+
+
 
 ;; produce a new rsound by multiplying each sample in the
 ;; first by each sample in the second. The length and sample
@@ -222,7 +250,7 @@ rsound-max-volume
 
 (define sine-wave
   (network (pitch)           
-           [angle (angle-add (prev angle) (* pitch TPSRINV)) #:init 0.0]
+           [angle (angle-add (prev angle 0.0) (* pitch TPSRINV))]
            [output (sin angle)]))
 
 ;; SYNTHESIS OF THREE-PARTIAL SINE
@@ -250,7 +278,9 @@ rsound-max-volume
     (cond [(< next 1.0) next]
           [else (- next 2.0)]))
   (network ()
-           (out (increment (prev out)) #:init (- scalar))))
+           [b (prev a 0.0)]
+           [a (increment b)]
+           [out b]))
 
 (define sawtooth-wave (make-checked-wave-fun raw-sawtooth-wave))
 
@@ -275,7 +305,7 @@ rsound-max-volume
 ;; also, the angle goes 
 (define pulse-wave
   (network (duty-cycle pitch)
-           [angle (angle-add/unit (prev angle) (* pitch SRINV)) #:init 0.0]
+           [angle (angle-add/unit (prev angle 0.0) (* pitch SRINV))]
            [out (pulse-wave-thresh angle duty-cycle)]))
 
 ;; add args, subtract 2pi if greater than 2pi. assumes all values
@@ -307,7 +337,7 @@ rsound-max-volume
 (define (fader fade-frames)
   (let ([p (expt 0.001 (/ 1 fade-frames))])
     (network ()
-             (out (* p (prev out)) #:init (/ 1 p)))))
+             (out (* p (prev out 1.0))))))
 
 ;; frisellinator : frames -> signal
 (define (frisellinator intro-frames)
@@ -517,7 +547,7 @@ rsound-max-volume
           [else 0]))
   (network ()
            (frame ((simple-ctr 0 1)))
-           (volume (ramp frame (prev volume)) #:init (- slope1))))
+           (volume (ramp frame (prev volume 0.0)))))
 
 ;; FFTs
 

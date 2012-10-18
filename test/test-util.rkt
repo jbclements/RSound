@@ -317,6 +317,28 @@
      (check-equal? (rs-ith/left s2 159)
                    (rs-ith/left s1 39)))
    
+   ;; resample/interp
+   ;; tolerances low (1e-4) because of rounding
+   ;; due to s16 coercion
+   (let ()
+     (define s1 (noise 50))
+     (define s2 (resample/interp 0.25 s1))
+     (check-equal? (rs-frames s2) 200)
+     (check-equal? (rs-ith/right s2 156)
+                   (rs-ith/right s1 39))
+     (check-= (rs-ith/left s2 157)
+              (+ (* 0.75 (rs-ith/left s1 39))
+                 (* 0.25 (rs-ith/left s1 40)))
+              1e-4)
+     (check-= (rs-ith/right s2 158)
+              (+ (* 0.5 (rs-ith/right s1 39))
+                 (* 0.5 (rs-ith/right s1 40)))
+              1e-4)
+     (check-= (rs-ith/left s2 159)
+              (+ (* 0.25 (rs-ith/left s1 39))
+                 (* 0.75 (rs-ith/left s1 40)))
+              1e-4))
+   
    
    
    ;; tests of rsound-largest-sample

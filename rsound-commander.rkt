@@ -19,6 +19,8 @@
                                    void?))
                   [signal->signal/block/unsafe
                    (-> procedure? procedure?)]
+                  [signal/16->signal/block/unsafe
+                   (-> procedure? procedure?)]
                   [signal/block-play 
                    (-> procedure? nonnegative-real? 
                        (or/c nonnegative-real? false?) 
@@ -81,13 +83,23 @@
    (lambda () (stop-sound)))
   stream-time)
 
-;; given a signal, produces a signal/block/unsafe;
+;; given a function that produces reals, produces a signal/block/unsafe;
 ;; that is, a function that can fill a full buffer on
 ;; each call.
-(define (signal->signal/block/unsafe signal)
+(define (signal->signal/block/unsafe sample-maker)
   (define (signal/block/unsafe ptr frames)
     (for ([frame (in-range 0 frames)])
-      (define sample (real->s16 (signal)))
+      (define sample (real->s16 (sample-maker)))
+      (define sample-num (* frame channels))
+      (ptr-set! ptr _sint16 sample-num sample)
+      (ptr-set! ptr _sint16 (add1 sample-num) sample)))
+  signal/block/unsafe)
+
+;; given a function that produces s16s, produce a signal/block/unsafe.
+(define (signal/16->signal/block/unsafe sample-maker)
+  (define (signal/block/unsafe ptr frames)
+    (for ([frame (in-range 0 frames)])
+      (define sample (sample-maker))
       (define sample-num (* frame channels))
       (ptr-set! ptr _sint16 sample-num sample)
       (ptr-set! ptr _sint16 (add1 sample-num) sample)))

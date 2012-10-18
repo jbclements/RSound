@@ -155,6 +155,13 @@
   (define sample-maker (network-init signal))
   (rc:signal/block-play/unsafe (rc:signal->signal/block/unsafe sample-maker) (default-sample-rate) #f))
 
+;; play an s16-producing signal using portaudio
+(define (signal-play/16 signal)
+  (unless (signal? signal)
+    (raise-argument-error 'signal-play/16 "signal" 0 signal))
+  (define sample-maker (network-init signal))
+  (rc:signal/block-play/unsafe (rc:signal/16->signal/block/unsafe sample-maker) (default-sample-rate) #f))
+
 ;; play a signal/block using portaudio:
 (define (signal/block-play signal/block sample-rate #:buffer-time [buffer-time #f])
   (unless (signal/block? signal/block)

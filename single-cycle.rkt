@@ -15,7 +15,8 @@
 
 
 (provide synth-note
-         synth-note/raw)
+         synth-note/raw
+         synth-waveform)
 
 (define-runtime-path main-wave-path "./contrib/AKWF_0001/")
 (define-runtime-path vgame-wave-path "./contrib/AKWF_vgame/")
@@ -48,6 +49,12 @@
   (define single-cycle 
     (resample/memo (/ pitch native-pitch) wave))
   (tile-to-len single-cycle duration))
+
+;; generate a 1Hz waveform:
+(define (synth-waveform family wave-spec)
+  (define wave (wave-lookup family wave-spec))
+  (define native-pitch (/ (default-sample-rate) (rs-frames wave)))
+  (resample/interp (/ 1 native-pitch) wave))
 
 ;; generating menus:
 (define (menu group max-idx)
