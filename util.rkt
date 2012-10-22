@@ -249,8 +249,9 @@ rsound-max-volume
 ;; SYNTHESIS OF SINE WAVES
 
 (define sine-wave
-  (network (pitch)           
-           [angle (angle-add (prev angle 0.0) (* pitch TPSRINV))]
+  (network (pitch)
+           [angle (prev added 0.0)]
+           [added (angle-add angle (* pitch TPSRINV))]
            [output (sin angle)]))
 
 ;; SYNTHESIS OF THREE-PARTIAL SINE
@@ -305,7 +306,8 @@ rsound-max-volume
 ;; also, the angle goes 
 (define pulse-wave
   (network (duty-cycle pitch)
-           [angle (angle-add/unit (prev angle 0.0) (* pitch SRINV))]
+           [angle (prev added 0.0)]
+           [added (angle-add/unit angle (* pitch SRINV))]
            [out (pulse-wave-thresh angle duty-cycle)]))
 
 ;; add args, subtract 2pi if greater than 2pi. assumes all values

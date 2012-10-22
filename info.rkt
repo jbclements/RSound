@@ -9,8 +9,8 @@
 
 (define scribblings '(("rsound.scrbl" () (gui-library))))
 (define categories '(media))
-(define version "2012-09-09-21:42")
-(define release-notes '((p "fix compilation problems in filter-typed")))
+(define version "2012-10-12-16:21")
+(define release-notes '((p "complete overhaul of signals")))
 
 ;; don't compile the stuff in the contrib subdirectory.
 (define compile-omit-paths '("contrib"))

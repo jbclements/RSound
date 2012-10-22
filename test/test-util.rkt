@@ -16,21 +16,19 @@
  (let ()
    ;; non-table-based-sine-wave and square wave
    
-   ;; GRR! OFF BY ONE:
    (check-= (signal-nth (fixed-inputs sine-wave 4) 0)
-            (sin (* 2 pi 1/44100 4))
+            0.0 #;(sin (* 2 pi 1/44100 4))
             1e-4)
    (check-= (signal-nth (fixed-inputs sine-wave 4) 13)
-            (sin (* 2 pi 14/44100 4)) 1e-4)
+            (sin (* 2 pi 13/44100 4)) 1e-4)
    
    (define sw (fixed-inputs square-wave 2))
    (check-= (signal-nth sw 0) 1.0 1e-4)
    (check-= (signal-nth sw 10) 1.0 1e-4)
-   ;; goes one early, because the signal doesn't start counting at zero....
-   (check-= (signal-nth sw 11023) 1.0 1e-4)
-   (check-= (signal-nth sw 11024) 0.0 1e-4)
-   (check-= (signal-nth sw 22048) 0.0 1e-4)
-   (check-= (signal-nth sw 22049) 1.0 1e-4)
+   (check-= (signal-nth sw 11024) 1.0 1e-4)
+   (check-= (signal-nth sw 11025) 0.0 1e-4)
+   (check-= (signal-nth sw 22049) 0.0 1e-4)
+   (check-= (signal-nth sw 22050) 1.0 1e-4)
    
    
    ;; these don't work, because our signals now assume 
@@ -49,31 +47,30 @@
    ;; make-tone
    (define r (make-tone 882 0.2 44100))
    
-   ;; off by one!
    (check-= (rs-ith/left/s16 r 0) 
-            (round (* s16max (* 0.2 (sin (* twopi 882 1/44100))))) 0.0)
-   (check-equal? (rs-ith/right/s16 r 49) 0)
+            (round (* s16max (* 0.2 (sin (* twopi 882 0/44100))))) 0.0)
+   (check-equal? (rs-ith/right/s16 r 50) 0)
    (check-= (rs-ith/left/s16 r 27) 
-            (round (* s16max (* 0.2 (sin (* twopi 882 28/44100))))) 0.0)
+            (round (* s16max (* 0.2 (sin (* twopi 882 27/44100))))) 0.0)
    ;; errors late:
    (check-= (rs-ith/left/s16 r 44098)
-            (round (* s16max (* 0.2 (sin (* twopi 882 44099/44100)))))
+            (round (* s16max (* 0.2 (sin (* twopi 882 44098/44100)))))
             1e-7)
    (let ()
    ;; errors crop up only on certain frequencies:
    (define r (make-tone 440 0.2 44100))
    
      (check-= (rs-ith/left/s16 r 0)
-              (round (* s16max (* 0.2 (sin (* twopi 440 1/44100))))) 0.0)
+              (round (* s16max (* 0.2 (sin (* twopi 440 0/44100))))) 0.0)
    (check-= (rs-ith/left/s16 r 27) 
-            (round (* s16max (* 0.2 (sin (* twopi 440 28/44100))))) 0.0)
+            (round (* s16max (* 0.2 (sin (* twopi 440 27/44100))))) 0.0)
    ;; errors late:
      (define (small x) (< x 1e-7))
      (for ([i 44100])
        (unless (small 
                 (abs
                  (- (rs-ith/left/s16 r i)
-                    (round (* s16max (* 0.2 (sin (* twopi 440 (/ (add1 i) 44100)))))))))
+                    (round (* s16max (* 0.2 (sin (* twopi 440 (/ i 44100)))))))))
          (error 'uhoh "failure on sample # ~s" i))))
 
    ;; can't do this any more...

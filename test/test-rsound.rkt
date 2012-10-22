@@ -34,7 +34,8 @@
 
 (define (add-ticker n)
   (network ()
-           (frame (add1 (prev frame)) #:init -1)
+           [frame (prev adder 0)]
+           [adder (add1 frame)]
            (out (n frame))))
 
 (define the-test-suite
