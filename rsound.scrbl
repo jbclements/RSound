@@ -285,7 +285,7 @@ In order to listen to them, you can transform them into rsounds, or play them di
 (define r (signal->rsound 44100 sig1))
 
 (play r)]
-
+}
 @defproc[(signals->rsound (frames nonnegative-integer?) 
                              (left-sig signal?) (right-sig signal?)) rsound?]{
  Builds a stereo sound of length @racket[frames] by using
