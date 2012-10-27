@@ -114,7 +114,7 @@
 ;; set default API on windows to be WASAPI....
 (case (system-type)
   [(windows) (host-api 'paWASAPI)]
-  [else #f])
+  [else (void)])
 
 
 ;; CONVERSIONS

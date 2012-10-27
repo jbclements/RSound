@@ -9,11 +9,11 @@
 
 (define scribblings '(("rsound.scrbl" () (gui-library))))
 (define categories '(media))
-(define version "2012-10-12-16:21")
-(define release-notes '((p "complete overhaul of signals")))
+(define version "2012-10-27-14:56")
+(define release-notes '((p "bugfixes")))
 
 ;; don't compile the stuff in the contrib subdirectory.
-(define compile-omit-paths '("contrib"))
+(define compile-omit-paths '("contrib" "test"))
 
 ;; planet-specific:
 (define repositories '("4.x"))
