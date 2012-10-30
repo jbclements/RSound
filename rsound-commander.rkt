@@ -36,6 +36,9 @@
 ;; you also change the copying-callback.
 (define channels 2)
 
+(pa-maybe-initialize)
+
+
 
 ;; STOPPING PLAYBACK
 (define (stop-playing)
