@@ -112,8 +112,8 @@ relatively gracefully on files it can't handle.}
 
 These procedures allow the creation, analysis, and manipulation of rsounds.
 
-@defstruct[rsound ([data s16vector?] [sample-rate nonnegative-number?])]{
- Represents a sound.}
+@defstruct[rsound ([data s16vector?] [start nonnegative-number?] [end nonnegative-number?] [sample-rate nonnegative-number?])]{
+ Represents a sound; specifically, frames @racket[start] through @racket[end] of the given 16-bit stereo @racket[s16vector].}
 
 @defproc[(rs-frames [sound rsound?]) nonnegative-integer?]{
  Returns the length of a sound, in frames.}
@@ -184,7 +184,7 @@ Here's a trivial signal:
 
 @racketblock[
 (network ()
-         [out (+ 1 2)])]
+         [out 3])]
 
 This is the signal that always produces 3.
 
@@ -193,10 +193,12 @@ Here's another one, that counts upward:
 @racketblock[
 (define counter/sig
   (network ()
-           [counter (+ 1 (prev counter))]))]
+           [counter (+ 1 (prev counter 0))]))]
 
 The @racket[prev] form is special, and is used to refer to the prior value of the
 signal component.
+
+Note that since we're adding one immediately, this counter starts at 1.
 
 Here's another example, that adds together two sine waves, at 34 Hz and 46 Hz, assuming 
 a sample rate of 44.1KHz:
@@ -210,13 +212,10 @@ a sample rate of 44.1KHz:
 
 Several things to note:
 @itemlist[@item{a network can have many clauses; each clause contains a name and a right-hand-side.}
-           @item{a right-hand-side must be an application, either of a primitive function or of a network.}
+           @item{a right-hand-side must be a constant, or an application, either of a primitive function or of a network.}
            @item{the last clause is used as the output, regardless of its name.}
            @item{clauses can produce multiple values; in this case, the name is replaced by a parenthesized list.}
           ]
-
-A clause may also have an optional @racket[#:init] clause, specifying its initial value.  This is important when
-a clause occurs in a @racket[prev] clause.
 
 In order to use a signal with @racket[signal-play], it should produce a real number in the range @racket[-1.0] to @racket[1.0].
 
@@ -262,6 +261,14 @@ Also note that all of these assume a fixed sample rate of 44.1 KHz.
  aliasing all over the spectrum.}
 
 @defproc[#:kind "signal"
+                (pulse-wave [duty-cycle real?] [frequency nonnegative-number?]) real?]{
+ Produces a signal representing a "pulse wave", with part of the signal at 1.0 and
+ the rest of the signal at 0.0. The @racket[duty-cycle] determines the fraction of the
+ cycle that is 1.0. So, for instance, when @racket[duty-cycle] is 0.5, the result is
+ a square wave.
+}
+
+@defproc[#:kind "signal"
                 (dc-signal [amplitude real?]) real?]{
  Produces a constant signal at @racket[amplitude]. Inaudible unless used to multiply by
  another signal.}
@@ -297,12 +304,19 @@ In order to listen to them, you can transform them into rsounds, or play them di
                                                                              
 @defproc[(signal-play (signal signal?)) void?]{
  Plays a (single-channel) signal. Halt playback using @racket[(stop)].}
+ 
 
+There are several functions that produce signals.
+
+@defproc[(indexed-signal [time->amplitude procedure?]) signal?]{
+  Given a mapping from frame to amplitude, return a signal. In prior versions of RSound, such
+  a mapping was called a signal. This function converts those functions into new-style
+  signals.
+}
 
 @defproc[(fader [fade-samples number?]) signal?]{
  Produces a signal that decays exponentially. After @racket[fade-samples], its value is @racket[0.001].
  Inaudible unless used to multiply by another signal.}
-
 
 
 

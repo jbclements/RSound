@@ -267,7 +267,7 @@ rsound-max-volume
 ;; SYNTHESIS OF TRIANGULAR WAVES:
 
 
-(define (raw-sawtooth-wave pitch)
+(define (sawtooth-wave pitch)
   (when (< (/ SR 2) pitch)
     (raise-argument-error 
      'raw-sawtooth-wave 
@@ -282,8 +282,6 @@ rsound-max-volume
            [b (prev a 0.0)]
            [a (increment b)]
            [out b]))
-
-(define sawtooth-wave (make-checked-wave-fun raw-sawtooth-wave))
 
 
 ;; a memoized 20-term sawtooth; it'll be slow if you don't hit the 
