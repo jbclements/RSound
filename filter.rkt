@@ -3,6 +3,7 @@
 (require (only-in racket pi)
          racket/match
          "rsound.rkt"
+         "network.rkt"
          "filter-typed.rkt"
          racket/flonum)
 

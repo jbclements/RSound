@@ -79,7 +79,6 @@ rsound-max-volume
          rsound-maximize-volume
          midi-note-num->pitch
          ;; for testing:
-         raw-sawtooth-wave
          binary-logn
          )
 
@@ -264,10 +263,20 @@ rsound-max-volume
                    (* 0.25 (sin (* twopi 3.0 pitch ctr)))))))
 
 
-;; SYNTHESIS OF TRIANGULAR WAVES:
+;; SYNTHESIS OF SAWTOOTH WAVES:
 
+(define sawtooth-wave
+  (let ()
+    (define (increment p pitch)
+      (define next (+ p (* 2.0 (* pitch SRINV))))
+      (cond [(< next 1.0) next]
+            [else (- next 2.0)]))
+    (network (pitch)
+             [b (prev a 0.0)]
+             [a (increment b pitch)]
+             [out b])))
 
-(define (sawtooth-wave pitch)
+#;(define (sawtooth-wave pitch)
   (when (< (/ SR 2) pitch)
     (raise-argument-error 
      'raw-sawtooth-wave 

@@ -181,6 +181,15 @@
      (check-equal? (signal-samples sig 4)
                    (vector 17 17 17 17)))
    
+   ;; tap
+   (let ()
+     
+     (define net (network () 
+                          [ctr ((simple-ctr 4 0.5))]
+                          [tapped ((tap 3 #f) ctr)]))
+     (check-equal? (signal-samples net 5)
+                   (vector #f #f #f 4 4.5)))
+   
 ))
 
 (module+ test

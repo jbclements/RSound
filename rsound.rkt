@@ -35,15 +35,7 @@
 (provide (except-out (all-defined-out) 
                      sound-list-total-frames
                      rs-play/helper
-                     rs-mutator)
-         network
-         fixed-inputs
-         prev
-         signal?
-         signal-+s
-         signal-*s
-         simple-ctr
-         loop-ctr)
+                     rs-mutator))
 
 (define s16max #x7fff)
 (define -s16max (- s16max))

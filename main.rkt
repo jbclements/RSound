@@ -9,6 +9,7 @@
                     set-rs-ith/right/s16!
                     set-rs-ith/left!
                     set-rs-ith/right!)
+         "network.rkt"
          "util.rkt"
          "single-cycle.rkt"
          "stream-play.rkt"
@@ -23,4 +24,7 @@
          (all-from-out "stream-play.rkt")
          (all-from-out "drum-samples.rkt")
          (all-from-out "checked-funs.rkt")
-         (all-from-out "diagnose.rkt"))
+         (all-from-out "diagnose.rkt")
+         ;; should probably hide network-init, but 
+         ;; I'm not going to... it could maybe be useful.
+         (all-from-out "network.rkt"))

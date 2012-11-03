@@ -130,11 +130,10 @@
       (for ([i (in-range 100)])
         (signal->rsound 44100 (sawtooth-wave 440))))
    
-   (parameterize ([default-sample-rate 1000])
-     (let ([tr (sawtooth-wave 100)])
-       (check-= (signal-nth tr 0) 0.0 1e-5)
-       (check-= (signal-nth tr 1) 0.2 1e-5)
-       (check-= (signal-nth tr 5) -1.0 1e-5)))
+   (let ([tr (fixed-inputs sawtooth-wave 100)])
+     (check-= (signal-nth tr 0) 0.0 1e-5)
+     (check-= (signal-nth tr 1) 2/441 1e-5)
+     (check-= (signal-nth tr 221) (+ -1.0 1/441) 1e-5))
    
    ;; signal-*
    

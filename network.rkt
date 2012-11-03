@@ -15,7 +15,8 @@
          loop-ctr
          simple-ctr
          signal-samples
-         signal-nth)
+         signal-nth
+         tap)
 
 ;; this representation can in principle handle multiple-out networks,
 ;; but the surface syntax will get yucky. For now, let's just do one
@@ -167,7 +168,6 @@
 
 
 ;; a signal is a network with no inputs.
-;; can this procedure be used as a signal? 
 (define (signal? f)
   (or (and (network/s? f) (= (network/s-ins f) 0))
       (and (procedure? f) (procedure-arity-includes? f 0))))
@@ -178,7 +178,6 @@
   (syntax-parse stx
     [(_ net arg ...)
      #'(network () [out (net arg ...)])]))
-
 
 ;; multiply the signals together:
 (define (signal-*s los)
@@ -230,84 +229,23 @@
   (for ([i n]) (sigfun))
   (sigfun))
 
+;; create a tap of the given length (we could generalize
+;; this to allow multiple tap lengths from one vector.)
+;; for now, it assumes real-valued inputs, and pre-fills
+;; the vector with zeros.
+;; nat -> network
+(define (tap len init-val)
+  (define the-proc
+    (lambda ()
+      (define tap-vec (make-vector len init-val))
+      (define idx 0)
+      (lambda (new-val)
+        (begin0 (vector-ref tap-vec idx)
+                (vector-set! tap-vec idx new-val)
+                (let ()
+                  (define next-idx (add1 idx))
+                  (set! idx (cond [(< next-idx len) next-idx]
+                                  [else 0])))))))
+  (network/s 1 1 the-proc))
 
 
-
-#|
-
-     #;(define num-clauses (length (syntax->list #'(clause ...))))
-     #;(define lhses (syntax->list #'((clause.out ...) ...)))
-     #;(define last-out 
-       (syntax-parse (car (reverse lhses))
-         [(out:id) #'out]
-         [(out:id out2:id ...+) #'(values out out2 ...)]))
-     #;(define lhses/flattened (syntax->list #'(clause.out ... ...)))
-     (define (rewrite/l input-list)
-       (map rewrite (syntax->list input-list)))
-     ;; rewrite occurrences of "prev" into vector references
-     (define (rewrite in)
-       (syntax-parse in
-         #:literals (prev)
-         [(prev in:id) #`(vector-ref saves-vec #,(find-idx #'in))]
-         [other:expr #'other]))
-     ;; extract inits; in the case of multi-inits, this may involve
-     ;; extra work.
-     (define (extract-inits clause-info)
-       (syntax-parse clause-info
-         [((id:id ...) (init:expr ...))
-          (define out-len (length (syntax->list #'(id ...))))
-          (define init-len (length (syntax->list #'(init ...))))
-          (cond [(= out-len init-len) #'(init ...)]
-                [(and (< 1 out-len) (= init-len 0))
-                 ;; auto-default:
-                 (for/list ([i out-len]) #'0.0)]
-                [else (error 'network
-                             "expected init list of length ~a, got ~e"
-                             out-len 
-                             (map syntax->datum
-                                  (syntax->list #'(init ...))))])]))
-
-
-
-
-     (define (find-idx id)
-       (let loop ([lhses lhses/flattened]
-                  [i 0])
-         (cond [(null? lhses) 
-                (error 'network
-                       "expected prev to name an output node, got: ~s"
-                       id)]
-               [(free-identifier=? id (car lhses))
-                #`(quote #,i)]
-               [else (loop (cdr lhses) (add1 i))])))
-
-
-     (with-syntax ([(signal-proc ...)
-                    (generate-temporaries #'(clause ...))]
-                   [((arg ...) ...)
-                    (map rewrite/l (syntax->list
-                                    #'((clause.input ...) ...)))]
-                   [(idx ...)
-                    (for/list ([i (in-range (length lhses/flattened))])
-                      #`(quote #,i))]
-                   [(lhs ...) lhses/flattened]
-                   [((init ...) ...) (map extract-inits
-                                    (syntax->list
-                                     #'(((clause.out ...)
-                                         (clause.init ...))
-                                        ...)))])
-       (with-syntax 
-           ([maker
-             #`(lambda ()
-                 (define saves-vec
-                   (vector init ... ...))
-                 (define signal-proc (network-init clause.node))
-                 ...
-                 (lambda (in ...)
-                   (let*-values ([(clause.out ...) (signal-proc arg ...)]
-                         ...)
-                     (begin
-                       (vector-set! saves-vec idx lhs)
-                       ...)
-                     #,last-out)))])
-         #`(network/s (quote #,num-ins) 1 maker)))|#
