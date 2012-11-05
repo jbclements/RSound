@@ -1,6 +1,7 @@
 #lang racket
 
 (require "../rsound.rkt"
+         "../network.rkt"
          rackunit
          rackunit/text-ui
          racket/runtime-path

@@ -1,6 +1,7 @@
 #lang racket
 
 (require "../rsound.rkt"
+         "../network.rkt"
          "../util.rkt")
 
 (printf "\nshort ding\n")
