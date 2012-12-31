@@ -26,7 +26,8 @@
   (match family
     ["main" (adventure-kid-waveform #f spec)]
     ["vgame" (adventure-kid-waveform "vgame" spec)]
-    ["path" (rs-read spec)]))
+    ["path" (rs-read spec)]
+    [other (raise-argument-error 'wave-lookup "string that is 'main', 'vgame', or 'path'" 0 family spec)]))
 
 ;; a memoized version of resample.
 (define/memo (resample/memo factor sound)

@@ -1,7 +1,6 @@
 #lang scribble/doc
 
-@(require scribble/manual
-          planet/scribble)
+@(require scribble/manual)
 
 @title{@bold{RSound}: An Adequate Sound Engine for Racket}
 
@@ -359,7 +358,7 @@ overhead.
 
 @section{Visualizing Rsounds}
 
-@defmodule/this-package[draw]
+@defmodule[rsound/draw]
 
 @defproc[(rs-draw [rsound rsound?]
                       [#:title title string?]
@@ -448,7 +447,7 @@ overhead.
 
 @section{Frequency Response}
 
-@defmodule/this-package[frequency-response]{
+@defmodule[rsound/frequency-response]{
  This module provides functions to allow the analysis of frequency response on filters specified
  either as transfer functions or as lists of poles and zeros. It assumes a sample rate of 44.1 Khz.
 
@@ -484,7 +483,7 @@ overhead.
 @section{Filtering}
 
 
-@defmodule/this-package[filter]{
+@defmodule[rsound/filter]{
  This module provides a dynamic low-pass filter, among other things.
  
 @defproc[(lpf/dynamic [control signal?] [input signal?]) signal?]{
@@ -503,7 +502,7 @@ overhead.
 
 @section{Single-cycle sounds}
 
-@defmodule/this-package[single-cycle]{
+@defmodule[rsound/single-cycle]{
  This module provides support for generating tones from single-cycle waveforms.
  
  In particular, it comes with a library of 247 such waveforms, courtesy of 
@@ -531,7 +530,7 @@ overhead.
 
 @section{Stream-based Playing}
 
-@defmodule/this-package[stream-play]{
+@defmodule[rsound/stream-play]{
  RSound now provides functions whereby all played sounds use a single stream.
  This has the advantage of lower latency and avoids problems on Windows, where
  opening a new stream for each sound causes errors.

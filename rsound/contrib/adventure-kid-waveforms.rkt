@@ -8,6 +8,12 @@
 (provide adventure-kid-waveform)
 
 (define (adventure-kid-waveform family index)
+  (when (not (exact-nonnegative-integer? index))
+    (raise-argument-error 'adventure-kid-waveform
+                          "exact nonnegative integer"
+                          1
+                          family
+                          index))
   (define wav-path
     (cond [(not family)
            (format "AKWF_~a/AKWF_~a.wav" 
