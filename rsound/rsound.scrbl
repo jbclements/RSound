@@ -8,10 +8,10 @@
 @author[(author+email "John Clements" "clements@racket-lang.org")]
 
 @(require (for-label racket
-                     (this-package-in main)
-                     (this-package-in frequency-response)))
+                     rsound
+                     rsound/frequency-response))
 
-@defmodule/this-package[main]{This collection provides a means to represent, read,
+@defmodule[rsound]{This collection provides a means to represent, read,
 write, play, and manipulate sounds. It depends on the @racket[clements/portaudio] 
 package to provide bindings to the cross-platform `PortAudio' library which appears
 to run on Linux, Mac, and Windows.
