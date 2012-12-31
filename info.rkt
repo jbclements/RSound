@@ -9,8 +9,8 @@
 
 (define scribblings '(("rsound.scrbl" () (gui-library))))
 (define categories '(media))
-(define version "2012-11-05-09:46")
-(define release-notes '((p "added new 'tap' form")))
+(define version "2012-11-24-09:01")
+(define release-notes '((p "added reverb")))
 
 ;; don't compile the stuff in the contrib subdirectory.
 (define compile-omit-paths '("contrib" "test"))

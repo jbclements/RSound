@@ -6,13 +6,16 @@
                                    [outs : Index]
                                    [maker : Procedure])])
 
+;; this file provides the "reverb" network
 (provide reverb)
 
 
+;; this function produces a function from floats to floats.
 (: starter (-> (Float -> Float)))
 (define starter
       (lambda ()
         ;; constants here from Moorer 1979:
+        ;; uses a base delay of 100ms
         (define base-delay (* 100/1000 44100.0))
         (define d1 (inexact->exact (round base-delay)))
         (define d2 (inexact->exact (round (* 1.1 d1))))
@@ -26,9 +29,8 @@
         (define g14 0.52)
         (define g15 0.53)
         (define g16 0.55)
-        (define g-konst 0.7) ;; how to choose? ?
+        (define g-konst 0.7) ;; (closer to 1.0 gives more ring)
         
-        ;; ... should be (- 1 g11), I think...
         (define g21 (* (- 1.0 g11) g-konst))
         (define g22 (* (- 1.0 g12) g-konst))
         (define g23 (* (- 1.0 g13) g-konst))
@@ -63,15 +65,17 @@
         ;; the main feedback buffers
         (lambda (in)
 
+          ;; the first comb filter
           (define delayed1 (flvector-ref v1 c1))
-  (define midnode1 (fl+ delayed1 (fl* g11 m1)))
-  (define out1 (fl+ (fl* g21 midnode1) in))
-  (flvector-set! v1 c1 out1)
-  (define next-c1 (add1 c1))
-  (set! c1 (cond [(<= d1 next-c1) 0]
-                 [else next-c1]))
-  (set! m1 midnode1)
+          (define midnode1 (fl+ delayed1 (fl* g11 m1)))
+          (define out1 (fl+ (fl* g21 midnode1) in))
+          (flvector-set! v1 c1 out1)
+          (define next-c1 (add1 c1))
+          (set! c1 (cond [(<= d1 next-c1) 0]
+                         [else next-c1]))
+          (set! m1 midnode1)
   
+          ;; the second comb filter
           (define delayed2 (flvector-ref v2 c2))
           (define midnode2 (fl+ delayed2 (fl* g12 (flvector-ref mvec 1))))
           (define out2 (fl+ (fl* g22 midnode2) in))
@@ -81,6 +85,7 @@
                          [else next-c2]))
           (flvector-set! mvec 1 midnode2)
 
+          ;; the third comb filter (and so on)
           (define delayed3 (flvector-ref v3 c3))
           (define midnode3 (fl+ delayed3 (fl* g13 (flvector-ref mvec 2))))
           (define out3 (fl+ (fl* g23 midnode3) in))
