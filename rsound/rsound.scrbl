@@ -586,6 +586,34 @@ square-wave tones. This one runs in the Intermediate student language:
 )
 
 
+An example of a signal that plays from one of the single-cycle vgame tones:
+
+@#reader scribble/comment-reader
+(racketmod
+racket
+
+(require (planet clements/rsound:4))
+
+(define waveform (synth-waveform "vgame" 4))
+
+;; wrap i around when it goes off the end:
+(define (maybe-wrap i)
+  (cond [(< i 44100) i]
+        [else (- i 44100)]))
+
+;; a signal that plays from a waveform:
+(define loop-sig
+  (network (pitch)
+    [i (maybe-wrap (+ (prev i 0) (round pitch)))]
+    [out (rs-ith/left waveform i)]))
+
+(signal-play
+ (network ()
+   [alternator (square-wave 2)]
+   [s (loop-sig (+ (* 200 (inexact->exact alternator)) 400))]
+   [out (* s 0.1)]))
+)
+
 
 @section{Reporting Bugs}
 
