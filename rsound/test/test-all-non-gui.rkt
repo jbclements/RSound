@@ -1,5 +1,6 @@
 #lang racket 
 
+;; this list is partially converted to the "test suite" style... I should finish the conversion.
 (require (prefix-in rw: "test-read-wav.rkt")
          (prefix-in ww: "test-write-wav.rkt")
          (prefix-in r: "test-rsound.rkt")

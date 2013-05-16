@@ -14,5 +14,10 @@
  (lambda (exn) (regexp-match #px"expected: exact nonnegative integer" 
                              (exn-message exn)))
  (lambda () (synth-note "main" #f 1 1)))
-(synth-note "main" 27384720 1 1)
+(check-exn
+ (lambda (exn) (regexp-match (regexp-quote
+                              "AKWF_273848/AKWF_27384720.wav
+  system error: No such file or directory; errno=2")
+                             (exn-message exn)))
+ (lambda () (synth-note "main" 27384720 1 1)))
 
