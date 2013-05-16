@@ -40,18 +40,18 @@
   (printf "trying each one in turn.\n")
   (for ([api host-apis])
     (printf "trying api ~s:\n" api)
-    (host-api api)
-    (for ([sr sample-rates])
-      (printf "trying to play at sample rate ~s:\n" sr)
-      (with-handlers ([exn:fail?
-                       (lambda (exn)
-                         (fprintf
-                          (current-error-port)
-                          "playing sound failed with message: ~s\n"
-                          (exn-message exn)))])
-        (s16vec-play s16vec 0 s16vec-len sr)
-        (sleep (+ 1.0 (/ s16vec-len sr)))
-        (printf "...finished.\n"))))
+    (parameterize ([host-api api])
+      (for ([sr sample-rates])
+        (printf "trying to play at sample rate ~s:\n" sr)
+        (with-handlers ([exn:fail?
+                         (lambda (exn)
+                           (fprintf
+                            (current-error-port)
+                            "playing sound failed with message: ~s\n"
+                            (exn-message exn)))])
+          (s16vec-play s16vec 0 s16vec-len sr)
+          (sleep (+ 1.0 (/ s16vec-len sr)))
+          (printf "...finished.\n")))))
   (printf "~a" followup-message))
 
 (define followup-message
