@@ -5,6 +5,7 @@
          ffi/vector)
 
 (provide diagnose-sound-playing
+         all-host-apis
          host-api)
 
 ;; on Windows, you need to manually set the playback device to 44.1KHz,

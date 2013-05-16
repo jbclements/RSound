@@ -27,20 +27,14 @@ Does it work on your machine? Try this example:
 
 }
 
+If it doesn't work on your machine, please try running @racket[(diagnose-sound-playing)], and 
+tell me about it!
+
 A note about volume: be careful not to damage your hearing, please. To take a simple example,
 the @racket[sine-wave] function generates a sine wave with amplitude 1.0.  That translates into
 the @emph{loudest possible sine wave} that can be represented. So please set your volume low, 
 and be careful with the headphones. Maybe there should be a parameter that controls the clipping 
 volume. Hmm.
-
-@section{A NOTE ABOUT WINDOWS}
-
-Windows is a bit of a pain for developers. If you're having trouble hearing sounds under 
-windows (high latency, or "Invalid Device" errors), try running @racket[diagnose-sound-playing].
-
-@defproc[(diagnose-sound-playing) void?]{
- Tries playing a short tone using all of the available APIs and several plausible sample rates.
- It tries to offer a helpful message, along with the test.}
 
 @section{Sound Control}
 
@@ -544,6 +538,23 @@ overhead.
 
 @defproc[(current-time/s) natural?]{
  Returns the current stream-relative frame.}}
+
+@section{Configuration}
+
+
+@defproc[(diagnose-sound-playing) void?]{
+ Tries playing a short tone using all of the available APIs and several plausible sample rates.
+ It tries to offer a helpful message, along with the test.}
+
+@defproc[(all-host-apis) (listof symbol?)]{
+ Returns a list of symbols representing host APIs supported by the underlying system. This is
+ a re-export from the @racket[portaudio] package.
+}
+
+@defparam[host-api api symbol?]{
+ A parameter that instructs portaudio to choose a particular API to use in playing sounds. If its
+ value is @racket[false], portaudio chooses one.
+}
 
 @section{Sample Code}
 
