@@ -181,10 +181,10 @@
 
 ;; fir-filter : (listof (list/c delay amplitude)) -> Network
 ;; filter the input signal using the delay values and amplitudes given for an FIR filter
-(: fir-filter ((Listof (List Nonnegative-Fixnum Real)) -> Network1))
+(: fir-filter ((Listof (List Index Real)) -> Network1))
 (define (fir-filter params)
   (match params
-    [`((,delays ,amplitudes) ...)
+    [`((,#{delays : (Listof Nonnegative-Fixnum)} ,amplitudes) ...)
      ;; enough to hold delayed and current, rounded up to next power of 2:
      (: max-delay Index)
      (define max-delay
@@ -294,7 +294,7 @@
 (define angle-epsilon 1e-5)
 
 ;; pick the next largest (or equal) power of 2
-(: up-to-power-of-two (Index -> Index))
+(: up-to-power-of-two (Positive-Integer -> Index))
 (define (up-to-power-of-two n)
   (define log-2 (log 2))
   (define log-2-n (log (max n 1)))
