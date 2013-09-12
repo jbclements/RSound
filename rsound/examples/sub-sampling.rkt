@@ -1,7 +1,7 @@
 #lang racket
 
-(require (planet clements/rsound)
-         (planet clements/rsound/draw)
+(require rsound
+         rsound/draw
          ffi/vector)
 
 (define song-chunk

@@ -1,10 +1,9 @@
 #lang racket
 
-(require (planet clements/rsound)
+(require rsound
          rackunit)
 
-(provide (all-from-out (planet clements/rsound))
-         (all-defined-out))
+(provide (all-defined-out))
 
 (define volume (make-parameter 0.5))
 (define tempo (make-parameter 200))

@@ -3,8 +3,8 @@
 ;; crunch by Mustafa Khafateh
 ;; cleanup & quantize by John Clements
 
-(require (planet "main.rkt" ("clements" "rsound.plt" 1 7)))
-(require (planet "draw.rkt" ("clements" "rsound.plt" 1 7)))
+(require "../main.rkt")
+(require "../draw.rkt")
 
 
 (define (vector->rsound v)
@@ -13,15 +13,15 @@
 
 ;(rsound-draw (vector->rsound chip1))
 
-; ratio is how much the sample rate is devided by
+; ratio is how much the sample rate is divided by
 (define (crush-helper t rsound ratio)
-  (rsound-ith/left rsound (* ratio (quotient t ratio))))
+  (rs-ith/left rsound (* ratio (quotient t ratio))))
 
 (define (crunch rsound ratio)
   (signal->rsound (rs-frames rsound) 44100 (signal crush-helper rsound ratio)))
 
 
-#;(rsound-play (time (crunch (rsound-read "/tmp/horizon2.wav") 50)))
+#;(play (time (crunch (rsound-read "/tmp/horizon2.wav") 50)))
 
 ; test on small rsound
 ;(rsound-draw (crunch (vector->rsound chip1) 2))

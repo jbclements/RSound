@@ -2,8 +2,8 @@
 
 ;; hastily assembled demo for Foaad Khosmood's class
 
-(require (planet clements/rsound)
-         (planet clements/rsound/paste-util)
+(require rsound
+         rsound/paste-util
          ffi/unsafe
          ffi/vector)
 

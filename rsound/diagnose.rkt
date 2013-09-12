@@ -1,7 +1,7 @@
 #lang racket
 
-(require (planet clements/portaudio:3:1)
-         (planet clements/portaudio:3:1/devices)
+(require portaudio
+         portaudio/devices
          ffi/vector)
 
 (provide diagnose-sound-playing

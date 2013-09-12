@@ -2,8 +2,8 @@
 
 ;; hastily assembled demo for Foaad Khosmood's class
 
-(require (planet clements/rsound)
-         (planet clements/rsound/draw)
+(require rsound
+         rsound/draw
          "quantize-looper.rkt"
          ffi/vector
          

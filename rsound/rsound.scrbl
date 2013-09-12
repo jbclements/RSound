@@ -20,7 +20,7 @@ advantages (speed, mostly) and disadvantages (clipping).
 
 Does it work on your machine? Try this example:
 @racketblock[
- (require (planet clements/rsound))
+ (require rsound)
   
  (play ding)
  ]
@@ -563,8 +563,8 @@ square-wave tones. This one runs in the Intermediate student language:
 
 @#reader scribble/comment-reader
 (racketblock
-(require (planet clements/rsound))
-(require (planet clements/rsound/filter))
+(require rsound)
+(require rsound/filter)
 
 ;; scrobble: number number number -> signal
 ;; return a signal that generates square-wave tones, changing
@@ -603,7 +603,7 @@ An example of a signal that plays from one of the single-cycle vgame tones:
 (racketmod
 racket
 
-(require (planet clements/rsound:4))
+(require rsound)
 
 (define waveform (synth-waveform "vgame" 4))
 

@@ -1,6 +1,6 @@
 #lang racket
 
-(require (planet clements/rsound)
+(require (except-in "../main.rkt" kick resample)
          rackunit)
 
 #;(rsound-play 
@@ -11,8 +11,8 @@
 (define sample-path "/Users/clements/Renoise2 Sample Library/Samples")
 
 (define (rsound-scale scale sound)
-  (define (left i) (* scale (rsound-ith/left sound i)))
-  (define (right i) (* scale (rsound-ith/right sound i)))
+  (define (left i) (* scale (rs-ith/left sound i)))
+  (define (right i) (* scale (rs-ith/right sound i)))
   (signals->rsound/stereo (rs-frames sound)
                        (rsound-sample-rate sound)
                        left
@@ -38,8 +38,8 @@
 
 
 (define (resample factor sound)
-  (define (left i) (rsound-ith/left sound (round (* factor i))))
-  (define (right i) (rsound-ith/right sound (round (* factor i))))
+  (define (left i) (rs-ith sound (round (* factor i))))
+  (define (right i) (rs-ith/right sound (round (* factor i))))
   (signals->rsound/stereo (round (/ (rs-frames sound) factor))
                        (rsound-sample-rate sound)
                        left
@@ -77,7 +77,7 @@
 (define anasquareemu03/1sec
   (single-cycle->tone anasquareemu03 1.0))
 
-(require (planet clements/rsound/draw))
+(require "../draw.rkt")
 (rsound-draw anasquareemu03)
 #;(vector-draw/real/imag (rsound-fft/left anasquareemu03))
 (rs-frames anasquareemu03/1sec)

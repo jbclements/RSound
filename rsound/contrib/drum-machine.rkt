@@ -2,7 +2,7 @@
 
 ; By Mustafa Khafateh & John Clements 
 
-(require (planet "main.rkt" ("clements" "rsound.plt" 1 7)))
+(require rsound)
 
 (require racket/runtime-path)
 

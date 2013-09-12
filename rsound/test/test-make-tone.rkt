@@ -1,7 +1,7 @@
 #lang racket
 
-(require (planet clements/rsound)
-         (planet clements/rsound/integral-cycles)
+(require "../main.rkt"
+         "../integral-cycles.rkt"
          rackunit)
 
 

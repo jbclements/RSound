@@ -1,8 +1,8 @@
 #lang racket
 
 (require plot
-         (planet clements/rsound)
-         (planet clements/rsound/draw))
+         (except-in "../main.rkt" bassdrum)
+         "../draw.rkt")
 
 ;; YAY! finally got the right frequency equation.
 #|
@@ -77,7 +77,8 @@
       #:y-min 0
       #:width 600)
 
-(fit (lambda (x z a b c d) (+ (* z x x x x)
+;; I guess... plot doesn't contain curve fitting any more?
+#;(fit (lambda (x z a b c d) (+ (* z x x x x)
                               (* a x x x)
                               (* b x x)
                               (* c x)
@@ -125,10 +126,10 @@
 
 
 (define bd (signal->rsound 15727 44100 bassdrum))
-(rsound-draw bd)
-(define bd2 (rsound-read "/Users/clements/RSound/contrib/drum-samples/bassdrum.wav"))
-(rsound-write bd "/tmp/bassdrum-synth.wav")
+(rs-draw bd)
+(define bd2 (rs-read "/Users/clements/RSound/contrib/drum-samples/bassdrum.wav"))
+(rs-write bd "/tmp/bassdrum-synth.wav")
 (define bd3 
-  (rsound-append* (list bd (make-silence 22050 44100) bd2 (make-silence 22050 44100))))
+  (rs-append* (list bd (silence 22050 44100) bd2 (silence 22050 44100))))
 
 
