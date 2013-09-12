@@ -1,28 +1,7 @@
 This repository contains the DrRacket source code for RSound, a
 cross-platform sound library.  Currently, it depends upon the
-'portaudio' library.  In fact, this repo contains windows and OS X
-binaries for that library.
+'portaudio' library, which lives in its own github repo
+(jbclements/rack-portaudio).
 
-This bundle contains the source code for a PLaneT package.  This means
-that the source code thinks it's a planet package, and the best
-way to use this repo (aside from simply sticking with the PLaneT
-package) is to use "raco planet" to set up a development link.
-
-More specifically, you'll probably want to use
-
-raco planet link clements rsound.plt 1 11 /path/to/repo
-
-BIG CAVEAT: DON'T USE ANY SYMBOLIC LINKS IN /path/to/repo. PLaneT
-development links don't work well with symbolic links.
-
-There are a bunch of other commands that will be helpful; the most
-important are probably
-
-raco planet show
-
-... which shows you what packages you've got installed and what
-development links you have installed, and
-
-raco planet --help
-
-... which gives you some help.
+This bundle represents a "pkg" for Racket, and should be installed
+using "raco pkg install rsound".
