@@ -5,16 +5,16 @@
 
 (require ffi/vector
          racket/contract
-         racket/match)
+         racket/match
+         racket/bool)
 
-(provide/contract
- [read-sound/s16vector (-> path-string? integer? (or/c integer? false?) 
-                           (list/c s16vector? integer?))]
- [read-sound/formatting (-> path-string? 
-                            (list/c integer? integer?))])
+(provide
+ (contract-out
+  [read-sound/s16vector (-> path-string? integer? (or/c integer? false?) 
+                            (list/c s16vector? integer?))]
+  [read-sound/formatting (-> path-string? 
+                             (list/c integer? integer?))]))
 
-(define (false? v)
-  (eq? v #f))
 
 ;; read-sound/s16vector : file-string nat (or/c #f nat) -> (list/c s16vector nat nat)
 ;; given a file-string, a beginning frame, and an ending frame (or #f),

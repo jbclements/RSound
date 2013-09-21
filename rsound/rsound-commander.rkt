@@ -21,27 +21,29 @@
          ffi/unsafe/custodian
          racket/async-channel)
 
-(provide/contract (buffer-play (-> s16vector?
-                                   exact-integer?
-                                   (or/c false? exact-integer?)
-                                   nonnegative-real?
-                                   void?))
-                  #;(buffer-loop (-> cpointer?
-                                   frames?
-                                   nonnegative-real?
-                                   void?))
-                  [signal->signal/block/unsafe
-                   (-> procedure? procedure?)]
-                  [signal/16->signal/block/unsafe
-                   (-> procedure? procedure?)]
-                  [signal/block-play 
-                   (-> procedure? nonnegative-real? 
-                       (or/c nonnegative-real? false?) 
-                       (-> nonnegative-real?))]
-                  [signal/block-play/unsafe (-> procedure? nonnegative-real? (or/c nonnegative-real? false?) 
-                                                (-> nonnegative-real?))]
-                  [stop-playing (-> void?)]
-                  [channels exact-nonnegative-integer?])
+(provide
+ (contract-out
+  (buffer-play (-> s16vector?
+                   exact-integer?
+                   (or/c false? exact-integer?)
+                   nonnegative-real?
+                   void?))
+  #;(buffer-loop (-> cpointer?
+                     frames?
+                     nonnegative-real?
+                     void?))
+  [signal->signal/block/unsafe
+   (-> procedure? procedure?)]
+  [signal/16->signal/block/unsafe
+   (-> procedure? procedure?)]
+  [signal/block-play 
+   (-> procedure? nonnegative-real? 
+       (or/c nonnegative-real? false?) 
+       (-> nonnegative-real?))]
+  [signal/block-play/unsafe (-> procedure? nonnegative-real? (or/c nonnegative-real? false?) 
+                                (-> nonnegative-real?))]
+  [stop-playing (-> void?)]
+  [channels exact-nonnegative-integer?]))
 
 (define (false? x) (eq? x #f))
 
@@ -52,13 +54,14 @@
 ;; you also change the copying-callback.
 (define channels 2)
 
-;; make sure that pa-terminate gets called.
-(register-custodian-shutdown #f pa-terminate-completely-caller)
-
 ;; this wrapper just discards its argument, to fit the API for
 ;; register-custodian shutdown
 (define (pa-terminate-completely-caller dc)
   (pa-terminate-completely))
+
+;; make sure that pa-terminate gets called.
+(define unregister-ptr
+  (register-custodian-shutdown #f pa-terminate-completely-caller))
 
 ;; initialize portaudio
 (pa-maybe-initialize)

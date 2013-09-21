@@ -4,7 +4,9 @@
          "util.rkt"
          "paste-util.rkt"
          data/heap
-         ffi/vector)
+         ffi/vector
+         racket/contract
+         racket/match)
 
 ;; a simple rsound sequencer
 
