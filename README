@@ -1,7 +1,13 @@
 This repository contains the DrRacket source code for RSound, a
 cross-platform sound library.  Currently, it depends upon the
 'portaudio' library, which lives in its own github repo
-(jbclements/rack-portaudio).
+(jbclements/portaudio).
 
 This bundle represents a "pkg" for Racket, and should be installed
 using "raco pkg install rsound".
+
+In version 6 of DrRacket and beyond, it should be possible to
+install only rsound--the dependency will be installed automatically.
+In earlier versions, you need to install portaudio (with "raco
+pkg install portaudio") first. Well, by "earlier" I mean 5.3.4 and
+up, because before that packages didn't even exist....
