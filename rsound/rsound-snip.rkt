@@ -1,4 +1,7 @@
-#lang racket
+#lang racket/base
+
+;; ooh... looks like I was starting to put together a snip for rsounds.... I should finish this!
+
 
 (require racket/gui)
 

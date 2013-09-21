@@ -1,4 +1,4 @@
-#lang racket
+#lang racket/base
 
 ;; to-do:
 ;; check okay for inputs to be inexact integers?
@@ -11,7 +11,10 @@
          "write-wav.rkt"
          "network.rkt"
          (prefix-in rc: "rsound-commander.rkt")
-         "private/s16vector-add.rkt")
+         "private/s16vector-add.rkt"
+         racket/contract
+         racket/match
+         racket/list)
 
 (define (positive-integer? n)
   (and (integer? n) (< 0 n)))

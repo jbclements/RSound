@@ -1,4 +1,4 @@
-#lang racket
+#lang racket/base
 
 (require (except-in "rsound.rkt"
                     rs-ith/left/s16

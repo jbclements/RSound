@@ -1,4 +1,4 @@
-#lang racket
+#lang racket/base
 
 ;; untested as of 2011-09:
 #|make-squaretone
@@ -21,7 +21,9 @@ rsound-max-volume
          racket/flonum
          racket/fixnum
          ffi/vector
-         (for-syntax syntax/parse))
+         (only-in racket/math pi)
+         (only-in racket/match match-define match)
+         (for-syntax racket/base syntax/parse))
 
 (provide rs-map
          rs-map/idx

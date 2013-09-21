@@ -1,10 +1,13 @@
-#lang racket
+#lang racket/base
 
 (require rackunit
          plot
          "filter.rkt"
          "filter-typed.rkt"
-         racket/flonum)
+         racket/flonum
+         (only-in racket/math pi)
+         (only-in racket/match match match-define)
+         racket/contract)
 
 (provide (contract-out [response-plot (->* ((-> number? number?) number? number?)
                                            (#:db boolean?)

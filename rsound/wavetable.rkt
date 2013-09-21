@@ -1,6 +1,9 @@
-#lang racket
+#lang racket/base
+
+;; could be ... typed?
 
 (require racket/flonum
+         racket/contract
          "network.rkt")
 
 (provide 

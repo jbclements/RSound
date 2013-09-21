@@ -1,4 +1,4 @@
-#lang racket
+#lang racket/base
 
 (require (prefix-in r: "rsound.rkt"))
 ;; these versions of the functions should do lots of error-checking:

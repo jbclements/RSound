@@ -1,9 +1,11 @@
-#lang racket
+#lang racket/base
 
 (require "main.rkt"
          ffi/unsafe
          ffi/vector
-         rackunit)
+         rackunit
+         racket/match
+         racket/list)
 
 (define (loop->signal/block/unsafe sound-start-stop-box)
   (match-define (list current-sound current-sound-start-offset current-sound-finish-offset)

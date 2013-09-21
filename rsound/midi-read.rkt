@@ -1,6 +1,12 @@
-#lang racket
+#lang racket/base
 
-(require rackunit)
+;; I have a sneaking suspicion I should delete this, as I believe
+;; that the stuff in rack-midi--which I believe is derived from 
+;; this--is better in most ways.
+
+(require rackunit
+         racket/list
+         racket/match)
 
 (provide parse-file)
 

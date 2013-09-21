@@ -1,12 +1,25 @@
-#lang racket
+#lang racket/base
 
-(require portaudio
+;; other than the special-case "diagnose.rkt", this is the
+;; only file in rsound that depends on portaudio, so
+;; all of the dependencies come through here.
+
+;; portaudio provides a ton of stuff, but only a few of
+;; them are used here, and they're listed explicitly 
+;; in the require:
+
+(require (only-in portaudio 
+                  pa-maybe-initialize
+                  pa-terminate-completely
+                  s16vec-play
+                  stream-play
+                  stream-play/unsafe
+                  host-api)
+         racket/contract
          (only-in ffi/unsafe cpointer? ptr-set! _sint16)
          ffi/vector
+         ffi/unsafe/custodian
          racket/async-channel)
-
-(define (nonnegative-real? n)
-  (and (real? n) (not (negative? n))))
 
 (provide/contract (buffer-play (-> s16vector?
                                    exact-integer?
@@ -30,14 +43,31 @@
                   [stop-playing (-> void?)]
                   [channels exact-nonnegative-integer?])
 
+(define (false? x) (eq? x #f))
 
+(define (nonnegative-real? n)
+  (and (real? n) (not (negative? n))))
 
 ;; channels... don't change this, unless 
 ;; you also change the copying-callback.
 (define channels 2)
 
+;; make sure that pa-terminate gets called.
+(register-custodian-shutdown #f pa-terminate-completely-caller)
+
+;; this wrapper just discards its argument, to fit the API for
+;; register-custodian shutdown
+(define (pa-terminate-completely-caller dc)
+  (pa-terminate-completely))
+
+;; initialize portaudio
 (pa-maybe-initialize)
 
+;; NOTE: there's a certain amount of peculiar conservatism here;
+;; in principle, it should be possible to use pa-initialize and
+;; pa-terminate, rather than pa-maybe-initialize and pa-terminate-completely,
+;; since each terminate should be paired with one initialize.
+;; I believe that what I'm doing here is less likely to cause problems.
 
 
 ;; STOPPING PLAYBACK
@@ -49,10 +79,10 @@
 
 ;; drain the live-stream-channel, calling each thunk.
 (define (call-all-stop-thunks)
-  (match (async-channel-try-get live-stream-channel)
-    [#f (void)]
-    [thunk (thunk)
-           (call-all-stop-thunks)]))
+  (define maybe-thunk (async-channel-try-get live-stream-channel))
+  (when maybe-thunk
+    (maybe-thunk)
+    (call-all-stop-thunks)))
 
 ;; a wrapper for portaudio's s16vec-play, that
 ;; saves a stopper in the global channel
@@ -67,8 +97,9 @@
 ;; in the global channel
 (define (signal/block-play block-filler sample-rate buffer-time)
   (define actual-buffer-time (or buffer-time default-buffer-time))
-  (match-define (list stream-time stats stop-sound)
-    (stream-play block-filler actual-buffer-time sample-rate))
+  (define stream-play-result (stream-play block-filler actual-buffer-time sample-rate))
+  (define stream-time (car stream-play-result))
+  (define stop-sound (caddr stream-play-result))
   (async-channel-put 
    live-stream-channel
    (lambda () (stop-sound)))
@@ -79,8 +110,9 @@
 ;; in the global channel
 (define (signal/block-play/unsafe block-filler sample-rate buffer-time)
   (define actual-buffer-time (or buffer-time default-buffer-time))
-  (match-define (list stream-time stats stop-sound)
-    (stream-play/unsafe block-filler actual-buffer-time sample-rate))
+  (define stream-play-result (stream-play/unsafe block-filler actual-buffer-time sample-rate))
+  (define stream-time (car stream-play-result))
+  (define stop-sound (caddr stream-play-result))
   (async-channel-put 
    live-stream-channel
    (lambda () (stop-sound)))

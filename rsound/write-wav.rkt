@@ -1,7 +1,8 @@
-#lang racket
+#lang racket/base
 ;;#lang typed/racket
 
-(require ffi/vector)
+(require ffi/vector
+         racket/match)
 #;(require/typed ffi/vector
                [s16vector? (Any -> Bool)]
                [s16vector-length (S16Vector -> Nat)]

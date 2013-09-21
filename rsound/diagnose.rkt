@@ -1,8 +1,9 @@
-#lang racket
+#lang racket/base
 
 (require portaudio
          portaudio/devices
-         ffi/vector)
+         ffi/vector
+         (only-in racket/math pi))
 
 (provide diagnose-sound-playing
          all-host-apis

@@ -1,4 +1,4 @@
-#lang racket
+#lang racket/base
 
 (require "rsound.rkt"
          "util.rkt"

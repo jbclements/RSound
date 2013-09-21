@@ -1,4 +1,4 @@
-#lang racket
+#lang racket/base
 
 (require "rsound.rkt"
          "private/s16vector-add.rkt"
