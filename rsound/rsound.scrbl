@@ -2,7 +2,7 @@
 
 @(require scribble/manual)
 
-@title{@bold{RSound}: An Adequate Sound Engine for Racket}
+@title{RSound: An Sound Engine for Racket}
 
 @author[(author+email "John Clements" "clements@racket-lang.org")]
 
