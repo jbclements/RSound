@@ -183,7 +183,8 @@
          (error 'rs-play/helper "not implemented")
          (rc:buffer-play data start finish sample-rate))]
     [other
-     (error 'rs-play/helper "expected an rsound, got: ~e" sound)]))
+     (error 'rs-play/helper "expected an rsound, got: ~e" sound)])
+  "played sound")
 
 ;; play an rsound
 (define play 
