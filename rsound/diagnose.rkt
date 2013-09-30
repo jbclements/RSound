@@ -7,9 +7,10 @@
 
 (provide diagnose-sound-playing
          all-host-apis
-         host-api)
+         host-api
+         set-host-api!)
 
-;; on Windows, you need to manually set the playback device to 44.1KHz,
+;; on Windows+WASAPI, you need to manually set the playback device to 44.1KHz,
 ;; or else playback simply fails with an "invalid device" error. Running
 ;; the "diagnose-sound-playing" function simply tries playing tones 
 ;; to each of the available apis using the most common 
@@ -52,7 +53,8 @@
                             (exn-message exn)))])
           (s16vec-play s16vec 0 s16vec-len sr)
           (sleep (+ 1.0 (/ s16vec-len sr)))
-          (printf "...finished.\n")))))
+          (printf "configuration tested. Press <return> to go to next test.\n")
+          (read-line)))))
   (printf "~a" followup-message))
 
 (define followup-message
@@ -64,4 +66,3 @@ on the volume icon and then digging through menus (properties, advanced).
 
 |
   )
-
