@@ -1,14 +1,16 @@
 #lang racket/base
 
 (require portaudio
-         portaudio/devices
          ffi/vector
          (only-in racket/math pi))
 
 (provide diagnose-sound-playing
          all-host-apis
          host-api
-         set-host-api!)
+         set-host-api!
+         display-device-table
+         output-device
+         set-output-device!)
 
 ;; on Windows+WASAPI, you need to manually set the playback device to 44.1KHz,
 ;; or else playback simply fails with an "invalid device" error. Running
@@ -66,3 +68,15 @@ on the volume icon and then digging through menus (properties, advanced).
 
 |
   )
+
+
+(define (display-device-table)
+  (define host-apis (all-host-apis))
+  (for ([i (pa-get-device-count)])
+    (define device-info (pa-get-device-info i))
+    (printf "device index ~s: api = ~s, device name = ~s, ~s input channels, ~s output channels\n"
+            i 
+            (list-ref host-apis (pa-device-info-host-api device-info))
+            (pa-device-info-name device-info)
+            (pa-device-info-max-input-channels device-info)
+            (pa-device-info-max-output-channels device-info))))

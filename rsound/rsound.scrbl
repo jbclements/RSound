@@ -131,6 +131,11 @@ These procedures allow the creation, analysis, and manipulation of rsounds.
  Returns a new rsound containing the frames in @racket[rsound] from the @racket[start]th to the @racket[finish]th - 1.
  This procedure copies the required portion of the sound.}
 
+@defproc[(rs-append (rsound-1 rsound?) (rsound-2 rsound?)) rsound?]{
+ Returns a new rsound containing the given two rsounds appended sequentially.
+ Both of the given rsounds must have the same sample-rate.
+ }
+
 @defproc[(rs-append* (rsounds (listof rsound?))) rsound?]{
  Returns a new rsound containing the given @racket[rsounds], appended sequentially. This procedure is relatively
  fast. All of the given rsounds must have the same sample-rate.}
@@ -554,6 +559,24 @@ overhead.
 @defparam[host-api api symbol?]{
  A parameter that instructs portaudio to choose a particular API to use in playing sounds. If its
  value is @racket[false], portaudio chooses one.
+}
+
+@defproc[(set-host-api! (api (or/c false? string?))) void?]{
+ A version of the @racket[host-api] parameter that can be used in the teaching languages
+ (because it's a regular procedure).
+ A parameter that instructs portaudio to choose a particular API to use in playing sounds. If its
+ value is @racket[false], portaudio chooses one.
+}
+
+@defproc[(display-device-table) void?]{
+ Display a table listing all of the available devices: what host API they're associated
+ with, what their names are, and the maximum number of input and output channels
+ associated with each one.
+}
+
+@defproc[(set-output-device! (index (or/c false? natural?))) void]{
+ Choose a specific device index number for use with portaudio. Note that this choice
+ supersedes the host-api choice.
 }
 
 @section{Sample Code}
