@@ -30,6 +30,12 @@
   (sleep 0.01))
 (sleep 1)
 
+;; DEBUGGING:
+(require portaudio/portaudio)
+(printf "portaudio opens: ~s, closes: ~s\n"
+        (unbox stream-opens)
+        (unbox stream-closes))
+
 (printf "\nmany open streams\n")
 (define tiny-tone (make-tone 550 0.05 10))
 (for ([i (in-range 1000)])
@@ -38,10 +44,11 @@
 (play ding)
 (sleep 1)
 
-;; 300 is definitely starting to affect performance:
+;; UNIX can't handle more than 30.
+;; on Mac OS X, 300 is definitely starting to affect performance:
 (printf "\nmany simultaneous streams\n")
 (define quiet-tone (make-tone 480 0.001 44100))
-(for ([i (in-range 300)])
+(for ([i (in-range 30)])
   (play quiet-tone))
 (sleep 1)
 (printf "...stop\n")
