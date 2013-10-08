@@ -11,7 +11,7 @@
                      rsound/frequency-response))
 
 @defmodule[rsound]{This collection provides a means to represent, read,
-write, play, and manipulate sounds. It depends on the @racket[clements/portaudio] 
+write, play, and manipulate sounds. It depends on the @racket[portaudio] 
 package to provide bindings to the cross-platform `PortAudio' library which appears
 to run on Linux, Mac, and Windows.
 
