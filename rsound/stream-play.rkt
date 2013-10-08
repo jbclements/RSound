@@ -9,7 +9,11 @@
 
 (provide play/s
          play/s/f
-         current-time/s)
+         current-time/s
+         #;make-pstream
+         #;pstream-play
+         #;pstream-queue
+         #;pstream-current-time)
 
 ;; play/s : rsound -> void
 ;; play a sound by queueing it for right now.
@@ -43,3 +47,15 @@
     (signal/block-play/unsafe signal/block/unsafe (default-sample-rate))
     (set! already-started? #t)))
 
+;; hmm... actually, it's not going to work quite the way I wanted....
+;; a faux-functional wrapper for a sound-heap
+#;(struct pstream (unplayed-heap used-box))
+
+;; make a new pstream
+#;(define (make-pstream)
+  (pstream (make-unplayed-heap) (box #f)))
+
+;; pstream-used?
+#;(define (pstream-used? pstream)
+  (unless (pstream? pstream)
+    (raise-argument-error 'pstream-used? )))

@@ -251,24 +251,24 @@
   (define tgt (make-s16vector 20 123))
   (define tgt-ptr (s16vector->cpointer tgt))
   (define-values (test-signal/block last-time) (heap->signal/block/unsafe unplayed-heap))
-  (test-signal/block tgt-ptr 10 0)
+  (test-signal/block tgt-ptr 10)
   (check-equal? (s16vector->list tgt)
                 (list 0 0 0 0 0 0 0 0 0 0
                       0 0 0 0 0 0 0 0 0 0))
   (check-equal? (last-time) 10)
-  (test-signal/block tgt-ptr 10 10)
+  (test-signal/block tgt-ptr 10)
   (check-equal? (s16vector->list tgt)
                 (list 0 0 0 0 0 0 0 0 0 0
                       2 2 2 2 4 4 4 4 4 4))
-  (test-signal/block tgt-ptr 10 20)
+  (test-signal/block tgt-ptr 10)
   (check-equal? (s16vector->list tgt)
                 (list 4 4 4 4 4 4 4 4 4 4
                       2 2 2 2 0 0 0 0 0 0))
-  (test-signal/block tgt-ptr 10 30)
+  (test-signal/block tgt-ptr 10)
   (check-equal? (s16vector->list tgt)
                 (list 0 0 0 0 0 0 0 0 0 0
                       0 0 0 0 4 4 4 4 4 4))
-  (test-signal/block tgt-ptr 10 40)
+  (test-signal/block tgt-ptr 10)
   (check-equal? (s16vector->list tgt)
                 (list 4 4 7 7 7 7 4 4 4 4
                       4 4 4 4 4 4 4 4 4 4))
