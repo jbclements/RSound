@@ -47,9 +47,21 @@
     (signal/block-play/unsafe signal/block/unsafe (default-sample-rate))
     (set! already-started? #t)))
 
-;; hmm... actually, it's not going to work quite the way I wanted....
-;; a faux-functional wrapper for a sound-heap
-#;(struct pstream (unplayed-heap used-box))
+(struct pstream (sound-heap time-checker))
+;; 
+#;(define (make-pstream)
+  (define pstream-heap (make-unplayed-heap))
+  ;; the signal for playing the heap's sounds, and
+  ;; the time-checker
+  (define-values (signal/block/unsafe current-time/s)
+    (heap->signal/block/unsafe sound-heap))
+  (signal/block-play/unsafe signal/block/unsafe (default-sample-rate))
+  (define (close)
+    (... what *is* a signal-block/unsafe, anyway? :))
+  (pstream pstream-heap current-time/s))
+
+#;(define (pstream-close pstream)
+  ())
 
 ;; make a new pstream
 #;(define (make-pstream)
