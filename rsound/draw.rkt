@@ -117,9 +117,52 @@
     
     (define data-window-width (- data-right data-left))
     
+    (define cur-mouse-x 0)
+    
     (inherit get-width get-height get-parent)
     
+    (define/override (on-char evt)
+      (define key-code (send evt get-key-code))
+      (match key-code
+        ;; zoom way in (100x)
+        [#\i (let* ([x (min (max 0 cur-mouse-x) (- (get-width) 1))]
+                    [scaled-x (pixel->frame x)]
+                    [orig-range (- data-right data-left)]
+                    [smaller-range (max 2 (floor (/ orig-range 100)))]
+                    [maybe-new-left (round (- scaled-x (/ smaller-range 2)))]
+                    [maybe-new-right (round (+ scaled-x (/ smaller-range 2)))])
+               (cond [(< orig-range 400) 
+                      ;; too small, ignore
+                      (void)]
+                     ;; bump to the right:
+                     [(< maybe-new-left 0)
+                      (let ()
+                        (define fixed-up-left 0)
+                        (define fixed-up-right (+ maybe-new-right (- maybe-new-left)))
+                        (vectors-draw "zoomed" left-getter right-getter len 
+                                      (send (get-parent) get-width) 
+                                      (send (get-parent) get-height)
+                                      fixed-up-left fixed-up-right))]
+                     ;; bump to the left
+                     [(< data-right maybe-new-left)
+                      (let ()
+                        (define fixed-up-right data-right)
+                        (define fixed-up-left (- maybe-new-left 
+                                                 (- data-right maybe-new-right)))
+                        (vectors-draw "zoomed" left-getter right-getter len 
+                                      (send (get-parent) get-width) 
+                                      (send (get-parent) get-height)
+                                      fixed-up-left fixed-up-right))]
+                     ;; zoom here:
+                     [else
+                      (vectors-draw "zoomed" left-getter right-getter len 
+                                    (send (get-parent) get-width) 
+                                    (send (get-parent) get-height)
+                                    maybe-new-left maybe-new-right)]))]
+        [other #f]))
+    
     (define/override (on-event evt)
+      (set! cur-mouse-x (send evt get-x))
       (cond [(send evt button-down?)
              (let* ([x (min (max 0 (send evt get-x)) (- (get-width) 1))]
                     [scaled-x (pixel->frame x)]
