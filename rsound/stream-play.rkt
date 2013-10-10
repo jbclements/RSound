@@ -72,6 +72,7 @@
     (raise-argument-error 'pstream-play "pstream" 0 pstream snd))
   (unless (rsound? snd)
     (raise-argument-error 'pstream-play "rsound" 1 pstream snd))
-  (pstream-queue pstream snd (pstream-current-frame pstream)))
+  (pstream-queue pstream snd (pstream-current-frame pstream))
+  pstream)
 
 

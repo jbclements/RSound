@@ -530,19 +530,45 @@ overhead.
 @section{Stream-based Playing}
 
 @defmodule[rsound/stream-play]{
- RSound now provides functions whereby all played sounds use a single stream.
- This has the advantage of lower latency and avoids problems on Windows, where
- opening a new stream for each sound causes errors.
+ RSound now provides a "pstream" abstraction which falls conceptually in between
+ @racket[play] and @racket[signal-play]. In particular, a @racket[pstream] encapsulates
+ an ongoing signal, with primitives available to queue sounds for playback, to check
+ the signal's "current time" (in frames), and to queue a callback to occur at a 
+ particular time.
  
+ This mechanism has two advantages over @racket[play]; first, it allows you to queue sounds 
+ for a particular frame, avoiding hiccups in playback.  Second, it only uses a single
+ portaudio stream, rather than the multiple portaudio streams that would occur in 
+ multiple calls to @racket[play]
  
-@defproc[(play/s [sound rsound?]) void]{
- Plays a given sound.}
+@defproc[(make-pstream) pstream?]{
+ Create a new pstream and start playing it. Initially, of course, it will be silent. Returns
+ the pstream.
+}
 
-@defproc[(play/s/f [sound rsound?] [frame natural?]) void]{
- Plays a given sound at a given (stream-relative) frame.}
+@defproc[(pstream-queue [pstream pstream?] [rsound rsound?] [frames natural?]) pstream?]{
+ Queue the given sound to be played at the time specified by @racket[frames]. If that frame
+ is in the past, it will still play the appropriate remainder of the sound. Returns
+ the pstream.
+}
 
-@defproc[(current-time/s) natural?]{
- Returns the current stream-relative frame.}}
+@defproc[(pstream-current-frames [pstream pstream?]) natural?]{
+ Returns the current value of the stream's frame counter.
+ }
+
+@defproc[(pstream-play [pstream pstream?] [rsound rsound?]) pstream?]{
+ Play the given sound on the given stream. Returns the pstream.
+}
+
+@defproc[(pstream-queue-callback [pstream pstream?] [callback procedure?] [frames natural?]) pstream?]{
+ Queue the callback (a procedure of no arguments) to be called when the pstream's frame
+ counter reaches @racket[frames]. If the counter is already larger than @racket[frames], calls
+ it immediately.
+ 
+ It's perhaps worth noting that the callbacks are triggered by semaphore posts, to avoid the possibility
+ of a callback stalling playback.  This can mean that the callback is delayed by a few milliseconds.
+ }
+}
 
 @section{Configuration}
 
