@@ -14,24 +14,23 @@
 
 (provide/contract
  [make-unplayed-heap (-> heap?)]
+ [make-uncallbacked-heap (-> heap?)]
  [queue-for-playing! (-> heap? rsound? nonnegative-integer? void?)]
- [heap->signal/block/unsafe 
-  (-> heap? (values procedure? procedure?))])
+ [queue-for-callbacking! (-> heap? (-> any) nonnegative-integer? void?)]
+ [heap->signal/block/unsafe
+  (-> heap? heap? (values procedure? procedure?))])
 
 
 
 ;; an entry is a vector of an rsound, a start frame, and an end frame.
 (define-struct entry (sound start finish) #:transparent)
 
+;; a callback contains a semaphore and a time-to-trigger
+(struct callback (sema trigger-t))
+
 ;; a heap of entries, ordered by start time.
 (define (make-unplayed-heap)
   (make-heap (lambda (a b)
-               (unless (entry? a)
-                 (raise-type-error 'unplayed-heap
-                                   "entry" 0 a b))
-               (unless (entry? b)
-                 (raise-type-error 'unplayed-heap
-                                   "entry" 1 a b))
                (<= (entry-start a) (entry-start b)))))
 
 ;; given a heap and a sound and a start, add the sound to the
@@ -42,6 +41,24 @@
            (heap->vector heap)))
   (heap-add! heap (make-entry sound start (+ start (rs-frames sound)))))
 
+;; a heap of callbacks, ordered by trigger time
+(define (make-uncallbacked-heap)
+  (make-heap (lambda (a b)
+               (<= (callback-trigger-t a) 
+                   (callback-trigger-t b)))))
+
+;; given a callback-heap and a procedure of no args and a frame,
+;; add a callback to the heap that will trigger the procedure
+;; at (or soon after) the given frame
+(define (queue-for-callbacking! heap cb frame)
+  (define sema (make-semaphore))
+  (heap-add! heap (callback sema frame))
+  (thread
+   (lambda ()
+     (semaphore-wait sema)
+     (cb)))
+  (void))
+
 (define (heap-has-false? heap)
   (not (for/and ([elt (heap->vector heap)]) elt)))
 
@@ -49,25 +66,27 @@
 ;; signal/block that plays them, and a thunk that can be used to determine the
 ;; most recent value of t. 
 
-(define (heap->signal/block/unsafe unplayed)
+(define (heap->signal/block/unsafe unplayed uncallbacked)
   ;; the "playing" heap is ordered by end time, to facilitate removal
   (define playing (make-heap (lambda (a b) (<= (entry-finish a) (entry-finish b)))))
   ;; invariant: playing-vec contains the same elements as the "playing" heap.
   (define playing-vec (vector))
+  ;; this mutable variable contains the last requested frame.
   (define last-t 0)
   (define (get-last-t) last-t)
   (define (signal/block cpointer frames)
-    (define t last-t)
     (when (< frames 0)
       (error 'sequencer "callback called with frames < 0: ~e\n" frames))
-    (set! last-t (+ frames t))
+    (define next-last-t (+ frames last-t))
     ;; remove sounds that end before the start:
-    (define sounds-removed? (clear-ended-sounds playing t))
+    (define sounds-removed? (clear-ended-sounds! playing last-t))
     ;; add sounds that start before the end:
-    (define sounds-added? (add-new-sounds unplayed playing t last-t))
+    (define sounds-added? (add-new-sounds unplayed playing last-t next-last-t))
     (when (or sounds-removed? sounds-added?)
       (set! playing-vec (heap->vector playing)))
-    (combine-onto! cpointer t frames playing-vec))
+    (combine-onto! cpointer last-t frames playing-vec)
+    (trigger-ready-semaphores! uncallbacked next-last-t)
+    (set! last-t next-last-t))
   (values 
    signal/block
    get-last-t))
@@ -100,7 +119,7 @@
 
 ;; given a heap (ordered by ending time) and a current time, remove
 ;; those sounds whose ending times are <= the current time
-(define (clear-ended-sounds playing-heap current-time)
+(define (clear-ended-sounds! playing-heap current-time)
   (let loop ([removed? #f])
     (cond [(= (heap-count playing-heap) 0) removed?]
           [else
@@ -110,6 +129,19 @@
                   (loop #t)]
                  [else removed?])])))
 
+;; given a callback heap and a current time, post to all the
+;; semaphores whose trigger time precedes the current time
+(define (trigger-ready-semaphores! callback-heap t)
+  (let loop ()
+    (cond [(= (heap-count callback-heap) 0) (void)]
+          [else
+           (define f (heap-min callback-heap))
+           (cond [(<= (callback-trigger-t f) t)
+                  (heap-remove-min! callback-heap)
+                  (semaphore-post (callback-sema f))
+                  (loop)]
+                 [else
+                  (void)])])))
 
 ;; given a heap of queued sounds (ordered by starting time), 
 ;; a heap of playing sounds (ordered by ending time), and
@@ -136,10 +168,14 @@
                [else added?])])))
 
 
-(module+ test
+(module+ the-test-suite
 
   (require rackunit)
+  (provide the-test-suite)
 
+  (define the-test-suite
+  (test-suite
+ "sequencer"
 ;; test of queue
 (let ()
   (define h (make-unplayed-heap))
@@ -155,6 +191,19 @@
   (check-equal? (entry-finish (heap-min h)) 30000))
 
 (let ()
+  (define h (make-uncallbacked-heap))
+  (define test-box (box #f))
+  (queue-for-callbacking! h (lambda () (set-box! test-box #t)) 21)
+  (trigger-ready-semaphores! h 15)
+  (check-equal? (unbox test-box) #f)
+  (trigger-ready-semaphores! h 30)
+  ;; not sure I should actually test this...:
+  (check-equal? (unbox test-box) #f)
+  ;; sleep to allow semaphores to run:
+  (sleep 0.001)
+  (check-equal? (unbox test-box) #t))
+
+(let ()
   (define playing-heap (make-heap (lambda (a b) 
                                     (<= (entry-finish a) (entry-finish b)))))
   (heap-add-all! playing-heap (list (entry 'a 14 29)
@@ -163,13 +212,13 @@
                                     (entry 'd 3 25)))
   (check-equal? (heap-count playing-heap) 4)
   (check-equal? (heap-min playing-heap) (entry 'b 16 21))
-  (check-equal? (clear-ended-sounds playing-heap 22) #t)
+  (check-equal? (clear-ended-sounds! playing-heap 22) #t)
   (check-equal? (heap-count playing-heap) 3)
-  (check-equal? (clear-ended-sounds playing-heap 25) #t)
+  (check-equal? (clear-ended-sounds! playing-heap 25) #t)
   (check-equal? (heap-count playing-heap) 1)
-  (check-equal? (clear-ended-sounds playing-heap 30) #t)
+  (check-equal? (clear-ended-sounds! playing-heap 30) #t)
   (check-equal? (heap-count playing-heap) 0)
-  (check-equal? (clear-ended-sounds playing-heap 40) #f))
+  (check-equal? (clear-ended-sounds! playing-heap 40) #f))
 
 
 
@@ -242,26 +291,37 @@
   (define s2 (rsound (make-s16vector 4 3) 0 2 44100))
   (define s3 (rsound (make-s16vector 30 4) 0 15 44100))
   (define unplayed-heap (make-unplayed-heap))
+  (define uncallbacked-heap (make-uncallbacked-heap))
   (queue-for-playing! unplayed-heap s1 15)
   (queue-for-playing! unplayed-heap s1 17)
   (queue-for-playing! unplayed-heap s3 37)
   (queue-for-playing! unplayed-heap s2 41)
+  (define test-box (box #f))
+  (queue-for-callbacking! uncallbacked-heap (lambda () (set-box! test-box #t)) 21)
   (define tgt (make-s16vector 20 123))
   (define tgt-ptr (s16vector->cpointer tgt))
-  (define-values (test-signal/block last-time) (heap->signal/block/unsafe unplayed-heap))
+  (define-values (test-signal/block last-time) 
+    (heap->signal/block/unsafe unplayed-heap uncallbacked-heap))
   (test-signal/block tgt-ptr 10)
   (check-equal? (s16vector->list tgt)
                 (list 0 0 0 0 0 0 0 0 0 0
                       0 0 0 0 0 0 0 0 0 0))
   (check-equal? (last-time) 10)
+  (check-equal? (unbox test-box) #f)
   (test-signal/block tgt-ptr 10)
   (check-equal? (s16vector->list tgt)
                 (list 0 0 0 0 0 0 0 0 0 0
                       2 2 2 2 4 4 4 4 4 4))
+  (check-equal? (unbox test-box) #f)
+  (check-equal? (last-time) 20)
   (test-signal/block tgt-ptr 10)
   (check-equal? (s16vector->list tgt)
                 (list 4 4 4 4 4 4 4 4 4 4
                       2 2 2 2 0 0 0 0 0 0))
+  (check-equal? (last-time) 30)
+  ;; must sleep a bit to allow semaphore-triggered thunk to run:
+  (sleep 0.001)
+  (check-equal? (unbox test-box) #t)
   (test-signal/block tgt-ptr 10)
   (check-equal? (s16vector->list tgt)
                 (list 0 0 0 0 0 0 0 0 0 0
@@ -270,6 +330,11 @@
   (check-equal? (s16vector->list tgt)
                 (list 4 4 7 7 7 7 4 4 4 4
                       4 4 4 4 4 4 4 4 4 4))
-  (check-equal? (last-time) 50))
+  (check-equal? (last-time) 50))))
 
 )
+
+(module+ test
+  (require rackunit/text-ui)
+  (require (submod ".." the-test-suite))
+  (run-tests the-test-suite))

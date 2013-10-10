@@ -4,28 +4,31 @@
          "./sequencer.rkt")
 
 ;; a stream-based sound player built on top of the sequencer.
-;; this solves problems on platforms such as windows that don't
-;; like it when you open lots of streams.
+;; this provides a reasonable way to stitch together sounds 
+;; seamlessly for playback, so you're not relying on the precision
+;; of "sleep" to get your sequential sounds lined up correctly.
 
 (provide make-pstream
          pstream-queue
          pstream-play
-         pstream-current-frame)
+         pstream-current-frame
+         pstream-queue-callback)
 
 ;; a pstream bundles a sound-heap that's attached
 ;; to a playing stream and a time-checker that returns
 ;; the most recently requested frame.
-(struct pstream (sound-heap time-checker))
+(struct pstream (sound-heap callback-heap time-checker))
 
 ;; make (and start) a pstream
 (define (make-pstream)
-  (define pstream-heap (make-unplayed-heap))
+  (define sound-heap (make-unplayed-heap))
+  (define callback-heap (make-uncallbacked-heap))
   ;; the signal for playing the heap's sounds, and
   ;; the time-checker
   (define-values (signal/block/unsafe current-time/s)
-    (heap->signal/block/unsafe pstream-heap))
+    (heap->signal/block/unsafe sound-heap callback-heap))
   (signal/block-play/unsafe signal/block/unsafe (default-sample-rate))
-  (pstream pstream-heap current-time/s))
+  (pstream sound-heap callback-heap current-time/s))
 
 ;; return the last-requested frame from the pstream
 (define (pstream-current-frame pstream)
@@ -44,6 +47,23 @@
   (queue-for-playing! (pstream-sound-heap pstream) 
                       snd 
                       frame)
+  pstream)
+
+;; queue a callback to run at a particular frame
+(define (pstream-queue-callback pstream callback frame)
+  (unless (pstream? pstream)
+    (raise-argument-error 'pstream-queue-callback "pstream" 0 pstream callback frame))
+  (unless (and (procedure? callback)
+               (procedure-arity-includes? callback 0))
+    (raise-argument-error 'pstream-queue-callback
+                          "procedure that accepts no arguments"
+                          1 pstream callback frame))
+  (unless (exact-nonnegative-integer? frame)
+    (raise-argument-error 'pstream-queue-callback
+                          "exact nonnegative integer" 2 pstream callback frame))
+  (queue-for-callbacking! (pstream-callback-heap pstream) 
+                          callback
+                          frame)
   pstream)
 
 ;; queue 'snd' for playing at the current frame

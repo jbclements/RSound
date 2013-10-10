@@ -1,7 +1,12 @@
 #lang racket
 
+;; I do not now know what bug this file was intended to illustrate....
+
 (require "../rsound.rkt"
-         "../fft.rkt")
+         "../fft.rkt"
+         racket/runtime-path)
+
+(define-runtime-path examples "../examples")
 
 (define sound-start (- 212930 1024))
 (define sound-end 212930)
@@ -11,7 +16,9 @@
 
 (printf "windows: ~s\n" windows)
 
-(define voice (rs-read/clip "/Users/clements/class/examples/spoken-voice.wav" sound-start (+ sound-start (* windows window-len))))
+(define voice (rs-read/clip 
+               (build-path examples "speaking.wav")
+               sound-start (+ sound-start (* windows window-len))))
 
 (define v1 (build-vector (rs-frames voice) (lambda (i) (rs-ith/left/s16 voice i))))
 

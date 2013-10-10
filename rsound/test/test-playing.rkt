@@ -38,7 +38,7 @@
 
 (printf "\nmany open streams\n")
 (define tiny-tone (make-tone 550 0.05 10))
-(for ([i (in-range 1000)])
+(for ([i (in-range 400)])
   (play tiny-tone)
   (sleep 0.005))
 (play ding)

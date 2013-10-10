@@ -5,6 +5,12 @@
          ffi/unsafe
          rackunit)
 
+(provide the-test-suite)
+
+(define the-test-suite
+(test-suite
+ "s16-vector-add"
+(let () 
 ;; s16vector of length 20 with random numbers from -50 to 49
 (define src-buf (make-s16vector 20 0))
 (define src-cpointer (s16vector->cpointer src-buf))
@@ -27,7 +33,12 @@
    (equal? (s16vector-ref tgt-buf (+ 46 i)) 
            (+ (s16vector-ref src-buf i)
               (s16vector-ref src-buf (+ i 10)))))
- #t)
+ #t))))
+
+(module+ test
+  (require rackunit/text-ui)
+  (run-tests the-test-suite))
+
 
 
 

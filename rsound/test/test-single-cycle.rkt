@@ -4,6 +4,11 @@
          "../single-cycle.rkt"
          rackunit)
 
+(provide the-test-suite)
+(define the-test-suite
+(test-suite
+ "single-cycle"
+ (let ()
 (check-not-exn (lambda () (synth-note "vgame" 132 0 44100)))
 (check-not-exn (lambda () (synth-note "main" 37 10 44100)))
 (check-exn 
@@ -19,5 +24,9 @@
                               "AKWF_273848/AKWF_27384720.wav
   system error: No such file or directory; errno=2")
                              (exn-message exn)))
- (lambda () (synth-note "main" 27384720 1 1)))
+ (lambda () (synth-note "main" 27384720 1 1))))))
+
+(module+ test
+  (require rackunit/text-ui)
+  (run-tests the-test-suite))
 

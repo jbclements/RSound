@@ -4,10 +4,10 @@
          "../util.rkt"
          "../paste-util.rkt"
          ffi/vector
-         rackunit
-         rackunit/text-ui)
+         rackunit)
 
-(run-tests
+(provide the-test-suite)
+(define the-test-suite
  (test-suite 
   "paste-util"
   
@@ -112,3 +112,7 @@
   
   
   ))
+
+(module+ test
+  (require rackunit/text-ui)
+  (run-tests the-test-suite))

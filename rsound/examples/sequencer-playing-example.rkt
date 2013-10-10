@@ -2,31 +2,23 @@
 
 (require rackunit/text-ui
          mred
-         "../main.rkt"
-         "../sequencer.rkt")
+         "../main.rkt")
 
 
 (define tone (make-tone 330 0.2 30000))
 (define tone2 (make-tone 440 0.2 15000))
 
-(define unplayed-heap (make-unplayed-heap))
-#;(queue-for-playing! unplayed-heap tone 0)
-#;(queue-for-playing! unplayed-heap tone 44100)
-#;(for ([i (in-range 50)])
-  (queue-for-playing! unplayed-heap tone2 (+ 1000 (* i 22050))))
+(define ps (make-pstream))
 
-
-(define-values (signal/block/unsafe last-time)
-  (heap->signal/block/unsafe unplayed-heap))
+(define (network-apply n constant)
+  (network ()
+     [o (n constant)]))
 
 (define (g p)
-  (queue-for-playing! unplayed-heap 
-                      (signal->rsound 44100 (signal-scale 0.2 (harm3-wave p)))
-                      (last-time)))
-
-(signal/block-play/unsafe signal/block/unsafe 44100)
-
-
+  (pstream-play ps 
+                (signal->rsound 44100 
+                                (signal-scale 0.2 (network-apply
+                                                   harm3-wave p)))))
 (define kbd-frame
   (new frame% [label "foo"]
        [width 200]

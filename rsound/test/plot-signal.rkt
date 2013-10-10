@@ -6,6 +6,8 @@
          "../util.rkt"
          "../filter.rkt")
 
+;; this is just a pair of helper functions for testing.
+
 (provide plot-signal plot-signals)
 ;; for interactive testing, right now.
 

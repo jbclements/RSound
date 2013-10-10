@@ -4,6 +4,12 @@
          "../integral-cycles.rkt"
          rackunit)
 
+(provide the-test-suite)
+
+(define the-test-suite
+(test-suite
+ "make-tone"
+(let ()
 
 ;; tests of integral-cycles:
 (check-equal? (cycles-to-use 441 44100.0) 1)
@@ -338,4 +344,9 @@
         (523.2511306011972 10/127 109790))))
    (list)))
 
-(check < t1 1000)
+(check < t1 1000))))
+
+
+(module+ test
+  (require rackunit/text-ui)
+  (run-tests the-test-suite))
