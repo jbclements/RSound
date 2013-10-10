@@ -45,11 +45,9 @@
 (define (heap-has-false? heap)
   (not (for/and ([elt (heap->vector heap)]) elt)))
 
-;; this accepts a heap of input sound entries and produces a "sensitive"
+;; this accepts a heap of input sound entries and produces a 
 ;; signal/block that plays them, and a thunk that can be used to determine the
-;; most recent value of t.  It's sensitive in the sense that if you don't 
-;; call it with monotonically non-decreasing time values, it's going to 
-;; behave badly. It returns a thunk that knows the most recent value of t
+;; most recent value of t. 
 
 (define (heap->signal/block/unsafe unplayed)
   ;; the "playing" heap is ordered by end time, to facilitate removal

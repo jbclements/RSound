@@ -10,10 +10,9 @@
 (provide play/s
          play/s/f
          current-time/s
-         #;make-pstream
-         #;pstream-play
-         #;pstream-queue
-         #;pstream-current-time)
+         make-pstream
+         pstream-queue-sound
+         pstream-current-time)
 
 ;; play/s : rsound -> void
 ;; play a sound by queueing it for right now.
@@ -49,25 +48,28 @@
 
 (struct pstream (sound-heap time-checker))
 ;; 
-#;(define (make-pstream)
+(define (make-pstream)
+  (maybe-initialize)
   (define pstream-heap (make-unplayed-heap))
   ;; the signal for playing the heap's sounds, and
   ;; the time-checker
   (define-values (signal/block/unsafe current-time/s)
-    (heap->signal/block/unsafe sound-heap))
+    (heap->signal/block/unsafe pstream-heap))
   (signal/block-play/unsafe signal/block/unsafe (default-sample-rate))
-  (define (close)
-    (... what *is* a signal-block/unsafe, anyway? :))
   (pstream pstream-heap current-time/s))
 
-#;(define (pstream-close pstream)
-  ())
+(define (pstream-current-time pstream)
+  ((pstream-time-checker pstream)))
 
-;; make a new pstream
-#;(define (make-pstream)
-  (pstream (make-unplayed-heap) (box #f)))
+(define (pstream-queue-sound pstream snd frame)
+  (queue-for-playing! (pstream-sound-heap pstream) 
+                      snd 
+                      frame)
+  pstream)
 
 ;; pstream-used?
 #;(define (pstream-used? pstream)
   (unless (pstream? pstream)
     (raise-argument-error 'pstream-used? )))
+
+
