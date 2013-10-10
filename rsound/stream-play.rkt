@@ -7,49 +7,18 @@
 ;; this solves problems on platforms such as windows that don't
 ;; like it when you open lots of streams.
 
-(provide play/s
-         play/s/f
-         current-time/s
-         make-pstream
-         pstream-queue-sound
-         pstream-current-time)
+(provide make-pstream
+         pstream-queue
+         pstream-play
+         pstream-current-frame)
 
-;; play/s : rsound -> void
-;; play a sound by queueing it for right now.
-(define (play/s snd)
-  (unless (rsound? snd)
-    (raise-type-error 'play/s "rsound" 0 snd))
-  (play/s/f snd (current-time/s)))
-
-;; play/s/f : rsound number -> void
-;; play a sound at a specified frame
-(define (play/s/f snd frame)
-  (unless (rsound? snd)
-    (raise-type-error 'play/s/f "rsound" 0 snd frame))
-  (unless (nonnegative-integer? frame)
-    (raise-type-error 'play/s/f "nonnegative integer" 1 snd frame))
-  (maybe-initialize)
-  (queue-for-playing! sound-heap snd frame))
-
-;; the heap of unplayed sounds
-(define sound-heap (make-unplayed-heap))
-
-;; the signal for playing the heap's sounds, and
-;; the time-checker
-(define-values (signal/block/unsafe current-time/s)
-  (heap->signal/block/unsafe sound-heap))
-
-;; initialize, unless it's already been started.
-(define already-started? #f)
-(define (maybe-initialize) 
-  (when (not already-started?)
-    (signal/block-play/unsafe signal/block/unsafe (default-sample-rate))
-    (set! already-started? #t)))
-
+;; a pstream bundles a sound-heap that's attached
+;; to a playing stream and a time-checker that returns
+;; the most recently requested frame.
 (struct pstream (sound-heap time-checker))
-;; 
+
+;; make (and start) a pstream
 (define (make-pstream)
-  (maybe-initialize)
   (define pstream-heap (make-unplayed-heap))
   ;; the signal for playing the heap's sounds, and
   ;; the time-checker
@@ -58,18 +27,31 @@
   (signal/block-play/unsafe signal/block/unsafe (default-sample-rate))
   (pstream pstream-heap current-time/s))
 
-(define (pstream-current-time pstream)
+;; return the last-requested frame from the pstream
+(define (pstream-current-frame pstream)
+  (unless (pstream? pstream)
+    (raise-argument-error 'pstream-current-frame "pstream" 0 pstream))
   ((pstream-time-checker pstream)))
 
-(define (pstream-queue-sound pstream snd frame)
+;; queue 'snd' for playing on 'pstream' at 'frame'
+(define (pstream-queue pstream snd frame)
+  (unless (pstream? pstream)
+    (raise-argument-error 'pstream-queue "pstream" 0 pstream snd frame))
+  (unless (rsound? snd)
+    (raise-argument-error 'pstream-queue "rsound" 1 pstream snd frame))
+  (unless (exact-nonnegative-integer? frame)
+    (raise-argument-error 'pstream-queue "exact nonnegative integer" 2 pstream snd frame))
   (queue-for-playing! (pstream-sound-heap pstream) 
                       snd 
                       frame)
   pstream)
 
-;; pstream-used?
-#;(define (pstream-used? pstream)
+;; queue 'snd' for playing at the current frame
+(define (pstream-play pstream snd)
   (unless (pstream? pstream)
-    (raise-argument-error 'pstream-used? )))
+    (raise-argument-error 'pstream-play "pstream" 0 pstream snd))
+  (unless (rsound? snd)
+    (raise-argument-error 'pstream-play "rsound" 1 pstream snd))
+  (pstream-queue pstream snd (pstream-current-frame pstream)))
 
 

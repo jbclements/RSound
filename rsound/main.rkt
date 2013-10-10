@@ -15,7 +15,8 @@
          "stream-play.rkt"
          "drum-samples.rkt"
          "checked-funs.rkt"
-         "diagnose.rkt")
+         "diagnose.rkt"
+         "stream-play.rkt")
 
 
 (provide (all-from-out "rsound.rkt")
@@ -27,4 +28,5 @@
          (all-from-out "diagnose.rkt")
          ;; should probably hide network-init, but 
          ;; I'm not going to... it could maybe be useful.
-         (all-from-out "network.rkt"))
+         (all-from-out "network.rkt")
+         (all-from-out "stream-play.rkt"))
