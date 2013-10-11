@@ -80,6 +80,7 @@ rsound-max-volume
          rsound-fft/right
          rsound-maximize-volume
          midi-note-num->pitch
+         pitch->midi-note-num
          ;; for testing:
          binary-logn
          )
@@ -140,6 +141,10 @@ rsound-max-volume
 ;; to obtain a new one. Using e.g. factor of 2 will make the sound one
 ;; octave higher and half as long.
 (define (resample factor sound)
+  (unless (and (real? factor) (<= 0 factor))
+    (raise-argument-error 'resample "nonnegative real number" 0 factor sound))
+  (unless (rsound? sound)
+    (raise-argument-error 'resample "rsound" 1 factor sound))
   (define left 
     (indexed-signal
      (lambda (i)
@@ -160,6 +165,10 @@ rsound-max-volume
 ;; to obtain a new one. Using e.g. factor of 2 will make the sound one
 ;; octave higher and half as long.
 (define (resample/interp factor sound)
+  (unless (and (real? factor) (<= 0 factor))
+    (raise-argument-error 'resample/interp "nonnegative real number" 0 factor sound))
+  (unless (rsound? sound)
+    (raise-argument-error 'resample/interp "rsound" 1 factor sound))
   (define new-sound-len 
     (inexact->exact (floor (/ (rs-frames sound) factor))))
   (define (the-sig extractor)
@@ -609,6 +618,12 @@ rsound-max-volume
     (raise-type-error 'midi-note-num->pitch "real" 0 note-num))
   (* 440 (expt 2 (/ (- note-num 69) 12))))
 
+;; pitch->midi-note-num : number -> number
+;; produces the midi note number that corresponds to a pitch
+(define (pitch->midi-note-num pitch)
+  (unless (real? pitch)
+    (raise-type-error 'pitch->midi-note-num "real" 0 pitch))
+  (+ 69 (* 12 (/ (log (/ pitch 440)) (log 2)))))
 
 ;; rsound->signal/either : (rsound number -> number) -> rsound -> signal
 ;; an abstraction over left/right channels for the following two functions.

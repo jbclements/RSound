@@ -420,6 +420,10 @@ overhead.
  Returns the frequency (in Hz) that corresponds to a given midi note number. Here's the top-secret formula: 
  440*2^((n-69)/12).}
 
+@defproc[(pitch->midi-note-num [pitch nonnegative-real?]) nonnegative-real?]{
+ Returns the midi note number that corresponds to a given frequency (in Hz). Inverse of the previous function.
+}
+
 @defproc[(fir-filter [delay-lines (listof (list/c nonnegative-exact-integer? real-number?))]) procedure?]{
  Given a list of delay times (in frames) and amplitudes for each, produces a function that maps signals
  to new signals where each frame is the sum of the current signal frame and the multiplied versions of 
@@ -552,7 +556,7 @@ overhead.
  the pstream.
 }
 
-@defproc[(pstream-current-frames [pstream pstream?]) natural?]{
+@defproc[(pstream-current-frame [pstream pstream?]) natural?]{
  Returns the current value of the stream's frame counter.
  }
 

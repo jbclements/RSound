@@ -1,1 +1,8 @@
-- get rid of internal FFT code copied from Doug Williams, rely on his science package... once it's released as a package, or (even better) racket/math. Ooh! It's there!
+- get rid of internal FFT code copied from Doug Williams, use racket/math instead.
+
+- add docs for resample, resample/interpolate, probably others.
+
+- wow, GC time is *terrible* for piano example, resampling 3-second sound linearly. Might
+  be better in TR.
+
+- why is startup time (require rsound) so terrible?

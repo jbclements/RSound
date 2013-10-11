@@ -200,6 +200,12 @@
               (lambda ()
                 (midi-note-num->pitch (list 34 24))))
    
+   ;; PITCH->MIDI-NOTE-NUM
+   
+   (check-= (pitch->midi-note-num 440.0) 69.0 1e-4)
+   (check-= (pitch->midi-note-num 220.0) 57.0 1e-4)
+   (check-= (pitch->midi-note-num (midi-note-num->pitch 22.0)) 22.0 1e-4)
+   
    ;; indexed-signal
    (check-= (signal-nth (indexed-signal (lambda (x) (* x 3))) 4)
             12
