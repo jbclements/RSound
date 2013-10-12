@@ -66,6 +66,8 @@
 
 ;; fill in 0 and max-frames for a newly created rsound
 (define (rsound/all s16vec sample-rate)
+  (when (= (s16vector-length s16vec) 0)
+    (raise-argument-error 'rsound/all "s16vector of length > 0" 0 s16vec sample-rate))
   (rsound s16vec 0 (/ (s16vector-length s16vec) channels) sample-rate))
 
 ;; an rdata is either
@@ -289,7 +291,7 @@
               (* rc:channels (rsound-start sound))
               sound-samples _sint16)
       (+ offset-samples sound-samples)))
-  (rsound cblock 0 total-frames (rsound-sample-rate (car los))))
+  (rsound/all cblock (rsound-sample-rate (car los))))
 
 ;; rs-overlay* : (listof (list/c rsound nat)) -> rsound
 ;; overlay all of the sounds at the specified offsets to form one
@@ -322,7 +324,7 @@
       (define p2 (ptr-add (s16vector->cpointer s16vec)
                           (* s16-size src-offset)))
       (s16buffer-add!/c p1 p2 num-samples))
-    (rsound cblock 0 total-frames (rsound-sample-rate (caar sound&times)))))
+    (rsound/all cblock (rsound-sample-rate (caar sound&times)))))
 
 
 
@@ -362,7 +364,7 @@
              [sample (real->s16 (sample-maker))])
         (s16vector-set! cblock offset       sample)
         (s16vector-set! cblock (+ offset 1) sample)))
-    (rsound cblock 0 int-frames sample-rate)))
+    (rsound/all cblock sample-rate)))
 
 
 ;; make a monaural sound of the given number of frames at the specified sample-rate
@@ -384,17 +386,17 @@
       (let* ([offset (* rc:channels i)])
         (s16vector-set! cblock offset       (real->s16 (sample-maker/left)))
         (s16vector-set! cblock (+ offset 1) (real->s16 (sample-maker/right)))))
-    (rsound cblock 0 int-frames sample-rate)))
+    (rsound/all cblock sample-rate)))
 
 ;; special-case silence (it's fast to generate):
 (define (silence frames)
-  (unless (nonnegative-integer? frames)
-    (raise-argument-error 'make-silence "non-negative integer" 0 frames sample-rate))
+  (unless (positive-integer? frames)
+    (raise-argument-error 'silence "positive integer" 0 frames sample-rate))
   (define sample-rate (default-sample-rate))
   (define int-frames (inexact->exact frames))
   (let* ([cblock (make-s16vector (* rc:channels int-frames))])
     (memset (s16vector->cpointer cblock) #x0 (* rc:channels int-frames) _sint16)
-    (rsound cblock 0 int-frames sample-rate)))
+    (rsound/all cblock sample-rate)))
 
 
 ;; CONVERSIONS

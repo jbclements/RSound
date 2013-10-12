@@ -66,9 +66,6 @@
   (check rs-equal? v1 v2)
   (s16vector-set! (rsound-data v2) 50 -30)
   (check-equal? (rs-equal? v1 v2) false))
-;; tests of silence
-
-
 
 ;; tests of check-below-threshold:
 #;(let ([sample-sound (rsound-append* (list (silence 10) 
@@ -91,6 +88,8 @@
     (check-equal? (rs-ith/right/s16 s i) 0)))
 (check-equal? (rs-frames (silence 22050)) 22050)
 (check-equal? (rsound-sample-rate (silence 22050)) (default-sample-rate))
+(check-exn (lambda (exn) (regexp-match #px"expected: positive integer" (exn-message exn)))
+           (lambda () (silence 0)))
 
 ;; sound-list-total-frames:
 (check-equal? (sound-list-total-frames (list (list (silence 22050) 0))) 22050)

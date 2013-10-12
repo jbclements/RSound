@@ -141,10 +141,15 @@ rsound-max-volume
 ;; to obtain a new one. Using e.g. factor of 2 will make the sound one
 ;; octave higher and half as long.
 (define (resample factor sound)
-  (unless (and (real? factor) (<= 0 factor))
-    (raise-argument-error 'resample "nonnegative real number" 0 factor sound))
+  (unless (and (real? factor) (< 0 factor))
+    (raise-argument-error 'resample "positive real number" 0 factor sound))
   (unless (rsound? sound)
     (raise-argument-error 'resample "rsound" 1 factor sound))
+  (define new-sound-len 
+    (inexact->exact (floor (/ (rs-frames sound) factor))))
+  (unless (< 0 new-sound-len)
+    (raise-argument-error 'resample "sound long enough to be shortened by the given factor"
+                          1 factor sound))
   (define left 
     (indexed-signal
      (lambda (i)
@@ -154,23 +159,22 @@ rsound-max-volume
     (indexed-signal
      (lambda (i) (rs-ith/right sound 
                                (inexact->exact (floor (* factor i)))))))
-  (parameterize ([default-sample-rate 
-                   (rsound-sample-rate sound)])
-    (signals->rsound (inexact->exact
-                      (floor (/ (rs-frames sound) factor)))
-                     left
-                     right)))
+  (parameterize ([default-sample-rate (rsound-sample-rate sound)])
+    (signals->rsound new-sound-len left right)))
 
 ;; given a factor and a sound, resample the sound (using linear interpolation)
 ;; to obtain a new one. Using e.g. factor of 2 will make the sound one
 ;; octave higher and half as long.
 (define (resample/interp factor sound)
-  (unless (and (real? factor) (<= 0 factor))
-    (raise-argument-error 'resample/interp "nonnegative real number" 0 factor sound))
+  (unless (and (real? factor) (< 0 factor))
+    (raise-argument-error 'resample/interp "positive real number" 0 factor sound))
   (unless (rsound? sound)
     (raise-argument-error 'resample/interp "rsound" 1 factor sound))
-  (define new-sound-len 
+  (define new-sound-len
     (inexact->exact (floor (/ (rs-frames sound) factor))))
+  (unless (< 0 new-sound-len)
+    (raise-argument-error 'resample "sound long enough to be shortened by the given factor"
+                          1 factor sound))
   (define (the-sig extractor)
     (lambda (i)
       (define virtual-source-sample (min (sub1 (rs-frames sound))
