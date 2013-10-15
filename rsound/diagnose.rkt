@@ -69,14 +69,3 @@ on the volume icon and then digging through menus (properties, advanced).
 |
   )
 
-
-(define (display-device-table)
-  (define host-apis (all-host-apis))
-  (for ([i (pa-get-device-count)])
-    (define device-info (pa-get-device-info i))
-    (printf "device index ~s: api = ~s, device name = ~s, ~s input channels, ~s output channels\n"
-            i 
-            (list-ref host-apis (pa-device-info-host-api device-info))
-            (pa-device-info-name device-info)
-            (pa-device-info-max-input-channels device-info)
-            (pa-device-info-max-output-channels device-info))))
