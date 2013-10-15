@@ -164,4 +164,7 @@
 ;; read a piece from a file
 (define (bytes-from-posn port offset len)
   (file-position port offset)
-  (read-bytes len port))
+  (match (read-bytes len port)
+    [(? bytes? b) b]
+    [(? eof-object? e) 
+     (error 'bytes-from-posn "no data available at file offset ~s" offset)]))

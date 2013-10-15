@@ -109,6 +109,10 @@
 (define (rs-read path)
   (unless (path-string? path)
     (raise-argument-error 'rs-read "path-string" 0 path))
+  (unless (file-exists? path)
+    (raise-argument-error 'rs-read "name of existing file" 0 path))
+  (unless (< 0 (file-size path))
+    (raise-argument-error 'rs-read "file of length >= 0" 0 path))
   (match (read-sound/s16vector path 0 #f)
     [(list data sample-rate) (rsound/all data sample-rate)]))
 

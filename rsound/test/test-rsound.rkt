@@ -144,6 +144,13 @@
 
 ;; rsound-read
 
+  
+;; better error message on empty .wav file:
+(check-exn (lambda (exn) (regexp-match #px"expected: file of length >= 0" (exn-message exn)))
+           (lambda ()
+             (define f (make-temporary-file))
+             (rs-read f)))
+  
 ;; tests copied from read-wav; these call the rsound-read funs directly:
 
 (define test-rsound (rs-read short-test-wav))
