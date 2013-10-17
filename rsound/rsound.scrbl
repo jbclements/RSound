@@ -7,7 +7,7 @@
 @author[(author+email "John Clements" "clements@racket-lang.org")]
 
 @(require (for-label racket
-                     rsound
+                     "main.rkt"
                      rsound/frequency-response))
 
 @defmodule[rsound]{This collection provides a means to represent, read,

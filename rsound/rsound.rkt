@@ -22,7 +22,7 @@
 (define (nonnegative-integer? n)
   (and (integer? n) (<= 0 n)))
 
-;; a rsound is (rsound rdata positive-integer)
+;; a rsound is (rsound s16vector positive-integer)
 (struct rsound (data start stop sample-rate) 
   #:transparent
   ;#:property prop:equal+hash
@@ -70,12 +70,7 @@
     (raise-argument-error 'rsound/all "s16vector of length > 0" 0 s16vec sample-rate))
   (rsound s16vec 0 (/ (s16vector-length s16vec) channels) sample-rate))
 
-;; an rdata is either
-;; an s16vector, 
-;; a function from time to a pair of real numbers in the range -1 to 1, or
-;; a function of no arguments that produces real numbers in the range -1 to 1.
-
-
+;; are two rsounds equal?
 (define (rs-equal? r1 r2)
   (unless (rsound? r1)
     (raise-argument-error 'rs-equal? "rsound" 0 r1 r2))
@@ -85,9 +80,11 @@
           (rs-frames r2))
        (= (rsound-sample-rate r1)
           (rsound-sample-rate r2))
-       (for/and ([i (in-range (rs-frames r1))])
-         (and (= (rs-ith/left/s16 r1 i) (rs-ith/left/s16 r2 i))
-              (= (rs-ith/right/s16 r1 i) (rs-ith/right/s16 r2 i))))))
+       ;; possible shortcut for 'eq?' s16vectors
+       (or (eq? (rs-frames r1) (rs-frames r2))
+           (for/and ([i (in-range (rs-frames r1))])
+             (and (= (rs-ith/left/s16 r1 i) (rs-ith/left/s16 r2 i))
+                  (= (rs-ith/right/s16 r1 i) (rs-ith/right/s16 r2 i)))))))
 
 (define (s16vector-equal? v1 v2)
   (and (= (s16vector-length v1)
@@ -196,12 +193,6 @@
 (define play 
   (rs-play/helper #f))
 
-;; loop an rsound endlessly
-#;(define (rs-loop sound)
-  (when (= (rs-frames sound) 0)
-    (error 'rs-loop "It's a bad idea to loop an empty sound."))
-  ((rs-play/helper #t) sound))
- 
 ;; backup solution: play from a file:
 #;(define (rs-play sound)
   (let ([filename (make-temporary-file "tmpsound~a.wav")])
@@ -213,18 +204,6 @@
      (lambda ()
        (play-sound filename #f)
        (delete-file filename)))))
-
-;; change the loop that's currently playing. Has no effect if a 
-;; loop isn't currently playing.
-;; ** ASSUMES SAMPLE-RATE IS UNCHANGED **
-#;(define (change-loop sound)
-  (unless (rsound? sound)
-    (raise-argument-error 'change-loop "rsound" 0 sound))
-  (match sound 
-    [(struct rsound (data frames sample-rate))
-     (error 'change-loop "not currently implemented")]
-    [other 
-     (error 'change-loop "expected an rsound, got: ~e" sound)]))
 
 ;; return the nth sample of an rsound's left channel.
 (define (rs-ith/left/s16 sound frame)
@@ -352,7 +331,7 @@
 ;; SOUND GENERATION
 
 ;; make a monaural sound of the given number of frames at the specified sample-rate
-;; using the function 'f' applied to the frame number to generate each sample. It 
+;; using the signal 'f'. It 
 ;; assumes that the result is a floating-point number between -1 and 1.
 (define (signal->rsound frames f)
   (define sample-rate (default-sample-rate))
@@ -361,14 +340,14 @@
   (unless (signal? f)
     (raise-argument-error 'signal->rsound "signal" 2 frames sample-rate f))
   (define sample-maker (network-init f))
-  (let* ([int-frames (inexact->exact (floor frames))]
-         [cblock (make-s16vector (* rc:channels int-frames))])
-    (for ([i (in-range int-frames)])
-      (let* ([offset (* rc:channels i)]
-             [sample (real->s16 (sample-maker))])
-        (s16vector-set! cblock offset       sample)
-        (s16vector-set! cblock (+ offset 1) sample)))
-    (rsound/all cblock sample-rate)))
+  (define int-frames (inexact->exact (floor frames)))
+  (define cblock (make-s16vector (* rc:channels int-frames)))
+  (for ([i (in-range int-frames)])
+    (let* ([offset (* rc:channels i)]
+           [sample (real->s16 (sample-maker))])
+      (s16vector-set! cblock offset       sample)
+      (s16vector-set! cblock (+ offset 1) sample)))
+  (rsound/all cblock sample-rate))
 
 
 ;; make a monaural sound of the given number of frames at the specified sample-rate

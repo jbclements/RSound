@@ -23,7 +23,8 @@ rsound-max-volume
          ffi/vector
          (only-in racket/math pi)
          (only-in racket/match match-define match)
-         (for-syntax racket/base syntax/parse))
+         (for-syntax racket/base syntax/parse)
+         (only-in racket/list last))
 
 (provide rs-map
          rs-map/idx
@@ -46,6 +47,7 @@ rsound-max-volume
          ;; envelope-funs
          fader
          frisellinator
+         envelope-signal
          ;; special signals
          dc-signal
          ;; signal combiners
@@ -572,6 +574,53 @@ rsound-max-volume
   (network ()
            (frame ((simple-ctr 0 1)))
            (volume (ramp frame (prev volume 0.0)))))
+
+;; envelope-signal : given a list of envelope-points, produce a signal that follows that envelope.
+(define (envelope-signal lop)
+  (unless (and (list? lop)
+               (< 1 (length lop))
+               (andmap env-point? lop))
+    (raise-argument-error 'envelope-signal "list of two-element lists containing index and value of length > 1"
+                          0 lop))
+  (for ([p (map car lop)]
+        [q (cdr (map car lop))])
+    (when (<= q p)
+      (raise-argument-error 'envelope-signal "list of envelope points with strictly increasing frame indices"
+                            0 lop)))
+  (unless (= (car (car lop)) 0)
+    (raise-argument-error 'envelope-signal "list of envelope points whose first point has frame 0"
+                          0 lop))
+  ;; precompute the slopes, add a special last element which indicates termination.
+  (define slopes
+    (for/list ([p lop]
+               [q (cdr lop)])
+      (define slope (/ (- (cadr q) (cadr p))
+                       (- (car q)  (car p))))
+      (list (car p) (cadr p) slope)))
+  (define halt-frame (car (last lop)))
+  (define f 0)
+  (lambda ()
+    (define result
+      (cond [(<= halt-frame f) 0.0]
+            [else
+             (when (and (pair? (cdr slopes))
+                        (< (caadr slopes) f))
+               (set! slopes (cdr slopes)))
+             (define the-point (car slopes))
+             (define point-f (car the-point))
+             (define point-val (cadr the-point))
+             (define point-slope (caddr the-point))
+             (+ point-val (* point-slope (- f point-f)))]))
+    (set! f (add1 f))
+    result))
+
+;; matches (list/c nonnegative-integer? number?)
+(define (env-point? p)
+  (and (pair? p)
+       (nonnegative-integer? (car p))
+       (pair? (cdr p))
+       (number? (cadr p))
+       (null? (cddr p))))
 
 ;; FFTs
 
