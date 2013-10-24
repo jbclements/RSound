@@ -188,6 +188,26 @@
   (rs-write test-rsound temp)
   (check rs-equal? (rs-read temp) test-rsound))
 
+;; round-trip with inexact but integer frame rate
+(let ([temp (make-temporary-file)]
+      [inexact-fr-sound (rsound (rsound-data test-rsound)
+                                (rsound-start test-rsound)
+                                (rsound-stop test-rsound)
+                                (exact->inexact (rsound-sample-rate test-rsound)))])
+  (check-not-exn (lambda () (rs-write inexact-fr-sound temp)))
+  (check rs-equal? (rs-read temp) inexact-fr-sound))
+  
+;; rs-write with non-integer frame rate
+  (let ([temp (make-temporary-file)]
+      [inexact-fr-sound (rsound (rsound-data test-rsound)
+                                (rsound-start test-rsound)
+                                (rsound-stop test-rsound)
+                                234.241)])
+  (check-exn (lambda (exn)
+               (regexp-match (regexp-quote "expected: rsound with integer sample rate") 
+                             (exn-message exn)))
+             (lambda () (rs-write inexact-fr-sound temp))))
+
 ;;rsound-append (*)
 (let ([short-test2 (rs-append test-rsound test-rsound)])
   (check-equal? (rs-ith/left/s16 short-test2 150) 

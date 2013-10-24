@@ -31,7 +31,7 @@
  (sleep 4.0))
 
 (let ()
-  (printf "tone should last for 4 seconds then rise from 440 to 500 Hz\n")
+  (printf "tone should last for 2 seconds then rise from 440 to 500 Hz\n")
   (define ps (make-pstream))
   (define pitch 440)
   (define lead-time 1000)
@@ -42,9 +42,9 @@
       (pstream-queue-callback ps (make-callback (add1 sec))
                               (- next-sec-start lead-time))))
   (pstream-queue-callback ps (make-callback 1) (- 44100 lead-time))
-  (sleep 4.0)
+  (sleep 2.0)
   (set! pitch 500)
-  (sleep 4.0)
+  (sleep 2.0)
   (stop))
 
 (let ()

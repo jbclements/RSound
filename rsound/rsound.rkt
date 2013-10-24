@@ -144,7 +144,13 @@
     (raise-argument-error 'rs-write "path" 1 sound path))
   (match sound
     [(struct rsound (data start stop sample-rate))
-     (write-sound/s16vector data start stop sample-rate path)]))
+     (define exact-integer-frame-rate
+       (cond [(integer? sample-rate) (inexact->exact sample-rate)]
+             [else
+              (raise-argument-error 'rs-write
+                                    "rsound with integer sample rate"
+                                    0 sound path)]))
+     (write-sound/s16vector data start stop exact-integer-frame-rate path)]))
 
 ;; play a signal using portaudio:
 (define (signal-play signal)
