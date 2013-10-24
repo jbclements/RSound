@@ -21,8 +21,7 @@
  (lambda () (synth-note "main" #f 1 1)))
 (check-exn
  (lambda (exn) (regexp-match (regexp-quote
-                              "AKWF_273848/AKWF_27384720.wav
-  system error: No such file or directory; errno=2")
+                              "expected: name of existing file")
                              (exn-message exn)))
  (lambda () (synth-note "main" 27384720 1 1))))))
 

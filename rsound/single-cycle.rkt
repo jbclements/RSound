@@ -38,8 +38,8 @@
 ;; given a family, a number/path, a midi note number, and a duration in frames,
 ;; produce an rsound.
 (define/memo (synth-note family wave-spec note-num duration)
-  (define env (my-env (floor duration)))
   (define raw-sound (synth-note/raw family wave-spec note-num duration))
+  (define env (my-env (floor duration)))
   (rs-mult env raw-sound))
 
 ;; same as above, but no envelope:
