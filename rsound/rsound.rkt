@@ -81,7 +81,7 @@
        (= (rsound-sample-rate r1)
           (rsound-sample-rate r2))
        ;; possible shortcut for 'eq?' s16vectors
-       (or (eq? (rs-frames r1) (rs-frames r2))
+       (or (eq? (rsound-data r1) (rsound-data r2))
            (for/and ([i (in-range (rs-frames r1))])
              (and (= (rs-ith/left/s16 r1 i) (rs-ith/left/s16 r2 i))
                   (= (rs-ith/right/s16 r1 i) (rs-ith/right/s16 r2 i)))))))
