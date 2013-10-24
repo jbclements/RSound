@@ -31,6 +31,7 @@ rsound-max-volume
          rs-scale
          resample
          resample/interp
+         resample-to-rate
          clip
          rs-mult
          twopi
@@ -87,6 +88,9 @@ rsound-max-volume
          binary-logn
          )
 
+
+;; don't allow resampling to higher than this sample-rate:
+(define MAX-FRAME-RATE 100000)
 
 (define twopi (* 2 pi))
 
@@ -196,8 +200,22 @@ rsound-max-volume
                      left
                      right)))
 
-
-
+;; resample-to-rate : like resample/interp, but produces a sound with a 
+;; given sample rate.
+;; That is, it resamples but also resets the sample rate, so the result should
+;; sound the same, just be at a different sample rate.
+(define (resample-to-rate frame-rate sound)
+  (unless (and (real? frame-rate) (< 0 frame-rate) (< frame-rate MAX-FRAME-RATE))
+    (raise-argument-error 'resample-to-rate 
+                          (format "positive real number in range 0<r<=~a"
+                                  MAX-FRAME-RATE) 0 factor sound))
+  (unless (rsound? sound)
+    (raise-argument-error 'resample-to-rate "rsound" 1 factor sound))
+  (define old-rate (rsound-sample-rate sound))
+  (define factor (/ old-rate frame-rate))
+  (define resampled
+    (resample/interp factor sound))
+  (rsound/all (rsound-data resampled) frame-rate))
 
 ;; produce a new rsound by multiplying each sample in the
 ;; first by each sample in the second. The length and sample
@@ -400,11 +418,13 @@ rsound-max-volume
 (define (wavefun->tone-maker wavefun)
   (let ([tone-table (make-hash)])
     (lambda (pitch volume frames)
-      (define sample-rate (default-sample-rate))
+      (define sample-rate (let ([ans (default-sample-rate)])
+                            (printf "dd: ~s\n" ans)
+                            ans))
       (define key (list pitch volume sample-rate))
       (define (compute-and-store)
         (define snd (signal->rsound frames 
-                             (wavefun pitch volume sample-rate)))
+                                    (wavefun pitch volume sample-rate)))
         (hash-set! tone-table key snd)
         snd)
       (match (hash-ref tone-table key #f)
@@ -427,6 +447,10 @@ rsound-max-volume
 (define (wavefun->tone-maker/periodic wavefun)
   (let ([tone-table (make-hash)])
     (lambda (pitch volume frames)
+      (unless (= SR (default-sample-rate))
+        (error 'wavefun->tone-maker
+               "this function only works when (default-sample-rate) = ~s"
+               SR))
       (define sample-rate (default-sample-rate))
       (define key (list pitch volume sample-rate))
       (define (compute-and-store)
@@ -451,7 +475,7 @@ rsound-max-volume
                  [(< frames stored-frames) (clip s 0 frames)]
                  [else (compute-and-store)]))]))))
 
-(define too-long-to-cache (* 44100 10))
+(define too-long-to-cache (* (default-sample-rate) 10))
 
 ;; we want to re-use the wavefun->tone-maker for the fader. It doesn't
 ;; have the right parameters, so we just re-purpose them.

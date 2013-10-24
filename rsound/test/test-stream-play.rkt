@@ -46,4 +46,13 @@
   (set! pitch 500)
   (sleep 4.0)
   (stop))
+
+(let ()
+  (define 22ksound (resample-to-rate 22050 (make-tone 440 0.2 22050)))
+  (check-equal? (rsound-sample-rate 22ksound) 22050)
+  (define ps (make-pstream))
+  (check-exn (lambda (exn)
+               (regexp-match #px"rsound matching pstream's frame rate"
+                             (exn-message exn)))
+             (lambda () (pstream-queue ps 22ksound 0))))
 ))

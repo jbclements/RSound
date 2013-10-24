@@ -82,7 +82,16 @@
      (check-= (rs-ith/left/s16 r 27) 
               (round (* s16max (* 0.2 (sin (* twopi 882 28/44100))))) 4.0))
    
-
+   
+   (let ()
+     (define r (make-tone 400 1.0 1000))
+     (define s (clip r 30 60))
+     (define t (resample-to-rate 22050 s))
+     (check-= (rs-ith/left t 0) (rs-ith/left s 0) 0)
+     (check-= (rs-ith/left t 1) (rs-ith/left s 2) 0)
+     (check-= (rs-ith/left t 2) (rs-ith/left s 4) 0)
+     (check-= (rsound-sample-rate t) 22050 0)
+     )
    
    (define pulse-12.5 (make-pulse-tone 0.125))
    (define short-pulse  (pulse-12.5 441 0.2 50))
