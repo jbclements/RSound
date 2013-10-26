@@ -14,6 +14,9 @@
          (prefix-in mt: "test-make-tone.rkt")
          (prefix-in pu: "test-paste-util.rkt")
          (prefix-in sc: "test-single-cycle.rkt")
+         (prefix-in rc: "test-rsound-commander.rkt")
+         (prefix-in ev: "test-envelope.rkt")
+         "test-signal-speed.rkt"
          rackunit/text-ui
          rackunit)
 
@@ -31,4 +34,6 @@
   mt:the-test-suite
   pu:the-test-suite
   sc:the-test-suite
+  rc:the-test-suite
+  ev:the-test-suite
   ))

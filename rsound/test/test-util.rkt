@@ -371,23 +371,7 @@
                    (rs-ith/left/s16 test-rsound 36)))
               
 
-   ;; ENVELOPE TESTS
-   
-   (define (s16-round-trip r)
-     (s16->real (real->s16 r)))
-   
-   (define envelope-sound
-     (signal->rsound
-      10000
-      (envelope-signal '((0 0.2) (50 0.8) (4050 1.0) (8050 -1.0)))))
-   (check-= (rs-ith/left envelope-sound 0) (s16-round-trip 0.2) 1e-4)
-   (check-= (rs-ith/left envelope-sound 1) (s16-round-trip 0.212) 1e-4)
-   (check-= (rs-ith/right envelope-sound 1) (s16-round-trip 0.212) 1e-4)
-   (check-= (rs-ith/left envelope-sound 49) (s16-round-trip 0.788) 1e-4)
-   (check-= (rs-ith/left envelope-sound 50) (s16-round-trip 0.8) 1e-4)
-   (check-= (rs-ith/left envelope-sound 54) (s16-round-trip 0.8002) 1e-4)
-   (check-= (rs-ith/left envelope-sound 8048) (s16-round-trip -0.999) 1e-4)
-   (check-= (rs-ith/left envelope-sound 8050) (s16-round-trip 0.0) 1e-4)
+
               ;; how much slower is signal?
               ;; answer: negligible; only about 2% slower
               #|(define (n-times-throwaway n x) 

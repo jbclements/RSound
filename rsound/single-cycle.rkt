@@ -33,7 +33,7 @@
 (define/memo (resample/memo factor sound)
   (resample factor sound))
 
-(define my-env (adsr/exp 200 0.5 2000 0.25 1000))
+(define my-env (adsr 200 0.5 1 0.25 1000))
 
 ;; given a family, a number/path, a midi note number, and a duration in frames,
 ;; produce an rsound.

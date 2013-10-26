@@ -274,7 +274,11 @@
 (time (rsound-draw (rsound-assemble (list (list (make-tone 400 0.15 1000) 0)
                                           (list (make-tone 404 0.15 1000) 0))) 400 100))
 
-|#)))
+|#
+  
+  
+  
+  )))
 
 ;;; TEST CASES
 (module+ test

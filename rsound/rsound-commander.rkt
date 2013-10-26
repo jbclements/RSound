@@ -16,9 +16,10 @@
                   stream-play/unsafe
                   host-api)
          racket/contract
-         (only-in ffi/unsafe cpointer? ptr-set! _sint16)
+         (only-in ffi/unsafe cpointer? ptr-set! _sint16 cast _pointer)
          ffi/vector
          ffi/unsafe/custodian
+         racket/unsafe/ops
          racket/async-channel)
 
 (provide
@@ -126,21 +127,27 @@
 ;; each call.
 (define (signal->signal/block/unsafe sample-maker)
   (define (signal/block/unsafe ptr frames)
+    (define s16vec
+      (cast ptr _pointer (_s16vector o frames)))
     (for ([frame (in-range 0 frames)])
       (define sample (real->s16 (sample-maker)))
       (define sample-num (* frame channels))
-      (ptr-set! ptr _sint16 sample-num sample)
-      (ptr-set! ptr _sint16 (add1 sample-num) sample)))
+      (unsafe-s16vector-set! s16vec sample-num sample)
+      (unsafe-s16vector-set! s16vec (add1 sample-num) sample)))
   signal/block/unsafe)
 
 ;; given a function that produces s16s, produce a signal/block/unsafe.
+;; use unsafe-16vector-set! for *MASSIVE SPEEDUP* (about 10x)
 (define (signal/16->signal/block/unsafe sample-maker)
   (define (signal/block/unsafe ptr frames)
+    (define s16vec (cast ptr
+                         _pointer
+                         (_s16vector o frames)))
     (for ([frame (in-range 0 frames)])
       (define sample (sample-maker))
       (define sample-num (* frame channels))
-      (ptr-set! ptr _sint16 sample-num sample)
-      (ptr-set! ptr _sint16 (add1 sample-num) sample)))
+      (unsafe-s16vector-set! s16vec sample-num sample)
+      (unsafe-s16vector-set! s16vec (add1 sample-num) sample)))
   signal/block/unsafe)
 
 ;; set default buffer time
