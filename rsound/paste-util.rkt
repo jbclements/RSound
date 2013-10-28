@@ -11,7 +11,8 @@
 ;; you'll be safe.
 
 (provide zero-buffer!
-         rs-copy-add!)
+         rs-copy-add!
+         rs-copy-mult-add!)
 
 (define frame-size (* channels s16-size))
 (define (frames->bytes f) (* frame-size f))
@@ -47,3 +48,30 @@
   (define src-ptr (ptr-add (s16vector->cpointer (rsound-data src))
                            (frames->bytes src-real-offset)))
   (s16buffer-add!/c tgt-ptr src-ptr (* channels copy-frames)))
+
+
+;; same as prior function, but multiply by 'factor' before adding.
+(define (rs-copy-mult-add! tgt tgt-offset 
+                           src src-offset
+                           copy-frames buf-frames
+                           factor)
+  (unless (cpointer? tgt)
+    (raise-type-error 'rs-copy-add! "cpointer" 0 tgt tgt-offset 
+                      src src-offset
+                      copy-frames buf-frames))
+  (unless (<= 0 tgt-offset (+ tgt-offset copy-frames) buf-frames)
+    (error 'rs-copy-add! "tgt bounds violation, must have (0 <= ~s <= ~s <= ~s)"
+           tgt-offset (+ tgt-offset copy-frames) buf-frames))
+  (unless (<= 0 src-offset (+ src-offset copy-frames)(rs-frames src))
+    (error 'rs-copy-add! "src bounds violation, must have (0 <= ~s <= ~s <= ~s)"
+           src-offset 
+           (+ src-offset copy-frames)
+           (rs-frames src)))
+  (unless (and (number? factor) (<= 0 factor))
+    (raise-argument-error 'rs-copy-mult-add! "nonnegative number" 6
+                          tgt tgt-offset src src-offset copy-frames buf-frames factor))
+  (define tgt-ptr (ptr-add tgt (frames->bytes tgt-offset)))
+  (define src-real-offset (+ src-offset (rsound-start src)))
+  (define src-ptr (ptr-add (s16vector->cpointer (rsound-data src))
+                           (frames->bytes src-real-offset)))
+  (s16buffer-mult-add!/c tgt-ptr src-ptr (* channels copy-frames) factor))

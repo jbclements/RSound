@@ -3,6 +3,8 @@
 (require "./rsound.rkt"
          "./sequencer.rkt")
 
+;; PSTREAMS
+
 ;; a stream-based sound player built on top of the sequencer.
 ;; this provides a reasonable way to stitch together sounds 
 ;; seamlessly for playback, so you're not relying on the precision

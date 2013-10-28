@@ -8,7 +8,8 @@
 ;; buffer-adding in C:
 
 ;; accepts target pointer, source pointer, and copy length *in samples*
-(provide s16buffer-add!/c)
+(provide s16buffer-add!/c
+         s16buffer-mult-add!/c)
 
 (define-runtime-path here ".")
 
@@ -21,4 +22,11 @@
   (get-ffi-obj "bufferAdd"
                buffer-add-lib
                (_fun _pointer _pointer _int -> _void)))
+
+(define s16buffer-mult-add!/c
+  (get-ffi-obj "bufferMultAdd"
+               buffer-add-lib
+               (_fun _pointer _pointer _int _double -> _void)))
+
+
 

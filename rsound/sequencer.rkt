@@ -63,8 +63,9 @@
   (not (for/and ([elt (heap->vector heap)]) elt)))
 
 ;; this accepts a heap of input sound entries and produces a 
-;; signal/block that plays them, and a thunk that can be used to determine the
-;; most recent value of t. 
+;; signal/block that plays them, a thunk that can be used to determine the
+;; most recent value of t, and a box containing the volume of the 
+;; sound (1.0 represents no change in volume)
 
 (define (heap->signal/block/unsafe unplayed uncallbacked)
   ;; the "playing" heap is ordered by end time, to facilitate removal
@@ -74,6 +75,7 @@
   ;; this mutable variable contains the last requested frame.
   (define last-t 0)
   (define (get-last-t) last-t)
+  (define volume-box (box 1.0))
   (define (signal/block cpointer frames)
     (when (< frames 0)
       (error 'sequencer "callback called with frames < 0: ~e\n" frames))
@@ -89,7 +91,8 @@
     (set! last-t next-last-t))
   (values 
    signal/block
-   get-last-t))
+   get-last-t
+   volume-box))
 
 ;; zero the target, and copy the appropriate regions of the 
 ;; source sounds onto them.
