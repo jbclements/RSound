@@ -20,7 +20,7 @@
 (struct pstream (sound-heap callback-heap time-checker frame-rate))
 
 ;; make (and start) a pstream
-(define (make-pstream)
+(define (make-pstream #:buffer-time [buffer-time #f])
   (define frame-rate (default-sample-rate))
   (define sound-heap (make-unplayed-heap))
   (define callback-heap (make-uncallbacked-heap))
@@ -28,7 +28,7 @@
   ;; the time-checker
   (define-values (signal/block/unsafe current-time/s)
     (heap->signal/block/unsafe sound-heap callback-heap))
-  (signal/block-play/unsafe signal/block/unsafe frame-rate)
+  (signal/block-play/unsafe signal/block/unsafe frame-rate #:buffer-time buffer-time)
   (pstream sound-heap callback-heap current-time/s frame-rate))
 
 ;; return the last-requested frame from the pstream

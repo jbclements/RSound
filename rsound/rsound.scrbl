@@ -545,9 +545,11 @@ overhead.
  portaudio stream, rather than the multiple portaudio streams that would occur in 
  multiple calls to @racket[play]
  
-@defproc[(make-pstream) pstream?]{
+@defproc[(make-pstream (#:buffer-time buffer-time (or/c number? #f) #f)) pstream?]{
  Create a new pstream and start playing it. Initially, of course, it will be silent. Returns
- the pstream.
+ the pstream. If a @racket[buffer-time] argument is specified (in seconds), it overrides the default
+ buffer time of about 50 ms. Use a long buffer-time when continuity is more important than 
+ responsiveness (background music, etc).
 }
 
 @defproc[(pstream-queue [pstream pstream?] [rsound rsound?] [frames natural?]) pstream?]{
