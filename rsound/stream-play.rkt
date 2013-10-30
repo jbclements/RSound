@@ -14,12 +14,14 @@
          pstream-queue
          pstream-play
          pstream-current-frame
-         pstream-queue-callback)
+         pstream-queue-callback
+         pstream-volume
+         pstream-set-volume!)
 
 ;; a pstream bundles a sound-heap that's attached
 ;; to a playing stream and a time-checker that returns
 ;; the most recently requested frame.
-(struct pstream (sound-heap callback-heap time-checker frame-rate))
+(struct pstream (sound-heap callback-heap time-checker frame-rate volume-box))
 
 ;; make (and start) a pstream
 (define (make-pstream #:buffer-time [buffer-time #f])
@@ -28,10 +30,10 @@
   (define callback-heap (make-uncallbacked-heap))
   ;; the signal for playing the heap's sounds, and
   ;; the time-checker
-  (define-values (signal/block/unsafe current-time/s)
+  (define-values (signal/block/unsafe current-time/s volume-box)
     (heap->signal/block/unsafe sound-heap callback-heap))
   (signal/block-play/unsafe signal/block/unsafe frame-rate #:buffer-time buffer-time)
-  (pstream sound-heap callback-heap current-time/s frame-rate))
+  (pstream sound-heap callback-heap current-time/s frame-rate volume-box))
 
 ;; return the last-requested frame from the pstream
 (define (pstream-current-frame pstream)
@@ -83,5 +85,19 @@
     (raise-argument-error 'pstream-play "rsound" 1 pstream snd))
   (pstream-queue pstream snd (pstream-current-frame pstream))
   pstream)
+
+;; check the pstream's volume
+(define (pstream-volume pstream)
+  (unless (pstream? pstream)
+    (raise-argument-error 'pstream-volume "pstream" 0 pstream))
+  (unbox (pstream-volume-box pstream)))
+
+;; set the pstream's volume
+(define (pstream-set-volume! pstream volume)
+  (unless (pstream? pstream)
+    (raise-argument-error 'pstream-set-volume! "pstream" 0 pstream volume))
+  (unless (number? volume)
+    (raise-argument-error 'pstream-set-volume! "number" 1 pstream volume))
+  (set-box! (pstream-volume-box pstream) volume))
 
 

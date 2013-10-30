@@ -42,10 +42,24 @@
       (pstream-queue-callback ps (make-callback (add1 sec))
                               (- next-sec-start lead-time))))
   (pstream-queue-callback ps (make-callback 1) (- 44100 lead-time))
-  (sleep 2.0)
+  (sleep 1.5)
   (set! pitch 500)
   (sleep 2.0)
   (stop))
+
+(let ()
+  (printf "tone should last for 2 seconds then get quieter\n")
+  (define ps (make-pstream))
+  (define pitch 440)
+  (pstream-queue ps (make-tone pitch 0.3 (* 4 44100)) 0)
+  (pstream-queue-callback ps
+                          (lambda ()
+                            (pstream-set-volume! ps 0.1))
+                          (* 2 44100))
+  (sleep 4.0)
+  (stop))
+
+
 
 (let ()
   (define 22ksound (resample-to-rate 22050 (make-tone 440 0.2 22050)))

@@ -18,7 +18,7 @@
  [queue-for-playing! (-> heap? rsound? nonnegative-integer? void?)]
  [queue-for-callbacking! (-> heap? (-> any) nonnegative-integer? void?)]
  [heap->signal/block/unsafe
-  (-> heap? heap? (values procedure? procedure?))])
+  (-> heap? heap? (values procedure? procedure? box?))])
 
 
 
