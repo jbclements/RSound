@@ -86,7 +86,7 @@
     (define sounds-added? (add-new-sounds unplayed playing last-t next-last-t))
     (when (or sounds-removed? sounds-added?)
       (set! playing-vec (heap->vector playing)))
-    (combine-onto! cpointer last-t frames playing-vec)
+    (combine-onto! cpointer last-t frames playing-vec (unbox volume-box))
     (trigger-ready-semaphores! uncallbacked next-last-t)
     (set! last-t next-last-t))
   (values 
@@ -96,16 +96,16 @@
 
 ;; zero the target, and copy the appropriate regions of the 
 ;; source sounds onto them.
-(define (combine-onto! cpointer t len playing-vec)
+(define (combine-onto! cpointer t len playing-vec volume)
   (zero-buffer! cpointer len)
   (for ([e (in-vector playing-vec)])
-    (add-from-buf! cpointer t len e)))
+    (add-from-buf! cpointer t len e volume)))
 
 ;; given a buffer in which to assemble the sounds, a frame number t,
-;; a number of frames len, and a playing entry e, add the appropriate
+;; a number of frames len, a playing entry e, and a volume, add the appropriate
 ;; section of the entry to the buffer.
 ;; required: entries have finish later than start, len > 0.
-(define (add-from-buf! ptr t len e)
+(define (add-from-buf! ptr t len e volume)
   (match-define (entry sound start finish) e)
   ;; in global time:
   (define copy-start (max t start))
@@ -116,9 +116,10 @@
   (define src-start (- copy-start start))
   ;; relative to target buffer:
   (define tgt-start (- copy-start t))
-  (rs-copy-add! ptr   tgt-start
-                sound src-start
-                copy-len len))
+  (rs-copy-mult-add! ptr   tgt-start
+                     sound src-start
+                     copy-len len
+                     volume))
 
 ;; given a heap (ordered by ending time) and a current time, remove
 ;; those sounds whose ending times are <= the current time
@@ -267,21 +268,21 @@
   (define dst1 (make-s16vector (* channels 10) 0))
   (check-equal? (s16vector->list dst1) (list 0 0 0 0 0 0 0 0 0 0
                                              0 0 0 0 0 0 0 0 0 0))
-  (add-from-buf! (s16vector->cpointer dst1) 45 10 entry1)
+  (add-from-buf! (s16vector->cpointer dst1) 45 10 entry1 1.0)
   (check-equal? (s16vector->list dst1) (list 0 0 0 0 0 0 0 0 0 0
                                              1 1 1 1 1 1 1 1 1 1))
   
   (define dst2 (make-s16vector 20 0))
-  (add-from-buf! (s16vector->cpointer dst2) 60 10 entry1)
-  (add-from-buf! (s16vector->cpointer dst2) 60 10 entry2)
+  (add-from-buf! (s16vector->cpointer dst2) 60 10 entry1 1.0)
+  (add-from-buf! (s16vector->cpointer dst2) 60 10 entry2 1.0)
   (check-equal? (s16vector->list dst2) (list 1 1 1 1 1 1 1 1 1 1 
                                              2 2 2 2 2 2 2 2 2 2))
   
   (define dst3 (make-s16vector 20 0))
   (define src3 (rsound (make-s16vector 10 2) 1 5 44100))
   (define entry3 (entry src3 70 74))
-  (add-from-buf! (s16vector->cpointer dst3) 68 10 entry1)
-  (add-from-buf! (s16vector->cpointer dst3) 68 10 entry3)
+  (add-from-buf! (s16vector->cpointer dst3) 68 10 entry1 1.0)
+  (add-from-buf! (s16vector->cpointer dst3) 68 10 entry3 1.0)
   (check-equal? (s16vector->list dst3) (list 1 1 1 1 
                                              3 3 3 3 3 3 3 3
                                              1 1 1 1 1 1 1 1))
@@ -289,6 +290,23 @@
   
   )
 
+(let ()
+  (define s1 (rsound (make-s16vector 20 2442) 0 10 44100))
+  (define unplayed-heap (make-unplayed-heap))
+  (define uncallbacked-heap (make-uncallbacked-heap))
+  (queue-for-playing! unplayed-heap s1 5)
+  (define-values (test-signal/block last-time volume-box) 
+    (heap->signal/block/unsafe unplayed-heap uncallbacked-heap))
+  (set-box! volume-box 0.67)
+  (define tgt (make-s16vector 200 123))
+  (define tgt-ptr (s16vector->cpointer tgt))
+  (test-signal/block tgt-ptr 100)
+  (check-equal? (s16vector-ref tgt 8) 0)
+  (check-equal? (s16vector-ref tgt 9) 0)
+  (check-equal? (s16vector-ref tgt 10) 1636)
+  (check-equal? (s16vector-ref tgt 28) 1636)
+  (check-equal? (s16vector-ref tgt 30) 0)
+  )
 (let ()
   (define s1 (rsound (make-s16vector 20 2) 0 10 44100))
   (define s2 (rsound (make-s16vector 4 3) 0 2 44100))
@@ -303,7 +321,7 @@
   (queue-for-callbacking! uncallbacked-heap (lambda () (set-box! test-box #t)) 21)
   (define tgt (make-s16vector 20 123))
   (define tgt-ptr (s16vector->cpointer tgt))
-  (define-values (test-signal/block last-time) 
+  (define-values (test-signal/block last-time volume-box) 
     (heap->signal/block/unsafe unplayed-heap uncallbacked-heap))
   (test-signal/block tgt-ptr 10)
   (check-equal? (s16vector->list tgt)
