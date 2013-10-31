@@ -350,6 +350,27 @@
                  (* 0.75 (rs-ith/left s1 40)))
               1e-4))
    
+   ;; wavetable-osc
+   
+   (define sine-wt
+     (make-tone 1 1.0 44100))
+   (define sound
+     (signal->rsound
+      10
+      (fixed-inputs (wavetable-osc/l sine-wt)
+                    0.3
+                    440)))
+   
+   (define (round-trip real)
+     (s16->real (real->s16 real)))
+   (check-equal? (rs-ith/left sound 0) 0.0)
+   (check-equal? (rs-ith/left sound 1) 
+                 (round-trip (* 0.3 (rs-ith/left sine-wt 440))))
+   (check-equal? (rs-ith/left sound 2)
+                 (round-trip (* 0.3 (rs-ith/left sine-wt 880))))
+   
+   
+   
    
    
    ;; tests of rsound-largest-sample

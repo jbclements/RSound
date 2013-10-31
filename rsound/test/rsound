@@ -1,0 +1,90 @@
+fft-bug.rkt:#;(signal->rsound (vector-length v1) 44100 (lambda (i) (/ (real-part (vector-ref v1 i)) s16max)))
+fft-bug.rkt:#;(rsound-play (signal->rsound (vector-length v1) 44100 (lambda (i) (/ (real-part (vector-ref v1 i)) s16max))))
+test-all-non-gui.rkt:         "test-signal-speed.rkt"
+test-all.rkt:           "test-playing-signal-block.rkt"
+test-draw.rkt:(rs-draw (signal->rsound 300
+test-draw.rkt:#;(let ([s (signal->rsound 4096 44100
+test-envelope.rkt:  (signal->rsound
+test-filter.rkt:    (signal-samples (network () 
+test-filter.rkt:    (signal-samples (network ()
+test-filter.rkt:    (signal-samples (network () 
+test-filter.rkt:    (signal-samples 
+test-filter.rkt:    (define snd (signal->rsound 10 
+test-filter.rkt:              (lambda () (signal->rsound 
+test-filter.rkt:   (check-not-exn (lambda () (signal->rsound 
+test-filter.rkt:   (lambda () (signal->rsound 
+test-filter.rkt:   (signal-nth
+test-filter.rkt:  (check-= (signal-nth
+test-filter.rkt:            (signal->rsound 200 (lpf/dynamic (lambda (x) 0.34) (lambda (x) 0.5)))
+test-filter.rkt:        (signal-samples
+test-filter.rkt:        (signal-samples 
+test-network.rkt:    (signal-samples (network ()
+test-network.rkt:     (check-equal? (signal-samples testnet 3)
+test-network.rkt:     (check-equal? (signal-samples testnet 3)
+test-network.rkt:     (check-equal? (signal-samples testnet 3)
+test-network.rkt:     (check-equal? (signal-samples testnet 3)
+test-network.rkt:   (check-equal? (signal-nth (simple-ctr 34 14) 1) 48)
+test-network.rkt:   (check-equal? (signal-samples (simple-ctr 4 3) 5)
+test-network.rkt:   ;; signal-+s
+test-network.rkt:   (check-equal? (signal-samples (signal-+s (list (simple-ctr 2 10)
+test-network.rkt:   (check-equal? (signal-samples (signal-*s (list (simple-ctr 1.0 -0.25)
+test-network.rkt:     (check-equal? (signal-samples sig 4)
+test-network.rkt:     (check-equal? (signal-samples net 5)
+test-playing.rkt:(signal-play (fixed-inputs sine-wave 440))
+test-rsound-commander.rkt:   ;; tests for signal->signal/block/unsafe
+test-rsound-commander.rkt:     (define sbu (signal->signal/block/unsafe simple-signal))
+test-rsound.rkt:  (signal->rsound frames (sine-wave pitch (default-sample-rate) volume)))
+test-rsound.rkt:(let ([t (signal->rsound 100 (add-ticker (lambda (i) (sin (* twopi 13/44100 i)))))])
+test-rsound.rkt:;; signal->rsound/stereo
+test-rsound.rkt:(let ([t (signal->rsound 100 (add-ticker
+test-rsound.rkt:(let ([v1 (signal->rsound 100 ramp-signal)]
+test-rsound.rkt:      [v2 (signal->rsound 100 ramp-signal)])
+test-rsound.rkt:  (let* ([sample-sound (signal->rsound 100 (lambda () (* 0.2 (random))))]
+test-rsound.rkt:             (signal->rsound 
+test-signal-speed.rkt:  (define sbu (signal->signal/block/unsafe simplest-signal))
+test-signal-speed.rkt:  (define sbu (signal->signal/block/unsafe sig)) 
+test-timing.rkt:  (signal->rsound sr sr
+test-timing.rkt:(printf "signal->rsound of simple constant value\n")
+test-timing.rkt:(rtavg (signal->rsound (* 100 sr) sr (lambda (t) 0.243)))
+test-timing.rkt:  (signal->rsound sr sr
+test-util.rkt:   (check-= (signal-nth (fixed-inputs sine-wave 4) 0)
+test-util.rkt:   (check-= (signal-nth (fixed-inputs sine-wave 4) 13)
+test-util.rkt:   (check-= (signal-nth sw 0) 1.0 1e-4)
+test-util.rkt:   (check-= (signal-nth sw 10) 1.0 1e-4)
+test-util.rkt:   (check-= (signal-nth sw 11024) 1.0 1e-4)
+test-util.rkt:   (check-= (signal-nth sw 11025) 0.0 1e-4)
+test-util.rkt:   (check-= (signal-nth sw 22049) 0.0 1e-4)
+test-util.rkt:   (check-= (signal-nth sw 22050) 1.0 1e-4)
+test-util.rkt:     (check-= (signal-nth sw 0) 1.0 1e-4)
+test-util.rkt:     (check-= (signal-nth sw 10) 1.0 1e-4)
+test-util.rkt:     (check-= (signal-nth sw 124) 1.0 1e-4)
+test-util.rkt:     (check-= (signal-nth sw 125) -1.0 1e-4)
+test-util.rkt:     (check-= (signal-nth sw 249) -1.0 1e-4)
+test-util.rkt:     (check-= (signal-nth sw 250)  1.0 1e-4)
+test-util.rkt:     (check-= (signal-nth sw 166) -1.0 1e-4)
+test-util.rkt:     (check-= (signal-nth sw 167)  1.0 1e-4))
+test-util.rkt:        (signal->rsound 44100 (fader 44100))))
+test-util.rkt:        (signal->rsound 44100 (sine-wave 440))))
+test-util.rkt:        (signal->rsound 44100 (sawtooth-wave 440))))
+test-util.rkt:     (check-= (signal-nth tr 0) 0.0 1e-5)
+test-util.rkt:     (check-= (signal-nth tr 1) 2/441 1e-5)
+test-util.rkt:     (check-= (signal-nth tr 221) (+ -1.0 1/441) 1e-5))
+test-util.rkt:   ;; signal-*
+test-util.rkt:   (check-equal? (signal-samples (signal-* (simple-ctr 1 0.5)
+test-util.rkt:   ;; signal-+
+test-util.rkt:   (check-equal? (signal-samples (signal-+ (simple-ctr 1.0 0.5)
+test-util.rkt:   (let ([s1 (signal->rsound 200 (signal-*s (list (dc-signal 0.5) 
+test-util.rkt:   (check-= (signal-nth (frisellinator 100) 0) 0.0 1e-4)
+test-util.rkt:   (check-= (signal-nth (frisellinator 100) 100) 1.0 1e-4)
+test-util.rkt:   (check-= (signal-nth (frisellinator 100) 50) 0.5 1e-4)
+test-util.rkt:   (check-= (signal-nth (indexed-signal (lambda (x) (* x 3))) 4)
+test-util.rkt:          [sf (signal-scale 4.0 f)])
+test-util.rkt:     (check-= (signal-nth f 0) 0 1e-4)
+test-util.rkt:     (check-= (signal-nth f 6) 0 1e-4)
+test-util.rkt:     (check-= (signal-nth f 3) 2.0 1e-4)
+test-util.rkt:     (check-= (signal-nth vf 0) 0 1e-4)
+test-util.rkt:     (check-= (signal-nth vf 3) 0.5 1e-4)
+test-util.rkt:     (check-= (signal-nth sf 3) 8.0 1e-4))
+test-util.rkt:   (signal->rsound (default-sample-rate) (lambda (t) (sin (* twopi t 340 1/44100))))))
+test-util.rkt:   (signal->rsound (default-sample-rate) (lambda (t) (testfun t 340)))))
+test-util.rkt:   (signal->rsound (default-sample-rate) (signal testfun 340))))

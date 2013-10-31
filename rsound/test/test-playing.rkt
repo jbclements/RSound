@@ -30,15 +30,9 @@
   (sleep 0.01))
 (sleep 1)
 
-;; DEBUGGING:
-(require portaudio/portaudio)
-(printf "portaudio opens: ~s, closes: ~s\n"
-        (unbox stream-opens)
-        (unbox stream-closes))
-
 (printf "\nmany short-lived streams\n")
 (define tiny-tone (make-tone 550 0.05 10))
-(for ([i (in-range 400)])
+(for ([i (in-range 80)])
   (play tiny-tone)
   (sleep 0.005))
 (play ding)

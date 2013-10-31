@@ -274,9 +274,8 @@ Also note that all of these assume a fixed sample rate of 44.1 KHz.
 In order to listen to them, you can transform them into rsounds, or play them directly:
 
 @defproc[(signal->rsound (frames nonnegative-integer?) (signal signal?)) rsound?]{
- Builds a sound of length @racket[frames] at the default sample-rate by calling 
- @racket[signal] with integers from 0 up to @racket[frames]-1. The result should be an inexact 
- number in the range @racket[-1.0] to @racket[1.0]. Values outside this range are clipped.
+ Builds a sound of length @racket[frames] at the default sample-rate by using
+ @racket[signal]. 
  Both channels are identical.
  
  Here's an example of using it:
@@ -296,9 +295,7 @@ In order to listen to them, you can transform them into rsounds, or play them di
  Builds a stereo sound of length @racket[frames] by using
  @racket[left-sig] and @racket[right-sig] to generate the
  samples for the left and right channels.
- 
- with integers from 0 up to @racket[frames]-1. The result should be an inexact 
- number in the range @racket[-1.0] to @racket[1.0]. Values outside this range are clipped.}
+}
                                                                              
 @defproc[(signal-play (signal signal?)) void?]{
  Plays a (single-channel) signal. Halt playback using @racket[(stop)].}
@@ -307,7 +304,7 @@ In order to listen to them, you can transform them into rsounds, or play them di
 There are several functions that produce signals.
 
 @defproc[(indexed-signal [time->amplitude procedure?]) signal?]{
-  Given a mapping from frame to amplitude, return a signal. In prior versions of RSound, such
+  Given a mapping from frame (in frames) to amplitude, return a signal. In prior versions of RSound, such
   a mapping was called a signal. This function converts those functions into new-style
   signals.
 }

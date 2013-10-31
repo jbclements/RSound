@@ -41,6 +41,7 @@ rsound-max-volume
          square-wave
          harm3-wave
          pulse-wave
+         wavetable-osc/l
          noise
          rearrange
          ;; functions on numbers
@@ -375,6 +376,18 @@ rsound-max-volume
   (network (pitch)
            [out (pulse-wave 0.5 pitch)]))
 
+;; create a looping signal from the left channel of an rsound
+;; no interpolation, just flooring.
+(define (wavetable-osc/l wt)
+  (unless (and (rsound? wt) 
+               (= (rs-frames wt) SR))
+    (raise-argument-error 'wavetable-osc
+                          (format "sound with ~s frames" SR)
+                          0 wt))
+  (define (fetch s) (rs-ith/left wt (inexact->exact (floor s))))
+  (network (vol pitch)
+           [idx ((loop-ctr/variable SR) pitch)]
+           [out (* vol (fetch idx))]))
 
 ;;fader : frames -> signal
 (define (fader fade-frames)

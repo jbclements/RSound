@@ -14,6 +14,7 @@
          (contract-out [network-init (-> network/c procedure?)])
          fixed-inputs
          loop-ctr
+         loop-ctr/variable
          simple-ctr
          signal-samples
          signal-nth
@@ -199,7 +200,7 @@
                      (for/sum ([fun sigfuns]) (fun))))))
 
 ;; a simple signal that starts at 0 and increments by "skip"
-;; until it passes "len", then jumps back to 0
+;; until it passes "len", then jumps back by "len"
 (define (loop-ctr len skip)
   (define (increment p)
     (define next-p (+ p skip))
@@ -208,6 +209,19 @@
   (network ()
            [a (prev b 0)]
            [b (increment a)]
+           [out a]))
+
+;; a simple signal that starts at 0 and increments by "skip"
+;; until it passes "len", then jumps back by "len", but "skip"
+;; can be dynamically adjusted
+(define (loop-ctr/variable len)
+  (define (increment p skip)
+    (define next-p (+ p skip))
+    (cond [(< next-p len) next-p]
+          [else (- next-p len)]))
+  (network (skip)
+           [a (prev b 0)]
+           [b (increment a skip)]
            [out a]))
 
 ;; a signal that simply starts at "init"  and adds "skip"

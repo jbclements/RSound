@@ -150,6 +150,23 @@
      (check-equal? (sigfun) 28)
      (check-equal? (sigfun) 8))
    
+   (let ()
+     (define ctr1 (network ()
+                           [incrs ((simple-ctr 0 1))]
+                           [out ((loop-ctr/variable 34) incrs)]))
+     (define sigfun (network-init ctr1))
+     (check-equal? (sigfun) 0)
+     (check-equal? (sigfun) 0)
+     (check-equal? (sigfun) 1)
+     (check-equal? (sigfun) 3)
+     (check-equal? (sigfun) 6)
+     (check-equal? (sigfun) 10)
+     (check-equal? (sigfun) 15)
+     (check-equal? (sigfun) 21)
+     (check-equal? (sigfun) 28)
+     (check-equal? (sigfun) 2)
+     (check-equal? (sigfun) 11))
+   
    (check-equal? (signal-nth (simple-ctr 34 14) 1) 48)
    
    (check-equal? (signal-samples (simple-ctr 4 3) 5)

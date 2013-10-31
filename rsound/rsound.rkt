@@ -35,7 +35,7 @@
                   ;; for testing...
                   [sound-list-total-frames (-> s&t-list? number?)])
 
-(provide (except-out (all-defined-out) 
+(provide (except-out (all-defined-out)
                      sound-list-total-frames
                      rs-play/helper
                      rs-mutator))
@@ -54,6 +54,12 @@
 ;; ... actually, I'm just going to make it a constant, to
 ;; speed things up.
 (define default-sample-rate (make-parameter 44100))
+
+;; constants that control the speed testing
+(define SPEED-TEST-MAX-FRAMES 1000000)
+(define SPEED-TEST-TIME-THRESHOLD-MSEC 400)
+(define SPEED-TEST-BUFSIZE (floor (* (default-sample-rate) 0.05))) ;; about 2K frames
+
 
 ;; an rsound (racket sound) provides a representation for sounds 
 ;; that leaves them packed as C data. For the moment, it's 
@@ -351,6 +357,7 @@
   (for ([i (in-range int-frames)])
     (let* ([offset (* rc:channels i)]
            [sample (real->s16 (sample-maker))])
+      ;; I believe these could safely be unsafe.
       (s16vector-set! cblock offset       sample)
       (s16vector-set! cblock (+ offset 1) sample)))
   (rsound/all cblock sample-rate))
@@ -373,6 +380,7 @@
   (let* ([cblock (make-s16vector (* rc:channels int-frames))])
     (for ([i (in-range int-frames)])
       (let* ([offset (* rc:channels i)])
+        ;; I believe these could safely be unsafe
         (s16vector-set! cblock offset       (real->s16 (sample-maker/left)))
         (s16vector-set! cblock (+ offset 1) (real->s16 (sample-maker/right)))))
     (rsound/all cblock sample-rate)))
@@ -387,6 +395,46 @@
     (memset (s16vector->cpointer cblock) #x0 (* rc:channels int-frames) _sint16)
     (rsound/all cblock sample-rate)))
 
+;; SPEED TESTING
+;; test the time taken per frame for a given signal.
+;; generates an rsound containing a bunch of frames.
+(define (signal-speed-test signal)
+  (define cblock (make-s16vector (inexact->exact (* rc:channels SPEED-TEST-BUFSIZE))))
+  (define sample-maker (network-init signal))
+  (define (generate-samples n)
+    (for ([dc (in-range (floor (/ n SPEED-TEST-BUFSIZE)))])
+      (for ([i (in-range SPEED-TEST-BUFSIZE)])
+        (let* ([offset (* rc:channels i)]
+               [sample (real->s16 (sample-maker))])
+          ;; I believe these could safely be unsafe.
+          (s16vector-set! cblock offset       sample)
+          (s16vector-set! cblock (+ offset 1) sample))))
+    ;; leftovers:
+    (for ([i (in-range (remainder n SPEED-TEST-BUFSIZE))])
+      (let* ([offset (* rc:channels i)]
+             [sample (real->s16 (sample-maker))])
+        ;; I believe these could safely be unsafe.
+        (s16vector-set! cblock offset       sample)
+        (s16vector-set! cblock (+ offset 1) sample))))
+  ;; try with larger and larger #s of frames until 
+  ;; it gets way too big or the time is too high
+  (let loop ([num-frames 1])
+    (printf "testing with ~s frame(s)\n" num-frames)
+    (define-values (_ cpu-msec wall-clock-msec gc-msec)
+      (time-apply generate-samples (list num-frames)))
+    (cond [(or (<= SPEED-TEST-MAX-FRAMES num-frames)
+               (<= SPEED-TEST-TIME-THRESHOLD-MSEC wall-clock-msec))
+           (speed-report num-frames cpu-msec wall-clock-msec gc-msec)]
+          [else
+           (speed-report num-frames cpu-msec wall-clock-msec gc-msec)
+           (loop (* 10 num-frames))])))
+
+(define (speed-report num-frames cpu-msec wall-clock-msec gc-msec)
+  (printf "test took ~s msec of cpu time, ~s msec of wall clock time, and ~s msec of gc time.\n"
+          cpu-msec wall-clock-msec gc-msec)
+  (printf "cpu msec / frame: ~s\n" (exact->inexact (/ cpu-msec num-frames)))
+  (printf "load (wall-clock-msec-per-frame / msec-allowed-per-frame): ~s %\n"
+          (round (* 100 (/ (/ wall-clock-msec num-frames) (/ 1000 (default-sample-rate)))))))
 
 ;; CONVERSIONS
 
