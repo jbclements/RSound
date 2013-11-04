@@ -448,6 +448,23 @@ overhead.
  ...would produce a filter that added the current frame to 4/10 of the output frame 13 frames ago and 1/10 of
  the output frame 4 frames ago.}
 
+@section{Piano Tones}
+
+@defmodule[rsound/piano-tones]{
+This module provides functions that generate resampled piano tones.  The source for these are recordings
+made by the University of Iowa's Electronic Music Studios, which graciously makes their data available
+for re-use. In particular, rsound uses samples of c3, c4, c5, and c6, and resamples as needed.
+
+@defproc[(piano-tone [midi-note-num number?]) rsound?]{
+  Returns an rsound containing a recording of a piano note at the given midi note number,
+  resampled from a nearby one. The notes are fairly long--about three seconds--though the
+  exact length naturally depends on the length of the recorded note and the resampling factor.
+
+  This function is memoized, to speed loading.
+}
+
+}
+
 @section{Frequency Response}
 
 @defmodule[rsound/frequency-response]{
