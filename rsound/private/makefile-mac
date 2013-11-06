@@ -3,7 +3,7 @@ all : i386 x86_64
 i386 : i386-macosx/3m/buffer-add.dylib
 
 i386-macosx/3m/buffer-add.dylib : i386-macosx/3m/buffer-add.o
-	raco ctool -d i386-macosx/3m --ld buffer-add.dylib ++ldf -arch ++ldf i386 ++ldf -mmacosx-version-min=10.5 buffer-add.o
+	raco ctool -d i386-macosx/3m --ld buffer-add.dylib ++ldf -arch ++ldf i386 ++ldf -mmacosx-version-min=10.5 i386-macosx/3m/buffer-add.o
 
 i386-macosx/3m/buffer-add.o : buffer-add.c
 	raco ctool -d i386-macosx/3m --cc ++ccf -arch ++ccf i386 ++ccf -mmacosx-version-min=10.5 buffer-add.c
@@ -11,7 +11,7 @@ i386-macosx/3m/buffer-add.o : buffer-add.c
 x86_64 : x86_64-macosx/3m/buffer-add.dylib
 
 x86_64-macosx/3m/buffer-add.dylib : x86_64-macosx/3m/buffer-add.o
-	raco ctool -d x86_64-macosx/3m --ld buffer-add.dylib ++ldf -arch ++ldf x86_64 ++ldf -mmacosx-version-min=10.5 buffer-add.o
+	raco ctool -d x86_64-macosx/3m --ld buffer-add.dylib ++ldf -arch ++ldf x86_64 ++ldf -mmacosx-version-min=10.5 x86_64-macosx/3m/buffer-add.o
 
 x86_64-macosx/3m/buffer-add.o : buffer-add.c
 	raco ctool -d x86_64-macosx/3m --cc ++ccf -arch ++ccf x86_64 ++ccf -mmacosx-version-min=10.5 buffer-add.c
