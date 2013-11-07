@@ -4,6 +4,7 @@
          "../util.rkt"
          "../network.rkt"
          "plot-signal.rkt"
+         math/array
          rackunit
          rackunit/text-ui
          (for-syntax syntax/parse))
@@ -181,23 +182,15 @@
    
    ;; FFT
    
-   (let* ([tone (make-tone 147 1.0 4800)]
+   (let* ([tone (make-tone 172.265625 1.0 4096)]
           [fft (rsound-fft/left tone)])
-     (check-= (magnitude (vector-ref fft 15)) 0.0 1e-2)
-     (check-= (magnitude (vector-ref fft 16)) 2400.0 1e-2)
-     (check-= (magnitude (vector-ref fft 17)) 0.0 1e-2))
+     (check-= (magnitude (array-ref fft #(15))) 0.0 1e-2)
+     (check-= (magnitude (array-ref fft #(16))) 2048.0 1e-2)
+     (check-= (magnitude (array-ref fft #(17))) 0.0 1e-2))
    
    (check-= (signal-nth (frisellinator 100) 0) 0.0 1e-4)
    (check-= (signal-nth (frisellinator 100) 100) 1.0 1e-4)
    (check-= (signal-nth (frisellinator 100) 50) 0.5 1e-4)
-   
-   
-   
-   (check-equal? (binary-logn 4096) 12)
-   (check-equal? (binary-logn 4095) #f)
-   
-   ;; SIGNAL... actually, I think signal was a bad idea.
-   #;(check-equal? ((signal (lambda (t b c) (+ t b c)) 3 4) 1) 8)
    
    ;; MIDI-NOTE-NUM->PITCH
    

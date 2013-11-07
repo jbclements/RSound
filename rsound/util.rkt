@@ -14,7 +14,8 @@ rsound-max-volume
 |#
 
 (require "rsound.rkt"
-         "fft.rkt"
+         math/base
+         math/array
          "integral-cycles.rkt"
          "wavetable.rkt"
          "network.rkt"
@@ -84,8 +85,6 @@ rsound-max-volume
          rsound-maximize-volume
          midi-note-num->pitch
          pitch->midi-note-num
-         ;; for testing:
-         binary-logn
          )
 
 
@@ -601,18 +600,6 @@ rsound-max-volume
 
 ;; FFTs
 
-;; binary-logn; a safe version of the one that appears in the fft code
-(define (binary-logn n)
-  (let ((binary-logn
-         (let loop ((k 1)
-                    (l 0))
-           (if (>= k n)
-               l
-               (loop (* k 2) (+ l 1))))))
-    (if (= n (arithmetic-shift 1 binary-logn))
-        binary-logn
-        #f)))
-
 ;; return the (complex) fft of the left channel
 (define (rsound-fft/left rsound)
   (channel-fft (lambda (i) (rs-ith/left/s16 rsound i)) (rs-frames rsound)))
@@ -623,13 +610,12 @@ rsound-max-volume
 
 ;; the common left-right abstraction
 (define (channel-fft accessor len)
-  (let* ([v (build-vector len 
-                          (lambda (i) 
-                            (/ (exact->inexact (accessor i)) s16max)))])
-    (if (binary-logn len)
-        (fft-complex-radix2-forward v)
-        (fft-complex-forward v)) 
-    v))
+  (unless (and (integer? len) (power-of-two? len))
+    (raise-argument-error 'channel-fft "integer power of two" 1 accessor len))
+  (let* ([v (build-array (vector len) 
+                         (lambda (i) 
+                           (/ (exact->inexact (accessor (vector-ref i 0))) s16max)))])
+    (array-fft v)))
 
 ;; make the sound as lound as possible without distortion
 (define (rsound-maximize-volume rsound)

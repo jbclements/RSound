@@ -4,7 +4,7 @@
 (require "rsound.rkt"
          racket/gui
          racket/class
-         "fft.rkt")
+         math/array)
 
 (provide rs-draw
          vectors-draw
@@ -427,9 +427,9 @@
     (for/list ([i (in-range windows)])
       (let* ([s (* window-size i)]
              [e (* window-size (add1 i))]
-             [v (build-vector (- e s) (lambda (i) (getter rsound (+ s i))))])
-        (fft-complex-radix2-forward v)
-        v)))
+             [v (build-array (- e s) 
+                             (lambda (i) (getter rsound (+ s (vector-ref i 0)))))])
+        (array-fft v))))
   
   (ffts-draw (ffts-from-getter rs-ith/left/s16) 
              (ffts-from-getter rs-ith/right/s16) 

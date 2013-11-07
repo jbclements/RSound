@@ -96,9 +96,6 @@
       [v2 (build-vector 16 (lambda (i) 0))])
   (ffts-draw (list v1 v2) (list v2 v1) 2 4))
 
-(require "../fft.rkt")
-
-
 
 #;(let ([v (build-vector 128 (lambda (i) (* s16max (* 0.5 (+ (sin (* i 4/128 twopi))
                                                            (sin (* i (/ 35.99 128) twopi)))))))])
