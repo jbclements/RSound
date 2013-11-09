@@ -14,6 +14,7 @@
                   s16vec-play
                   stream-play
                   stream-play/unsafe
+                  s16vec-record
                   host-api)
          racket/contract
          (only-in ffi/unsafe cpointer? ptr-set! _sint16 cast _pointer)
@@ -44,7 +45,8 @@
   [signal/block-play/unsafe (-> procedure? nonnegative-real? (or/c nonnegative-real? false?) 
                                 (-> nonnegative-real?))]
   [stop-playing (-> void?)]
-  [channels exact-nonnegative-integer?]))
+  [channels exact-nonnegative-integer?])
+ s16vec-record)
 
 (define (false? x) (eq? x #f))
 

@@ -76,6 +76,9 @@
     (raise-argument-error 'rsound/all "s16vector of length > 0" 0 s16vec sample-rate))
   (rsound s16vec 0 (/ (s16vector-length s16vec) channels) sample-rate))
 
+(define (record-sound frames)
+  (rsound/all (rc:s16vec-record frames (default-sample-rate)) (default-sample-rate)))
+
 ;; are two rsounds equal?
 (define (rs-equal? r1 r2)
   (unless (rsound? r1)
