@@ -2,11 +2,11 @@
 
 (define collection 'multi)
 
-;; unfortunately, this doesn't work in 5.3.6.... even
-;; though the catalog supplies dummy versions, the
-;; graphical tool pops up a Y/N message in a dialog
-;; that has no means of entering text!
-(define deps (list "portaudio"
+(define deps (list ("portaudio" '#:version "0.1")
+                   ;; unfortunately, specifying core dependencies doesn't work in 5.3.6.... even
+                   ;; though the catalog supplies dummy versions, the
+                   ;; graphical tool pops up a Y/N message in a dialog
+                   ;; that has no means of entering text!
                    ;"base"
                    ;"data-lib"
                    ;"gui-lib"
