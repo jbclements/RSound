@@ -38,23 +38,68 @@ volume. Hmm.
 
 @section{Sound Control}
 
-These procedures start and stop playing sounds and loops.
+These procedures start and stop playing sounds.
 
 @defproc[(play (rsound rsound?)) void?]{
  Plays an rsound. Plays concurrently with an already-playing sound, if there is one.}
 
-@;{@defproc[(rsound-loop (rsound rsound?)) void?]{
- Plays an rsound repeatedly.  Continues looping until interrupted by 
- another sound command.}
-
-@defproc[(change-loop (rsound rsound?)) void?]{
- When the current sound or loop finishes, starts looping this one instead.}
-}
 @defproc[(stop) void]{
  Stop all of the the currently playing sounds.}
 
 @defthing[ding rsound?]{
  A one-second "ding" sound. Nice for testing whether sound playing is working.}
+
+@section{Stream-based Playing}
+
+ RSound now provides a "pstream" abstraction which falls conceptually in between
+ @racket[play] and @racket[signal-play]. In particular, a @racket[pstream] encapsulates
+ an ongoing signal, with primitives available to queue sounds for playback, to check
+ the signal's "current time" (in frames), and to queue a callback to occur at a 
+ particular time.
+ 
+ This mechanism has two advantages over @racket[play]; first, it allows you to queue sounds 
+ for a particular frame, avoiding hiccups in playback.  Second, it only uses a single
+ portaudio stream, rather than the multiple portaudio streams that would occur in 
+ multiple calls to @racket[play]
+ 
+@defproc[(make-pstream (#:buffer-time buffer-time (or/c number? #f) #f)) pstream?]{
+ Create a new pstream and start playing it. Initially, of course, it will be silent. Returns
+ the pstream. If a @racket[buffer-time] argument is specified (in seconds), it overrides the default
+ buffer time of about 50 ms. Use a long buffer-time when continuity is more important than 
+ responsiveness (background music, etc).
+}
+
+@defproc[(pstream-queue [pstream pstream?] [rsound rsound?] [frames natural?]) pstream?]{
+ Queue the given sound to be played at the time specified by @racket[frames]. If that frame
+ is in the past, it will still play the appropriate remainder of the sound. Returns
+ the pstream.
+}
+
+@defproc[(pstream-current-frame [pstream pstream?]) natural?]{
+ Returns the current value of the stream's frame counter.
+ }
+
+@defproc[(pstream-play [pstream pstream?] [rsound rsound?]) pstream?]{
+ Play the given sound on the given stream. Returns the pstream.
+}
+
+@defproc[(pstream-queue-callback [pstream pstream?] [callback procedure?] [frames natural?]) pstream?]{
+ Queue the callback (a procedure of no arguments) to be called when the pstream's frame
+ counter reaches @racket[frames]. If the counter is already larger than @racket[frames], calls
+ it immediately.
+ 
+ It's perhaps worth noting that the callbacks are triggered by semaphore posts, to avoid the possibility
+ of a callback stalling playback.  This can mean that the callback is delayed by a few milliseconds.
+ }
+
+@section{Recording}
+
+RSound now includes basic support for recording sounds.
+
+@defproc[(record-sound (frames nat?)) rsound?]{
+ Using the default input default device, record a (stereo) sound of length @racket[frames],
+ using the default sample rate. Blocks until the sound is finished.
+}
 
 @section{Sound I/O}
 
@@ -68,7 +113,7 @@ The RSound library reads and writes WAV files only; this means fewer FFI depende
  
  It currently
 has lots of restrictions (it insists on 16-bit PCM encoding, for instance), but deals 
-with a number of common bizarre conventions that certain WAV files have (PAD chunks,
+with a number of common bizarre conventions th-at certain WAV files have (PAD chunks,
 extra blank bytes at the end of the fmt chunk, etc.), and tries to fail
 relatively gracefully on files it can't handle.
 
@@ -545,50 +590,6 @@ for re-use. In particular, rsound uses samples of c3, c4, c5, and c6, and resamp
  
  }
 
-@section{Stream-based Playing}
-
-@defmodule[rsound/stream-play]{
- RSound now provides a "pstream" abstraction which falls conceptually in between
- @racket[play] and @racket[signal-play]. In particular, a @racket[pstream] encapsulates
- an ongoing signal, with primitives available to queue sounds for playback, to check
- the signal's "current time" (in frames), and to queue a callback to occur at a 
- particular time.
- 
- This mechanism has two advantages over @racket[play]; first, it allows you to queue sounds 
- for a particular frame, avoiding hiccups in playback.  Second, it only uses a single
- portaudio stream, rather than the multiple portaudio streams that would occur in 
- multiple calls to @racket[play]
- 
-@defproc[(make-pstream (#:buffer-time buffer-time (or/c number? #f) #f)) pstream?]{
- Create a new pstream and start playing it. Initially, of course, it will be silent. Returns
- the pstream. If a @racket[buffer-time] argument is specified (in seconds), it overrides the default
- buffer time of about 50 ms. Use a long buffer-time when continuity is more important than 
- responsiveness (background music, etc).
-}
-
-@defproc[(pstream-queue [pstream pstream?] [rsound rsound?] [frames natural?]) pstream?]{
- Queue the given sound to be played at the time specified by @racket[frames]. If that frame
- is in the past, it will still play the appropriate remainder of the sound. Returns
- the pstream.
-}
-
-@defproc[(pstream-current-frame [pstream pstream?]) natural?]{
- Returns the current value of the stream's frame counter.
- }
-
-@defproc[(pstream-play [pstream pstream?] [rsound rsound?]) pstream?]{
- Play the given sound on the given stream. Returns the pstream.
-}
-
-@defproc[(pstream-queue-callback [pstream pstream?] [callback procedure?] [frames natural?]) pstream?]{
- Queue the callback (a procedure of no arguments) to be called when the pstream's frame
- counter reaches @racket[frames]. If the counter is already larger than @racket[frames], calls
- it immediately.
- 
- It's perhaps worth noting that the callbacks are triggered by semaphore posts, to avoid the possibility
- of a callback stalling playback.  This can mean that the callback is delayed by a few milliseconds.
- }
-}
 
 @section{Configuration}
 
