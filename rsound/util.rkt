@@ -114,7 +114,12 @@ rsound-max-volume
                    right)))
 
 ;; rsound-scale : number rsound -> rsound
+;; THIS COULD BE SPED UP ENORMOUSLY USING EXISTING C SUBROUTINES
 (define (rs-scale scalar rsound)
+  (unless (number? scalar)
+    (raise-argument-error 'rs-scale "number" 0 scalar rsound))
+  (unless (rsound? rsound)
+    (raise-argument-error 'rs-scale "rsound" 1 scalar rsound))
   (rs-map (lambda (x) (* x scalar)) rsound))
 
 
@@ -221,6 +226,10 @@ rsound-max-volume
 ;; rate are determined by the first, and nonexistent samples
 ;; in the second are taken to be zeros.
 (define (rs-mult a b)
+  (unless (rsound? a)
+    (raise-argument-error 'rs-mult "rsound" 0 a b))
+  (unless (rsound? b)
+    (raise-argument-error 'rs-mult "rsound" 1 a b))
   (define len1 (rs-frames a))
   (define len2 (rs-frames b))
   (define new-snd
