@@ -448,15 +448,19 @@ overhead.
  given a pitch in Hz, a volume between 0.0 and 1.0, and a duration in frames, return the
  rsound consisting of a pure sine wave tone using the specified parameters.}
 
-@defproc[(rsound-fft/left [rsound rsound?]) (vectorof complex?)]{
+@defproc[(rsound-fft/left [rsound rsound?]) (fcarrayof complex?)]{
  Produces the complex-valued vector that represents the fourier transform of the rsound's left channel.
- Since the FFT takes time N*log(N) in the size of the input, running this on rsounds with more than a
- few thousand frames is probably going to be slow, unless the number of frames is a power of 2.}
+ The sound's length must be a power of two. 
+ 
+ The FFT takes time N*log(N) in the size of the input, so runtimes will be super-linear, but on a modern
+ machine even FFTs of 32K points take on the order of 100msec.}
 
-@defproc[(rsound-fft/right [rsound rsound?]) (vectorof complex?)]{
+@defproc[(rsound-fft/right [rsound rsound?]) (fcarrayof complex?)]{
  Produces the complex-valued vector that represents the fourier transform of the rsound's right channel.
- Since the FFT takes time N*log(N) in the size of the input, running this on rsounds with more than a
- few thousand frames is probably going to be slow, unless the number of frames is a power of 2}
+ The sound's length must be a power of two. 
+ 
+ The FFT takes time N*log(N) in the size of the input, so runtimes will be super-linear, but on a modern
+ machine even FFTs of 32K points take on the order of 100msec. }
 
 @defproc[(midi-note-num->pitch [note-num nonnegative-integer?]) number?]{
  Returns the frequency (in Hz) that corresponds to a given midi note number. Here's the top-secret formula: 
