@@ -19,13 +19,15 @@ rsound-max-volume
          "integral-cycles.rkt"
          "wavetable.rkt"
          "network.rkt"
+         "paste-util.rkt"
          racket/flonum
          racket/fixnum
          ffi/vector
          (only-in racket/math pi)
          (only-in racket/match match-define match)
          (for-syntax racket/base syntax/parse)
-         (only-in racket/list last))
+         (only-in racket/list last)
+         racket/unsafe/ops)
 
 (provide rs-map
          rs-map/idx
@@ -92,35 +94,52 @@ rsound-max-volume
 (define MAX-FRAME-RATE 100000)
 
 (define twopi (* 2 pi))
-
+(define CHANNELS 2)
 
 ;; given a function from numbers to numbers and an rsound, 
 ;; produce a new rsound where every sample is modified 
 ;; by applying the given function.
 (define (rs-map fun sound)
-  (rs-map/idx (lambda (s i) (fun s)) sound))
+  (rs-generate (rs-frames sound)
+               (lambda (i) 
+                 (fun (rs-ith/left sound i)))
+               (lambda (i) 
+                 (fun (rs-ith/right sound i)))
+               (rsound-sample-rate sound)))
+
+;; given a number of frames and a left and right generator and a sample
+;; rate, produce a sound.
+(define (rs-generate frames left-fun right-fun sample-rate)
+  (define vec (make-s16vector (* CHANNELS frames)))
+  (for ([i frames])
+    (unsafe-s16vector-set! vec (* CHANNELS i) (real->s16 (left-fun i)))
+    (unsafe-s16vector-set! vec (add1 (* CHANNELS i)) (real->s16 (right-fun i))))
+  (rsound/all vec sample-rate))
 
 ;; given (a function from sample and index to sample) and an rsound,
 ;; produce a new rsound where every sample is modified 
 ;; by applying the given function
 (define (rs-map/idx fun sound)
-  (define left
-    (indexed-signal (lambda (i) (fun (rs-ith/left sound i) i))))
-  (define right
-    (indexed-signal (lambda (i) (fun (rs-ith/right sound i) i))))
-  (parameterize ([default-sample-rate (rsound-sample-rate sound)])
-  (signals->rsound (rs-frames sound)
-                   left
-                   right)))
+  (define samp (silence (rs-frames sound)))
+  (for ([i (rs-frames sound)])
+    (set-rs-ith/left! samp i (fun (rs-ith/left sound i) i))
+    (set-rs-ith/right! samp i (fun (rs-ith/right sound i) i)))
+  samp)
 
 ;; rsound-scale : number rsound -> rsound
-;; THIS COULD BE SPED UP ENORMOUSLY USING EXISTING C SUBROUTINES
+;; this uses C subroutines. It will behave badly when
+;; clipping occurs (not crashy, but noisy)
 (define (rs-scale scalar rsound)
   (unless (number? scalar)
     (raise-argument-error 'rs-scale "number" 0 scalar rsound))
   (unless (rsound? rsound)
     (raise-argument-error 'rs-scale "rsound" 1 scalar rsound))
-  (rs-map (lambda (x) (* x scalar)) rsound))
+  (define samp (silence (rs-frames rsound)))
+  (rs-copy-mult-add! (s16vector->cpointer (rsound-data samp)) 0 
+                     rsound 0
+                     (rs-frames rsound) (rs-frames samp)
+                     scalar)
+  samp)
 
 
 ;; clip : rsound nat nat -> rsound
@@ -239,16 +258,14 @@ rsound-max-volume
   (for ([i (in-range (min len1 len2))])
     (set-rs-ith/left/s16! new-snd
                           i
-                          (inexact->exact
-                           (floor
-                            (* (rs-ith/left/s16 a i)
-                               (rs-ith/left b i)))))
+                          (real->s16
+                           (* (rs-ith/left a i)
+                             (rs-ith/left b i))))
     (set-rs-ith/right/s16! new-snd
                            i
-                           (inexact->exact
-                            (floor
-                             (* (rs-ith/right/s16 a i)
-                                (rs-ith/right b i))))))
+                           (real->s16
+                            (* (rs-ith/right a i)
+                               (rs-ith/right b i)))))
   new-snd)
 
 
@@ -438,9 +455,7 @@ rsound-max-volume
 (define (wavefun->tone-maker wavefun)
   (let ([tone-table (make-hash)])
     (lambda (pitch volume frames)
-      (define sample-rate (let ([ans (default-sample-rate)])
-                            (printf "dd: ~s\n" ans)
-                            ans))
+      (define sample-rate (default-sample-rate))
       (define key (list pitch volume sample-rate))
       (define (compute-and-store)
         (define snd (signal->rsound frames 

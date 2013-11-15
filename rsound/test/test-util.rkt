@@ -9,11 +9,17 @@
          rackunit/text-ui
          (for-syntax syntax/parse))
 
+   (define (round-trip real)
+     (s16->real (real->s16 real)))
+   (define (int-round-trip int)
+     (real->s16 (s16->real int)))
+
 (provide the-test-suite)
 
 (define the-test-suite
 (test-suite 
  "utils tests"
+ (random-seed 23497)
  (let ()
    ;; non-table-based-sine-wave and square wave
    
@@ -113,8 +119,15 @@
    (define shorty3 (rs-overlay* (list shorty shorty shorty)))
    (check-= (rs-ith/left shorty3 6) 0.18 1e-4)
    
-   (let ([s (rs-scale 0.75 shorty)])
-     (check-= (rs-ith/left s 8) 0.06 1e-4))
+   ;; RS-SCALE USES A TRUNCATE (IN C CODE)
+   ;; this is not ideal, but it's the current behavior.
+   (let ()
+     (define n (noise 500))
+     (define o (rs-scale 0.75 n))
+     (for ([i 500])
+       (check-= (s16->real (truncate (* 0.75 (rs-ith/left/s16 n i))))
+                (rs-ith/left o i)
+                1e-9)))
    
    
    ;; vectors->rsound
@@ -283,11 +296,11 @@
      (define s (noise 50))
      (define t (noise 50))
      (define u (rs-mult s t))
-     (for/and ([i (in-range 1)])
-       (check-= (rs-ith/left u i) (* (rs-ith/left s i) (rs-ith/left t i)) 1e-2)
+     (for/and ([i (in-range 50)])
+       (check-= (rs-ith/left u i) 
+                (round-trip (* (rs-ith/left s i) (rs-ith/left t i))) 1e-9)
        (check-= (rs-ith/right u i) 
-                (* (rs-ith/right s i) 
-                   (rs-ith/right t i)) 1e-2)))
+                (round-trip (* (rs-ith/right s i) (rs-ith/right t i))) 1e-9)))
    
    ;; TILE-TO-LEN
    
@@ -354,8 +367,7 @@
                     0.3
                     440)))
    
-   (define (round-trip real)
-     (s16->real (real->s16 real)))
+
    (check-equal? (rs-ith/left sound 0) 0.0)
    (check-equal? (rs-ith/left sound 1) 
                  (round-trip (* 0.3 (rs-ith/left sine-wt 440))))
