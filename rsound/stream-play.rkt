@@ -53,11 +53,12 @@
      (format "rsound matching pstream's frame rate (~a)"
              (pstream-frame-rate pstream))
      1 pstream snd frame))
-  (unless (exact-nonnegative-integer? frame)
+  (unless (nonnegative-integer? frame)
     (raise-argument-error 'pstream-queue "exact nonnegative integer" 2 pstream snd frame))
+  (define exact-frame (inexact->exact frame))
   (queue-for-playing! (pstream-sound-heap pstream) 
                       snd 
-                      frame)
+                      exact-frame)
   pstream)
 
 ;; queue a callback to run at a particular frame
