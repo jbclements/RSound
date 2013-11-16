@@ -134,11 +134,12 @@ rsound-max-volume
     (raise-argument-error 'rs-scale "number" 0 scalar rsound))
   (unless (rsound? rsound)
     (raise-argument-error 'rs-scale "rsound" 1 scalar rsound))
+  (define inexact-scalar (exact->inexact scalar))
   (define samp (silence (rs-frames rsound)))
   (rs-copy-mult-add! (s16vector->cpointer (rsound-data samp)) 0 
                      rsound 0
                      (rs-frames rsound) (rs-frames samp)
-                     scalar)
+                     inexact-scalar)
   samp)
 
 
