@@ -4,7 +4,7 @@
 (require/typed "network.rkt"
                [#:struct network/s ([ins : Index] 
                                    [outs : Index]
-                                   [maker : Procedure])])
+                                   [maker : Any])])
 
 ;; this file provides the "reverb" network
 (provide reverb)
@@ -120,7 +120,7 @@
                          [else next-c6]))
           (flvector-set! mvec 5 midnode6)
 
-          (* 0.1667 (+ out1 out2 out3 out4 out5 out6)))))
+          (/ (+ out1 out2 out3 out4 out5 out6) 6.0))))
 
 
 (: reverb network/s)

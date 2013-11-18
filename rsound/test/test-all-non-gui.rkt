@@ -16,7 +16,7 @@
          (prefix-in sc: "test-single-cycle.rkt")
          (prefix-in rc: "test-rsound-commander.rkt")
          (prefix-in ev: "test-envelope.rkt")
-         "test-signal-speed.rkt"
+         (prefix-in rvb: "test-reverb.rkt")
          rackunit/text-ui
          rackunit)
 
@@ -36,4 +36,5 @@
   sc:the-test-suite
   rc:the-test-suite
   ev:the-test-suite
+  rvb:the-test-suite
   ))
