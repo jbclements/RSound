@@ -23,6 +23,9 @@
          racket/unsafe/ops
          racket/async-channel)
 
+;; this file uses the term "signal" to refer exclusively to ( -> Real) 
+;; procedures; it doesn't handle the network form.
+
 (provide
  (contract-out
   (buffer-play (-> s16vector?
