@@ -94,7 +94,6 @@ rsound-max-volume
 (define MAX-FRAME-RATE 100000)
 
 (define twopi (* 2 pi))
-(define CHANNELS 2)
 
 ;; given a function from numbers to numbers and an rsound, 
 ;; produce a new rsound where every sample is modified 
@@ -742,7 +741,7 @@ rsound-max-volume
 
 ;; noise
 (define (noise duration)
-  (define samples (* duration channels))
+  (define samples (* duration CHANNELS))
   (define vec (make-s16vector samples))
   (for ([i (in-range samples)])
     (s16vector-set! vec i (- (random (* 2 s16max)) s16max)))
@@ -750,13 +749,13 @@ rsound-max-volume
 
 ;; rearrange
 (define (rearrange frames fun orig)
-  (define samples (* frames channels))
+  (define samples (* frames CHANNELS))
   (define vec (make-s16vector samples))
   (for ([i (in-range frames)])
     (define source (fun i))
-    (s16vector-set! vec (* channels i) 
+    (s16vector-set! vec (* CHANNELS i) 
                     (rs-ith/left/s16 orig source))
-    (s16vector-set! vec (add1 (* channels i)) 
+    (s16vector-set! vec (add1 (* CHANNELS i)) 
                     (rs-ith/right/s16 orig source)))
   (rsound vec 0 frames (default-sample-rate)))
 
@@ -783,8 +782,8 @@ rsound-max-volume
                                      (rs-frames sound) min-frame max-frame))
 
 (define (buffer-largest-sample/range buffer start stop frames)
-  (buffer-largest-sample/range/helper buffer (* channels start) 
-                                      (* channels stop) 1))
+  (buffer-largest-sample/range/helper buffer (* CHANNELS start) 
+                                      (* CHANNELS stop) 1))
 
 ;; what's the largest sample from min to max-1 ?
 
@@ -793,16 +792,16 @@ rsound-max-volume
 (define (buffer-largest-sample/range/left buffer frames min-frame max-frame)
   (frame-range-checks frames min-frame max-frame)
   (buffer-largest-sample/range/helper buffer
-                                      (* channels min-frame)
-                                      (* channels max-frame)
+                                      (* CHANNELS min-frame)
+                                      (* CHANNELS max-frame)
                                       2))
 
 ;; right channel only
 (define (buffer-largest-sample/range/right buffer frames min-frame max-frame)
   (frame-range-checks frames min-frame max-frame)
   (buffer-largest-sample/range/helper buffer
-                                      (add1 (* channels min-frame))
-                                      (add1 (* channels max-frame))
+                                      (add1 (* CHANNELS min-frame))
+                                      (add1 (* CHANNELS max-frame))
                                       2))
 
 ;; sample-based, for internal use only:

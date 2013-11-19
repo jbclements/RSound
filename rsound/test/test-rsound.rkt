@@ -2,6 +2,7 @@
 
 (require "../rsound.rkt"
          "../network.rkt"
+         "../util.rkt"
          rackunit
          rackunit/text-ui
          racket/runtime-path
@@ -11,20 +12,10 @@
 
 ;;; HELPERS FOR TEST CASES
 
-
-(define twopi (* 2 pi))
-
-(define (sine-wave pitch sample-rate volume)
-  (let ([scalar (* twopi pitch)])
-    (add-ticker
-     (lambda (i)
-       (let ([t (/ i sample-rate)])
-         (* volume (sin (* scalar t))))))))
-
-;; make a monaural pitch with the given number of frames
-(define (make-tone pitch volume frames)
-  (signal->rsound frames (sine-wave pitch (default-sample-rate) volume)))
-
+(define (round-trip real)
+  (s16->real (real->s16 real)))
+(define (int-round-trip int)
+  (real->s16 (s16->real int)))
 
 (define-runtime-path short-test-wav "./short-test.wav")
 
@@ -276,6 +267,22 @@
 
 |#
   
+  ;; rs-filter
+  (let ()
+    ;; a stateful filter, so we can make sure left and right are independent:
+    (define my-filter 
+      (network (in)
+               [ctr ((simple-ctr 0 (/ 1.0 200.0)))]
+               [out (+ in ctr)]))
+    (define n (noise 100))
+    (define p (rs-filter n my-filter))
+    (for ([i 100])
+      (check-= (rs-ith/left p i) 
+               (round-trip (+ (rs-ith/left n i) (/ i 200.0)))
+               1e-9)
+      (check-= (rs-ith/right p i) 
+               (round-trip (+ (rs-ith/right n i) (/ i 200.0)))
+               1e-9)))
   
   
   )))

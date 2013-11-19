@@ -8,6 +8,7 @@
 (provide network
          prev
          signal?
+         filter?
          signal-*s
          signal-+s
          (struct-out network/s)
@@ -173,6 +174,11 @@
 (define (signal? f)
   (or (and (network/s? f) (= (network/s-ins f) 0))
       (and (procedure? f) (procedure-arity-includes? f 0))))
+
+;; a filter is a network with 1 inputs.
+(define (filter? f)
+  (or (and (network/s? f) (= (network/s-ins f) 1))
+      (and (procedure? f) (procedure-arity-includes? f 1))))
 
 ;; take a network with inputs and a set of fixed 
 ;; inputs and return a new signal closed over those inputs

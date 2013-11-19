@@ -6,6 +6,7 @@
          "../filter.rkt"
          "../network.rkt"
          "../filter-typed.rkt"
+         "../reverb-typed.rkt"
          rackunit
          racket/flonum)
 
@@ -238,6 +239,13 @@
   (check-= (poly 0) -1/2 1e-7))
    
 
+  ;; filter?
+  (let ()
+    (check-true (filter? reverb))
+    (check-true (filter? sine-wave))
+    (check-true (filter? (lambda (x) x)))
+    (check-false (filter? (lambda () 3))))
+   
 )))
 
 

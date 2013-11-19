@@ -14,7 +14,7 @@
          rs-copy-add!
          rs-copy-mult-add!)
 
-(define frame-size (* channels s16-size))
+(define frame-size (* CHANNELS s16-size))
 (define (frames->bytes f) (* frame-size f))
 
 ;; given a cpointer and a length in frames,
@@ -47,7 +47,7 @@
   (define src-real-offset (+ src-offset (rsound-start src)))
   (define src-ptr (ptr-add (s16vector->cpointer (rsound-data src))
                            (frames->bytes src-real-offset)))
-  (s16buffer-add!/c tgt-ptr src-ptr (* channels copy-frames)))
+  (s16buffer-add!/c tgt-ptr src-ptr (* CHANNELS copy-frames)))
 
 
 ;; same as prior function, but multiply by 'factor' before adding.
@@ -74,4 +74,4 @@
   (define src-real-offset (+ src-offset (rsound-start src)))
   (define src-ptr (ptr-add (s16vector->cpointer (rsound-data src))
                            (frames->bytes src-real-offset)))
-  (s16buffer-mult-add!/c tgt-ptr src-ptr (* channels copy-frames) factor))
+  (s16buffer-mult-add!/c tgt-ptr src-ptr (* CHANNELS copy-frames) factor))

@@ -45,7 +45,7 @@
 (define s16max/i (exact->inexact #x7fff))
 (define s16-size 2)
 
-(define channels rc:channels)
+(define CHANNELS rc:channels)
 (define stop rc:stop-playing)
 
 ;; used for creating sounds; specifying the 
@@ -74,7 +74,7 @@
 (define (rsound/all s16vec sample-rate)
   (when (= (s16vector-length s16vec) 0)
     (raise-argument-error 'rsound/all "s16vector of length > 0" 0 s16vec sample-rate))
-  (rsound s16vec 0 (/ (s16vector-length s16vec) channels) sample-rate))
+  (rsound s16vec 0 (/ (s16vector-length s16vec) CHANNELS) sample-rate))
 
 (define (record-sound frames)
   (rsound/all (rc:s16vec-record frames (default-sample-rate)) (default-sample-rate)))
@@ -397,6 +397,21 @@
   (let* ([cblock (make-s16vector (* rc:channels int-frames))])
     (memset (s16vector->cpointer cblock) #x0 (* rc:channels int-frames) _sint16)
     (rsound/all cblock sample-rate)))
+
+
+;; apply a filter to a sound (left and right are filtered
+;; individually
+;; rsound filter -> rsound
+(define (rs-filter sound filter)
+  (define left-filter (network-init filter))
+  (define right-filter (network-init filter))
+  (define output-s16vec (make-s16vector (* CHANNELS (rs-frames sound))))
+  (for ([i (rs-frames sound)])
+    ;; could be faster with unsafe write and read...
+    (s16vector-set! output-s16vec       (* i CHANNELS)  (real->s16 (left-filter (rs-ith/left sound i))))
+    (s16vector-set! output-s16vec (add1 (* i CHANNELS)) (real->s16 (right-filter (rs-ith/right sound i))))
+    )
+  (rsound/all output-s16vec (rsound-sample-rate sound)))
 
 ;; SPEED TESTING
 ;; test the time taken per frame for a given signal.

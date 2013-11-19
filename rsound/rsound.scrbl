@@ -101,7 +101,7 @@ RSound now includes basic support for recording sounds.
  using the default sample rate. Blocks until the sound is finished.
 }
 
-@section{Sound I/O}
+@section{File I/O}
 
 These procedures read and write rsounds from/to disk.
 
@@ -218,12 +218,55 @@ These procedures allow the creation, analysis, and manipulation of rsounds.
 
 @section{Signals and Networks}
 
-For signal processing, RSound adopts a dataflow-like paradigm. Networks represent
-interconnected signal-processing nodes, and produce streams of values. They can be
-connected together using a number of primitives, including the @racket[network]
-syntactic form. Networks that have no inputs are called @deftech{signals}.
+For signal processing, RSound adopts a dataflow-like paradigm, where elements
+may be joined together to form a directed acyclic graph, which is itself an
+elemnt that can be joined together, and so forth. So, for instance,
+you might have a sine wave generator connected to the amplitude input of
+another sine wave generator, and the result pass through a distortion filter. 
+Each node accepts a stream of inputs, and produces a stream of outputs. I will
+use the term @deftech{node} to refer to both the primitive elements and the
+compound elements.
+
+The most basic form of node is simply a procedure.  It takes inputs, and 
+produces outputs. In addition, the @racket[network] form provides support
+for nodes that are stateful and require initialization.
+
+A node that requires no inputs is called a @deftech{signal}.
+
+Signals can be played directly, with @racket[signal-play]. They may also be
+converted to rsounds, using @racket[signal->rsound] or @racket[signals->rsound].
+
+A node that takes one input is called a @deftech{filter}.
+
+@defform[(network (in ...)
+                  [node-label node]
+                  ...)
+         #:grammar
+         [(in identifier?)
+          (node-label identifier)
+          (node (network-or-proc node-arg ...)
+                expression?)
+          (network-or-proc expression?)
+          (node-arg node-label
+                    (prev node-label)
+                    expression?)]]{
+ Produces a network. The @racket[in] names specify input arguments to the
+ network.  Each network clause describes a node.  Each node must have a 
+ label, which may be used later to refer to the value that is the result 
+ of that node. The special @racket[(prev ...)] form may be used to refer
+ to the previous value of the corresponding node. The final clause's node
+ is used as the output of the network.
+ 
+ The @racket[network] form is useful because it manages the initialization
+ of stateful networks, and allows reference to previous outputs.}
 
 Here's a trivial signal:
+
+@racketblock[
+(lambda () 3)
+]
+
+Here's the same signal, written using @racket[network]:
 
 @racketblock[
 (network ()
@@ -341,6 +384,11 @@ In order to listen to them, you can transform them into rsounds, or play them di
  @racket[left-sig] and @racket[right-sig] to generate the
  samples for the left and right channels.
 }
+
+@defproc[(rs-filter (sound rsound?) (filter filter?)) rsound?]{
+ Applies the given filter to the given sound to produce a new sound. The
+ sound's channels are processed independently. The new sound is of
+ the same length as the old sound.}
                                                                              
 @defproc[(signal-play (signal signal?)) void?]{
  Plays a (single-channel) signal. Halt playback using @racket[(stop)].}
@@ -395,7 +443,11 @@ overhead.
 
 @defproc[(signal? [maybe-signal any/c]) boolean?]{
  Is the given value a signal? More precisely, is the given value a procedure whose
- arity includes 1?}
+ arity includes 0, or a network that takes zero inputs?}
+
+@defproc[(filter? [maybe-filter any/c]) boolean?]{
+ Is the given value a filter? More precisely, is the given value a procedure whose
+ arity includes 1, or a network that takes one input?}
 
 @section{Visualizing Rsounds}
 
