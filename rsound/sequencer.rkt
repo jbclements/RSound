@@ -262,10 +262,10 @@
 
 
 (let ()
-  (define src1 (rsound (make-s16vector (* channels 200) 1) 0 200 44100))
+  (define src1 (rsound (make-s16vector (* CHANNELS 200) 1) 0 200 44100))
   (define entry1 (entry src1 50 250))
   (define entry2 (entry src1 65 265))
-  (define dst1 (make-s16vector (* channels 10) 0))
+  (define dst1 (make-s16vector (* CHANNELS 10) 0))
   (check-equal? (s16vector->list dst1) (list 0 0 0 0 0 0 0 0 0 0
                                              0 0 0 0 0 0 0 0 0 0))
   (add-from-buf! (s16vector->cpointer dst1) 45 10 entry1 1.0)

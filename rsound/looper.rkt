@@ -18,9 +18,9 @@
     (define used-frames (- t current-sound-start))
     (define frames-to-copy (min frames (- sound-frames used-frames)))
     (define src-ptr (ptr-add (s16vector->cpointer (rsound-data current-sound))
-                             (* (+ current-sound-start-offset used-frames) channels)
+                             (* (+ current-sound-start-offset used-frames) CHANNELS)
                              _sint16))
-    (memcpy ptr src-ptr (* frames-to-copy channels) _sint16)
+    (memcpy ptr src-ptr (* frames-to-copy CHANNELS) _sint16)
     (when (< frames-to-copy frames)
       ;; start next sound
       (match-define (list new-current-sound 
@@ -42,14 +42,14 @@
       (define more-frames-to-copy (min frames-remaining 
                                        new-sound-len))
       (define tgt-ptr (ptr-add ptr
-                               (* frames-to-copy channels) 
+                               (* frames-to-copy CHANNELS) 
                                _sint16))
       (define src-ptr (ptr-add (s16vector->cpointer (rsound-data current-sound))
-                               (* new-current-sound-start-offset channels)
+                               (* new-current-sound-start-offset CHANNELS)
                                _sint16))
       (memcpy tgt-ptr 
               src-ptr 
-              (* channels more-frames-to-copy)
+              (* CHANNELS more-frames-to-copy)
               _sint16)))
   signal/block/unsafe)
 
