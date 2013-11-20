@@ -13,13 +13,17 @@
 ;; load the C4 and C5 samples
 
 (define C3samp (rs-read (build-path piano-samples "Piano.c3.clipped.wav"))) ; 48
+(define Gb3samp (rs-read (build-path piano-samples "Piano.gb3.clipped.wav")))
 (define C4samp (rs-read (build-path piano-samples "Piano.c4.clipped.wav"))) ; 60
+(define Gb4samp (rs-read (build-path piano-samples "Piano.gb3.clipped.wav")))
 (define C5samp (rs-read (build-path piano-samples "Piano.c5.clipped.wav"))) ; 72
 (define C6samp (rs-read (build-path piano-samples "Piano.c6.clipped.wav"))) ; 84
 
 (define sample-table
   `((48 ,C3samp)
+    (54 ,Gb3samp)
     (60 ,C4samp)
+    (66 ,Gb4samp)
     (72 ,C5samp)
     (84 ,C6samp)))
 
