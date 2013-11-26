@@ -23,10 +23,10 @@
 (define t 0)
 (define (simple-signal/block/s16 pointer frames)
   (set! ts (cons t ts))
-  (define sample (* t channels))
-  (define samples (* frames channels))
+  (define sample (* t CHANNELS))
+  (define samples (* frames CHANNELS))
   (define copy-source (modulo sample sine-wave-len))
-  (if (< (* channels src-buf-len) (+ copy-source samples))
+  (if (< (* CHANNELS src-buf-len) (+ copy-source samples))
       (error "sample buffer only goes to ~s, needed ~s"
              src-buf-len (+ copy-source samples))
       (begin

@@ -22,23 +22,15 @@
 (define (nonnegative-integer? n)
   (and (integer? n) (<= 0 n)))
 
-;; a rsound is (rsound s16vector positive-integer)
-(struct rsound (data start stop sample-rate) 
-  #:transparent
-  ;#:property prop:equal+hash
-  ;(list rsound=? rsound-hash-1 rsound-hash-2)
-  )
-
-(define s&t-list? (listof (list/c rsound? number?)))
-
-(provide/contract 
-                  ;; for testing...
-                  [sound-list-total-frames (-> s&t-list? number?)])
-
 (provide (except-out (all-defined-out)
-                     sound-list-total-frames
                      rs-play/helper
-                     rs-mutator))
+                     rs-mutator
+                     rsound=?
+                     s16vector-equal?
+                     s16vector-hash-1
+                     s16vector-hash-2
+                     rsound-hash-1
+                     rsound-hash-2))
 
 (define s16max #x7fff)
 (define -s16max (- s16max))
@@ -95,11 +87,67 @@
              (and (= (rs-ith/left/s16 r1 i) (rs-ith/left/s16 r2 i))
                   (= (rs-ith/right/s16 r1 i) (rs-ith/right/s16 r2 i)))))))
 
-(define (s16vector-equal? v1 v2)
+(define (s16vector-equal? v1 v2 recursive-equal?)
   (and (= (s16vector-length v1)
           (s16vector-length v2))
        (for/and ([i (in-range (s16vector-length v1))])
          (= (s16vector-ref v1 i) (s16vector-ref v2 i)))))
+
+(define HASH-CONSTANT-1 624327903)
+(define (s16vector-hash-1 v1 recursive-equal-hash)
+  (+ HASH-CONSTANT-1
+     (cond [(= (s16vector-length v1) 0) 0]
+           [else
+            (define quarter-len (/ (s16vector-length v1) 4))
+            (+ (* #x80 (s16vector-length v1))
+               (s16vector-ref v1 0)
+               (* #x10000 (s16vector-ref v1 (floor quarter-len)))
+               (s16vector-ref v1 (floor (* 2 quarter-len)))
+               (* #x10000 (s16vector-ref v1 (floor (* 3 quarter-len)))))])))
+
+(define HASH-CONSTANT-2 79438529)
+(define (s16vector-hash-2 v1 recursive-equal-hash)
+  (+ HASH-CONSTANT-2
+     (cond [(= (s16vector-length v1) 0) 0]
+           [else
+            (define quarter-len (/ (s16vector-length v1) 4))
+            (+ (* #x100 (s16vector-length v1))
+               (s16vector-ref v1 0)
+               (s16vector-ref v1 (floor quarter-len))
+               (* #x10000 (s16vector-ref v1 (floor (* 2 quarter-len))))
+               (* #x10000 (s16vector-ref v1 (floor (* 3 quarter-len)))))])))
+
+(define HASH-CONSTANT-3 669668284)
+(define (rsound-hash-1 rs recursive-equal-hash)
+  (+ HASH-CONSTANT-3 
+     (s16vector-hash-1 (rsound-data rs) recursive-equal-hash)
+     (* #x1 (rsound-start rs))
+     (* #x100 (rsound-stop rs))
+     (* #x10000 (rsound-sample-rate rs))))
+
+(define HASH-CONSTANT-4 2143890123)
+(define (rsound-hash-2 rs recursive-equal-hash)
+  (+ HASH-CONSTANT-4 
+     (s16vector-hash-1 (rsound-data rs) recursive-equal-hash)
+     (* #x10000 (rsound-start rs))
+     (* #x100 (rsound-stop rs))
+     (* #x1 (rsound-sample-rate rs))))
+
+(define (rsound=? rs1 rs2 recursive-equal?)
+  (rs-equal? rs1 rs2))
+
+;; a rsound is (rsound s16vector positive-integer)
+(struct rsound (data start stop sample-rate) 
+  #:transparent
+  ;#:property prop:equal+hash
+  ;(list rsound=? rsound-hash-1 rsound-hash-2)
+  #:methods gen:equal+hash
+  [(define equal-proc rsound=?)
+   (define hash-proc rsound-hash-1)
+   (define hash2-proc rsound-hash-2)]
+  )
+
+(define s&t-list? (listof (list/c rsound? number?)))
 
 ;; can this procedure be used as a signal/block?
 (define (signal/block? f)

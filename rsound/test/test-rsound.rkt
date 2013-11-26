@@ -54,9 +54,12 @@
 ;; test of rs-equal?
 (let ([v1 (signal->rsound 100 ramp-signal)]
       [v2 (signal->rsound 100 ramp-signal)])
+  (check-equal? v1 v2)
   (check rs-equal? v1 v2)
   (s16vector-set! (rsound-data v2) 50 -30)
-  (check-equal? (rs-equal? v1 v2) false))
+  (check-false (equal? v1 v2))
+  (check-equal? (rs-equal? v1 v2) false)
+  (check-not-exn (lambda () (equal-hash-code v1))))
 
 ;; tests of check-below-threshold:
 #;(let ([sample-sound (rsound-append* (list (silence 10) 
