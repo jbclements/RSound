@@ -15,7 +15,7 @@
 (define C3samp (rs-read (build-path piano-samples "Piano.c3.clipped.wav"))) ; 48
 (define Gb3samp (rs-read (build-path piano-samples "Piano.gb3.clipped.wav")))
 (define C4samp (rs-read (build-path piano-samples "Piano.c4.clipped.wav"))) ; 60
-(define Gb4samp (rs-read (build-path piano-samples "Piano.gb3.clipped.wav")))
+(define Gb4samp (rs-read (build-path piano-samples "Piano.gb4.clipped.wav")))
 (define C5samp (rs-read (build-path piano-samples "Piano.c5.clipped.wav"))) ; 72
 (define C6samp (rs-read (build-path piano-samples "Piano.c6.clipped.wav"))) ; 84
 
