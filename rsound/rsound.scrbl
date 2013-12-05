@@ -92,6 +92,10 @@ These procedures start and stop playing sounds.
  of a callback stalling playback.  This can mean that the callback is delayed by a few milliseconds.
  }
 
+@defproc[(pstream-set-volume! [pstream pstream?] [volume real?]) pstream?]{
+ given a nonnegative real number, sets the pstream's volume to that number. A value of 0 indicates
+ silence, a value of 1.0 indicates full volume. Returns the pstream}
+
 @section{Recording}
 
 RSound now includes basic support for recording sounds.

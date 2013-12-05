@@ -99,6 +99,7 @@
     (raise-argument-error 'pstream-set-volume! "pstream" 0 pstream volume))
   (unless (number? volume)
     (raise-argument-error 'pstream-set-volume! "number" 1 pstream volume))
-  (set-box! (pstream-volume-box pstream) volume))
+  (set-box! (pstream-volume-box pstream) (exact->inexact volume))
+  pstream)
 
 
