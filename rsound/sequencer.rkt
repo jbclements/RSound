@@ -21,6 +21,11 @@
   (-> heap? heap? (values procedure? procedure? box?))])
 
 
+;; with occasional #f's sneaking into the heap, it looks like I need to
+;; protect my heaps against race conditions. I think it should be performant
+;; to have one semaphore per invocation, rather than one per heap.
+(define heap-sema (make-semaphore 1))
+
 
 ;; an entry is a vector of an rsound, a start frame, and an end frame.
 (define-struct entry (sound start finish) #:transparent)
@@ -39,7 +44,10 @@
   (when (heap-has-false? heap)
     (error 'queue-for-playing "heap has false in it: ~s"
            (heap->vector heap)))
-  (heap-add! heap (make-entry sound start (+ start (rs-frames sound)))))
+  (call-with-semaphore 
+   heap-sema
+   (lambda ()
+     (heap-add! heap (make-entry sound start (+ start (rs-frames sound)))))))
 
 ;; a heap of callbacks, ordered by trigger time
 (define (make-uncallbacked-heap)
@@ -52,7 +60,10 @@
 ;; at (or soon after) the given frame
 (define (queue-for-callbacking! heap cb frame)
   (define sema (make-semaphore))
-  (heap-add! heap (callback sema frame))
+  (call-with-semaphore
+   heap-sema
+   (lambda ()
+     (heap-add! heap (callback sema frame))))
   (thread
    (lambda ()
      (semaphore-wait sema)
@@ -129,7 +140,10 @@
           [else
            (define earliest-ending (heap-min playing-heap))
            (cond [(<= (entry-finish earliest-ending) current-time) 
-                  (heap-remove-min! playing-heap)
+                  (call-with-semaphore
+                   heap-sema
+                   (lambda ()
+                     (heap-remove-min! playing-heap)))
                   (loop #t)]
                  [else removed?])])))
 
@@ -141,7 +155,10 @@
           [else
            (define f (heap-min callback-heap))
            (cond [(<= (callback-trigger-t f) t)
-                  (heap-remove-min! callback-heap)
+                  (call-with-semaphore
+                   heap-sema
+                   (lambda ()
+                     (heap-remove-min! callback-heap)))
                   (semaphore-post (callback-sema f))
                   (loop)]
                  [else
@@ -163,11 +180,17 @@
                  (format "missed a queued sound entirely, because ~e<=~e"
                          (entry-finish earliest-to-play) 
                          start-time))
-                (heap-remove-min! queued-heap)
+                (call-with-semaphore
+                 heap-sema
+                 (lambda ()
+                   (heap-remove-min! queued-heap)))
                 (loop added?)]
                [(<= (entry-start earliest-to-play) stop-time)
-                (heap-add! playing-heap earliest-to-play)
-                (heap-remove-min! queued-heap)
+                (call-with-semaphore
+                 heap-sema
+                 (lambda ()
+                   (heap-add! playing-heap earliest-to-play)
+                   (heap-remove-min! queued-heap)))                
                 (loop #t)]
                [else added?])])))
 
