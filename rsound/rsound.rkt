@@ -123,7 +123,7 @@
      (s16vector-hash-1 (rsound-data rs) recursive-equal-hash)
      (* #x1 (rsound-start rs))
      (* #x100 (rsound-stop rs))
-     (* #x10000 (rsound-sample-rate rs))))
+     (* #x10000 (inexact->exact (round (rsound-sample-rate rs))))))
 
 (define HASH-CONSTANT-4 2143890123)
 (define (rsound-hash-2 rs recursive-equal-hash)
@@ -131,7 +131,7 @@
      (s16vector-hash-1 (rsound-data rs) recursive-equal-hash)
      (* #x10000 (rsound-start rs))
      (* #x100 (rsound-stop rs))
-     (* #x1 (rsound-sample-rate rs))))
+     (* #x1 (inexact->exact (round (rsound-sample-rate rs))))))
 
 (define (rsound=? rs1 rs2 recursive-equal?)
   (rs-equal? rs1 rs2))
