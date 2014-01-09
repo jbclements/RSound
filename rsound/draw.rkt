@@ -22,25 +22,27 @@
 
 ;; make-sound-drawing-callback 
 ;;  : (nat -> real) (nat->real) nat nat nat -> canvas dc -> void
-(define (make-sound-drawing-callback left-getter right-getter vec-len data-left
-                                     data-right)
+;; given a function that gets a sample from the left channel, a function that 
+;; gets a sample from the right channel, the number of samples, and ... er ... two things that 
+;; are going to go away, produce a function to be used as a drawer.
+(define (make-sound-drawing-callback left-getter right-getter vec-len)
   (let ([sound-max (max (abs-max-from left-getter vec-len)
                         (abs-max-from right-getter vec-len))])
-    (unless (<= 0 data-left data-right vec-len)
-      (error 
-       'make-sound-drawing-callback 
-       "must have 0 <= data-left <= data-right <= frames, given 0 <= ~s <= ~s <= ~s"
-             data-left data-right vec-len))
     (when (= sound-max 0.0)
       (error
        'make-sound-drawing-callback
        "max value is 0.0, vectors are uniformly 0."))
     (lambda (canvas dc)
+      (define-values (view-start-x _1) (send canvas get-view-start))
+      (define-values (client-width _2) (send canvas get-client-size))
+      (define-values (virtual-canvas-width _3) (send canvas get-virtual-size))
+      (define frames-per-pixel (/ vec-len virtual-canvas-width))
+      (define data-left (* frames-per-pixel view-start-x))
+      (define frames (floor (* frames-per-pixel client-width)))
+      (define data-right (+ data-left frames))
       (let* ([h (- (send canvas get-height) 1)]
              [half-h (floor (/ h 2))]
-             [w (send canvas get-width)]
-             [frames (- data-right data-left)]
-             [h-scale (/ (- frames 1) (- w 1))]
+             [h-scale (/ (- frames 1) (- client-width 1))]
              [v-scale (/ (/ half-h 2) sound-max)]
              [upper-centerline (* 1/2 half-h)]
              [lower-centerline (* 3/2 half-h)]
@@ -49,7 +51,7 @@
         ;; basically, this is a rasterization problem.
         ;; the very left and right edges are special cases.
         ;; ... in fact, I'll just skip them for now :)
-        (for ([i (in-range 1 (- w 1))])
+        (for ([i (in-range 1 (- client-width 1))])
           (let ([raster-left (* h-scale (- i 1/2))]
                 [raster-right (* h-scale (+ i 1/2))])
             (let*-values ([(left-min left-max) 
@@ -62,11 +64,20 @@
               (define (num->pixel centerline n)
                 (inexact->exact (floor (- centerline (* v-scale n)))))
               (send dc draw-line
-                    i (num->pixel upper-centerline left-max)
-                    i (num->pixel upper-centerline left-min))
+                    (+ view-start-x i) (num->pixel upper-centerline left-max)
+                    (+ view-start-x i) (num->pixel upper-centerline left-min))
               (send dc draw-line
-                    i (num->pixel lower-centerline right-max)
-                    i (num->pixel lower-centerline right-min)))))))))
+                    (+ view-start-x i) (num->pixel lower-centerline right-max)
+                    (+ view-start-x i) (num->pixel lower-centerline right-min)))))))))
+
+(define (make-zoom-bar-drawing-callback left-getter right-getter vec-len
+                                        data-left data-right)
+  (lambda (canvas dc)
+    (define w (send canvas get-width))
+    (define h (send canvas get-height))
+    (send dc draw-line
+          0 0
+          w h)))
 
 
 
@@ -104,6 +115,14 @@
     (+ (* (- 1 frac) (get-sample fl)) (* frac (get-sample (+ fl 1))))))
 
 
+(define zoom-bar-canvas%
+  (class canvas%
+    (super-new)))
+
+;; SOUND-CANVAS%
+;;
+;; the canvas that draws a sound
+
 (define sound-canvas%
   (class canvas%
     (init-field len)
@@ -111,18 +130,28 @@
     (init-field y-value-text)
     (init-field left-getter)
     (init-field right-getter)
-    ;; what portion of the data is shown in the window?
-    (init-field data-left)
-    (init-field data-right)
     
-    (define data-window-width (- data-right data-left))
+    #;(define data-window-width (- data-right data-left))
     
     (define cur-mouse-x 0)
     
-    (inherit get-width get-height get-parent)
+    (inherit get-width get-height get-parent init-auto-scrollbars
+             get-view-start get-client-size get-virtual-size)
     
     (define/override (on-char evt)
       (define key-code (send evt get-key-code))
+      
+      (define-values (view-start-x _1) (get-view-start))
+      (define-values (client-width _2) (get-client-size))
+      (define-values (virtual-canvas-width _3) (get-virtual-size))
+      (define frames-per-pixel (/ len virtual-canvas-width))
+      (define data-left (* frames-per-pixel view-start-x))
+      (define frames (floor (* frames-per-pixel client-width)))
+      (define data-right (+ data-left frames))
+          ;; given an x coordinate, return the corresponding frame
+      (define (pixel->frame x)
+          (+ data-left (* frames-per-pixel x)))
+      
       (match key-code
         ;; zoom way in (100x)
         [#\i (let* ([x (min (max 0 cur-mouse-x) (- (get-width) 1))]
@@ -161,7 +190,7 @@
                                     maybe-new-left maybe-new-right)]))]
         [other #f]))
     
-    (define/override (on-event evt)
+    #;(define/override (on-event evt)
       (set! cur-mouse-x (send evt get-x))
       (cond [(send evt button-down?)
              (let* ([x (min (max 0 (send evt get-x)) (- (get-width) 1))]
@@ -195,11 +224,9 @@
                               y-val)))
                (send y-value-text end-edit-sequence))]))
     
-    ;; given an x coordinate, return the corresponding frame
-    (define (pixel->frame x)
-      (+ data-left (floor (* data-window-width (/ x (get-width))))))
     
-    (super-new)))
+    (super-new)
+    (init-auto-scrollbars 1600 #f 0.0 0.0)))
 
 
 (define (vectors-draw title left-getter right-getter len width height data-left
@@ -207,18 +234,24 @@
   (let* ([f (new frame% [label title] [width width] [height height])]
          [tx (new text%)]
          [ty (new text%)]
+         [foo (new zoom-bar-canvas%
+                   [parent f]
+                   [min-height 20]
+                   [stretchable-height #f]
+                   [paint-callback
+                    (make-zoom-bar-drawing-callback
+                     left-getter right-getter len data-left data-right)
+                    ])]
          [c (new sound-canvas%
                  [parent f]
                  [paint-callback 
-                  (make-sound-drawing-callback left-getter right-getter
-                                               len data-left data-right)]
+                  (make-sound-drawing-callback left-getter right-getter len)]
                  [len len]
                  [frame-num-text tx]
                  [y-value-text   ty]
                  [left-getter left-getter]
                  [right-getter right-getter]
-                 [data-left data-left]
-                 [data-right data-right])]
+                 [style '(hscroll)])]
          [ecx (new editor-canvas%
                    [parent f]
                    [editor tx]
@@ -243,7 +276,7 @@
 
 (define (vector-pair-draw/magnitude left-vec right-vec 
                                     #:title [title "magnitude of vector"]
-                                    #:width [width 800] #:height [height 200])
+                                    #:width [width 800] #:height [height 230])
   (unless (= (vector-length left-vec)
              (vector-length right-vec))
     (error 'vector-pair-draw/magnitude
@@ -260,7 +293,7 @@
                 (vector-length left-vec)))
 
 (define (vector-draw/real/imag vec #:title [title "real and imaginary parts"]
-                               #:width [width 800] #:height [height 200])
+                               #:width [width 800] #:height [height 230])
   (vectors-draw title
                 (lambda (i) (real-part (vector-ref vec i)))
                 (lambda (i) (imag-part (vector-ref vec i)))
@@ -271,7 +304,7 @@
                 (vector-length vec)))
 
 (define (rs-draw sound #:title [title "picture of sound"] 
-                     #:width [width 800] #:height [height 200])
+                     #:width [width 800] #:height [height 230])
   (vectors-draw title
                 (lambda (i) (rs-ith/left/s16 sound i))
                 (lambda (i) (rs-ith/right/s16 sound i))
