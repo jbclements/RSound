@@ -137,12 +137,6 @@
            [in-bytes (bytes-from-posn port 
                                       (+ data-offset (* global-bytespersample channels begin-frame))
                                       (* global-bytespersample channels frames-to-read))])
-      (let ([ans (bytes-length in-bytes)])
-        (printf "~s\n" ans)
-        ans)
-      (let ([ans (* 2 samples-to-read)])
-        (printf "~s\n" ans)
-        ans)
       (cond [(= channels 2)
              (for ([j (in-range (* 2 frames-to-read))])
                (define i (* global-bytespersample j))
