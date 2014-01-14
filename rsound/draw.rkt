@@ -23,7 +23,7 @@
 ;; make-sound-drawing-callback 
 ;;  : (nat -> real) (nat->real) nat nat nat -> canvas dc -> void
 ;; given a function that gets a sample from the left channel, a function that 
-;; gets a sample from the right channel, the number of samples, and ... er ... two things that 
+;; gets a sample from the right channel, the number of frames, and ... er ... two things that 
 ;; are going to go away, produce a function to be used as a drawer.
 (define (make-sound-drawing-callback left-getter right-getter vec-len)
   (let ([sound-max (max (abs-max-from left-getter vec-len)
@@ -33,13 +33,20 @@
        'make-sound-drawing-callback
        "max value is 0.0, vectors are uniformly 0."))
     (lambda (canvas dc)
+      ;; the x position on the virtual canvas:
       (define-values (view-start-x _1) (send canvas get-view-start))
+      ;; the width in pixels of the area to be drawn:
       (define-values (client-width _2) (send canvas get-client-size))
+      ;; the total width of the virtual canvas:
       (define-values (virtual-canvas-width _3) (send canvas get-virtual-size))
       (define frames-per-pixel (/ vec-len virtual-canvas-width))
       (define data-left (floor (* frames-per-pixel view-start-x)))
       (define frames (floor (* frames-per-pixel client-width)))
-      (define data-right (+ data-left frames))
+      ;; because of canvas resizing or zooming, the window may extend 
+      ;; beyond the edge of the sound. Stop at the 
+      (define proposed-data-right (+ data-left frames))
+      (define actual-data-right (min vec-len proposed-data-right))
+      (define stop-pixel (- (/ actual-data-right frames-per-pixel) view-start-x))
       (let* ([h (- (send canvas get-height) 1)]
              [half-h (floor (/ h 2))]
              [h-scale (/ (- frames 1) (- client-width 1))]
@@ -54,7 +61,7 @@
         (define-values (a b c d)
           (time-apply
            (lambda ()
-             (for ([i (in-range 1 (- client-width 1))])
+             (for ([i (in-range 1 (- stop-pixel #;client-width 1))])
                (let ([raster-left (* h-scale (- i 1/2))]
                      [raster-right (* h-scale (+ i 1/2))])
                  (let*-values ([(left-min left-max) 
@@ -74,15 +81,6 @@
                          (+ view-start-x i) (num->pixel lower-centerline right-min))))))
            (list)))
         (printf "time: ~s ~s ~s\n" b c d)))))
-
-(define (make-zoom-bar-drawing-callback left-getter right-getter vec-len
-                                        data-left data-right)
-  (lambda (canvas dc)
-    (define w (send canvas get-width))
-    (define h (send canvas get-height))
-    (send dc draw-line
-          0 0
-          w h)))
 
 
 
@@ -119,11 +117,6 @@
          [frac (- n fl)])
     (+ (* (- 1 frac) (get-sample fl)) (* frac (get-sample (+ fl 1))))))
 
-
-(define zoom-bar-canvas%
-  (class canvas%
-    (super-new)))
-
 ;; SOUND-CANVAS%
 ;;
 ;; the canvas that draws a sound
@@ -135,9 +128,11 @@
     (init-field y-value-text)
     (init-field left-getter)
     (init-field right-getter)
+    ;; should always be an exact integer
     (init-field frames-per-pixel)
     
-    (define virtual-width (ceiling (/ len frames-per-pixel)))
+    (unless (exact-positive-integer? frames-per-pixel)
+      (raise-argument-error 'sound-canvas-creation "exact positive integer" 0 frames-per-pixel))
     
     (define cur-mouse-x 0)
     
@@ -153,20 +148,18 @@
       
       (define client-width (get-client-width))
       (define-values (view-start-x _1) (get-view-start))
-      (define-values (virtual-canvas-width _3) (get-virtual-size))
-      (define frames-per-pixel (/ len virtual-canvas-width))
       (define data-left (* frames-per-pixel view-start-x))
       (define frames (floor (* frames-per-pixel client-width)))
-      (define data-right (+ data-left frames))
       ;; given an x coordinate, return the corresponding frame
       (define (pixel->frame x)
           (+ data-left (* frames-per-pixel x)))
       
       (match key-code
+        [#\+ (set-frames-per-pixel! (ceiling (/ frames-per-pixel 2)))]
+        [#\- (set-frames-per-pixel! (* frames-per-pixel 2))]
         ;; zoom way in (100x)
-        [#\i 
+        #;[#\i 
          (init-auto-scrollbars 16000 #f 0.0 0.0)
-         (printf "abc\n")
          #;(let* ([x (min (max 0 cur-mouse-x) (- (get-width) 1))]
                     [scaled-x (pixel->frame x)]
                     [orig-range (- data-right data-left)]
@@ -205,19 +198,18 @@
     
     (define/override (on-event evt)
       (set! cur-mouse-x (send evt get-x))
-      (cond #;[(send evt button-down?)
-             (let* ([x (min (max 0 (send evt get-x)) (- (get-width) 1))]
-                    [scaled-x (pixel->frame x)]
-                    [data-middle (round (/ (+ data-left data-right) 2))])
-               (match-let ([(list new-left new-right) 
-                            (cond [(< x (/ (get-width) 2)) (list data-left data-middle)]
-                                  [else                    (list data-middle data-right)])])
-                 (cond [(< data-left (- data-right 2))
-                        (vectors-draw "zoomed" left-getter right-getter len (send (get-parent) get-width) 
-                                      (send (get-parent) get-height) new-left new-right)]
-                       [else
-                        ;; buffer too short to zoom; just ignore the click.
-                        (void)])))]
+      
+            
+      (define client-width (get-client-width))
+      (define-values (view-start-x _1) (get-view-start))
+      (define data-left (* frames-per-pixel view-start-x))
+      (define frames (floor (* frames-per-pixel client-width)))
+      ;; given an x coordinate, return the corresponding frame
+      (define (pixel->frame x)
+          (+ data-left (* frames-per-pixel x)))
+      
+      (cond [(send evt button-down?)
+             (set-frames-per-pixel! (ceiling (/ frames-per-pixel 2)))]
             [else
              (let* ([x (min (max 0 (send evt get-x)) (- (get-client-width) 1))]
                     [scaled-x (pixel->frame x)]
@@ -237,9 +229,22 @@
                               y-val)))
                (send y-value-text end-edit-sequence))]))
     
+    ;; change the frames-per-pixel (and reset the virtual width)
+    (define (set-frames-per-pixel! fpp)
+      (unless (exact-positive-integer? fpp)
+        (raise-argument-error 'set-frames-per-pixel! "exact positive integer" 0 fpp))
+      (set! frames-per-pixel fpp)
+      (reset-virtual-width!))
+    
+    ;; reset the virtual width based on the current frames-per-pixel
+    ;; (we'll have to get the scroll position right as well, soon)
+    (define (reset-virtual-width!)
+      (define virtual-width (ceiling (/ len frames-per-pixel)))
+      (init-auto-scrollbars virtual-width #f 0.0 0.0))
     
     (super-new)
-    (init-auto-scrollbars virtual-width #f 0.0 0.0)))
+    (reset-virtual-width!)
+    ))
 
 
 (define (vectors-draw title left-getter right-getter len width height data-left
@@ -247,14 +252,6 @@
   (let* ([f (new frame% [label title] [width width] [height height])]
          [tx (new text%)]
          [ty (new text%)]
-         [foo (new zoom-bar-canvas%
-                   [parent f]
-                   [min-height 20]
-                   [stretchable-height #f]
-                   [paint-callback
-                    (make-zoom-bar-drawing-callback
-                     left-getter right-getter len data-left data-right)
-                    ])]
          [c (new sound-canvas%
                  [parent f]
                  [paint-callback 
@@ -264,7 +261,8 @@
                  [y-value-text   ty]
                  [left-getter left-getter]
                  [right-getter right-getter]
-                 [style '(hscroll)])]
+                 [style '(hscroll)]
+                 [frames-per-pixel (floor (/ len width))])]
          [ecx (new editor-canvas%
                    [parent f]
                    [editor tx]
