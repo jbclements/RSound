@@ -10,10 +10,10 @@
 
 (provide
  (contract-out
-  [read-sound/s16vector (-> path-string? integer? (or/c integer? false?) 
-                            (list/c s16vector? integer?))]
+  [read-sound/s16vector (-> path-string? exact-integer? (or/c exact-integer? false?) 
+                            (list/c s16vector? exact-integer?))]
   [read-sound/formatting (-> path-string? 
-                             (list/c integer? integer?))]))
+                             (list/c exact-integer? exact-integer?))]))
 
 
 ;; read-sound/s16vector : file-string nat (or/c #f nat) -> (list/c s16vector nat nat)
@@ -137,17 +137,23 @@
            [in-bytes (bytes-from-posn port 
                                       (+ data-offset (* global-bytespersample channels begin-frame))
                                       (* global-bytespersample channels frames-to-read))])
+      (let ([ans (bytes-length in-bytes)])
+        (printf "~s\n" ans)
+        ans)
+      (let ([ans (* 2 samples-to-read)])
+        (printf "~s\n" ans)
+        ans)
       (cond [(= channels 2)
-             (for ([j (in-range samples-to-read)]
-                   [i (in-range 0 (* global-bytespersample samples-to-read) 2)])
+             (for ([j (in-range (* 2 frames-to-read))])
+               (define i (* global-bytespersample j))
                (s16vector-set! cblock j (integer-bytes->integer (subbytes in-bytes i (+ i 2)) #t #f)))]
             [(= channels 1)
-             (for ([j (in-range 0 (* 2 frames-to-read) 2)]
-                   [i (in-range 0 (* global-bytespersample samples-to-read) 2)])
+             (for ([j (in-range 0 (* 2 frames-to-read) 2)] ;; write into stereo buffer, duplicating samples
+                   [i (in-range 0 (* global-bytespersample samples-to-read) global-bytespersample)])
                (let ([sample (integer-bytes->integer (subbytes in-bytes i (+ i 2)) #t #f)])
                  (s16vector-set! cblock j sample)
                  (s16vector-set! cblock (+ j 1) sample)))]
-            [else (error 'parse-data-chunk "internal error 201009271918")])
+            [else (error 'parse-data-chunk "this package only handles 1- or 2-channel .wav files")])
       (list cblock frames-to-read))))
 
 
@@ -165,6 +171,10 @@
 (define (bytes-from-posn port offset len)
   (file-position port offset)
   (match (read-bytes len port)
-    [(? bytes? b) b]
+    [(? bytes? b) 
+     (when (< (bytes-length b) len)
+       (error 'bytes-from-posn ".wav file too short. tried to read ~s bytes, got only ~s"
+              len (bytes-length b)))
+     b]
     [(? eof-object? e) 
      (error 'bytes-from-posn "no data available at file offset ~s" offset)]))
