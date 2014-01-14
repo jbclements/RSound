@@ -37,7 +37,7 @@
       (define-values (client-width _2) (send canvas get-client-size))
       (define-values (virtual-canvas-width _3) (send canvas get-virtual-size))
       (define frames-per-pixel (/ vec-len virtual-canvas-width))
-      (define data-left (* frames-per-pixel view-start-x))
+      (define data-left (floor (* frames-per-pixel view-start-x)))
       (define frames (floor (* frames-per-pixel client-width)))
       (define data-right (+ data-left frames))
       (let* ([h (- (send canvas get-height) 1)]
@@ -51,24 +51,29 @@
         ;; basically, this is a rasterization problem.
         ;; the very left and right edges are special cases.
         ;; ... in fact, I'll just skip them for now :)
-        (for ([i (in-range 1 (- client-width 1))])
-          (let ([raster-left (* h-scale (- i 1/2))]
-                [raster-right (* h-scale (+ i 1/2))])
-            (let*-values ([(left-min left-max) 
-                           (rasterize-column offset-left-getter
-                                             raster-left raster-right)]
-                          [(right-min right-max) 
-                           (rasterize-column offset-right-getter
-                                             raster-left
-                                             raster-right)])
-              (define (num->pixel centerline n)
-                (inexact->exact (floor (- centerline (* v-scale n)))))
-              (send dc draw-line
-                    (+ view-start-x i) (num->pixel upper-centerline left-max)
-                    (+ view-start-x i) (num->pixel upper-centerline left-min))
-              (send dc draw-line
-                    (+ view-start-x i) (num->pixel lower-centerline right-max)
-                    (+ view-start-x i) (num->pixel lower-centerline right-min)))))))))
+        (define-values (a b c d)
+          (time-apply
+           (lambda ()
+             (for ([i (in-range 1 (- client-width 1))])
+               (let ([raster-left (* h-scale (- i 1/2))]
+                     [raster-right (* h-scale (+ i 1/2))])
+                 (let*-values ([(left-min left-max) 
+                                (rasterize-column offset-left-getter
+                                                  raster-left raster-right)]
+                               [(right-min right-max) 
+                                (rasterize-column offset-right-getter
+                                                  raster-left
+                                                  raster-right)])
+                   (define (num->pixel centerline n)
+                     (inexact->exact (floor (- centerline (* v-scale n)))))
+                   (send dc draw-line
+                         (+ view-start-x i) (num->pixel upper-centerline left-max)
+                         (+ view-start-x i) (num->pixel upper-centerline left-min))
+                   (send dc draw-line
+                         (+ view-start-x i) (num->pixel lower-centerline right-max)
+                         (+ view-start-x i) (num->pixel lower-centerline right-min))))))
+           (list)))
+        (printf "time: ~s ~s ~s\n" b c d)))))
 
 (define (make-zoom-bar-drawing-callback left-getter right-getter vec-len
                                         data-left data-right)
@@ -130,31 +135,39 @@
     (init-field y-value-text)
     (init-field left-getter)
     (init-field right-getter)
+    (init-field frames-per-pixel)
     
-    #;(define data-window-width (- data-right data-left))
+    (define virtual-width (ceiling (/ len frames-per-pixel)))
     
     (define cur-mouse-x 0)
     
     (inherit get-width get-height get-parent init-auto-scrollbars
              get-view-start get-client-size get-virtual-size)
     
+    (define (get-client-width)
+      (define-values (w _) (get-client-size))
+      w)
+    
     (define/override (on-char evt)
       (define key-code (send evt get-key-code))
       
+      (define client-width (get-client-width))
       (define-values (view-start-x _1) (get-view-start))
-      (define-values (client-width _2) (get-client-size))
       (define-values (virtual-canvas-width _3) (get-virtual-size))
       (define frames-per-pixel (/ len virtual-canvas-width))
       (define data-left (* frames-per-pixel view-start-x))
       (define frames (floor (* frames-per-pixel client-width)))
       (define data-right (+ data-left frames))
-          ;; given an x coordinate, return the corresponding frame
+      ;; given an x coordinate, return the corresponding frame
       (define (pixel->frame x)
           (+ data-left (* frames-per-pixel x)))
       
       (match key-code
         ;; zoom way in (100x)
-        [#\i (let* ([x (min (max 0 cur-mouse-x) (- (get-width) 1))]
+        [#\i 
+         (init-auto-scrollbars 16000 #f 0.0 0.0)
+         (printf "abc\n")
+         #;(let* ([x (min (max 0 cur-mouse-x) (- (get-width) 1))]
                     [scaled-x (pixel->frame x)]
                     [orig-range (- data-right data-left)]
                     [smaller-range (max 2 (floor (/ orig-range 100)))]
@@ -190,9 +203,9 @@
                                     maybe-new-left maybe-new-right)]))]
         [other #f]))
     
-    #;(define/override (on-event evt)
+    (define/override (on-event evt)
       (set! cur-mouse-x (send evt get-x))
-      (cond [(send evt button-down?)
+      (cond #;[(send evt button-down?)
              (let* ([x (min (max 0 (send evt get-x)) (- (get-width) 1))]
                     [scaled-x (pixel->frame x)]
                     [data-middle (round (/ (+ data-left data-right) 2))])
@@ -206,7 +219,7 @@
                         ;; buffer too short to zoom; just ignore the click.
                         (void)])))]
             [else
-             (let* ([x (min (max 0 (send evt get-x)) (- (get-width) 1))]
+             (let* ([x (min (max 0 (send evt get-x)) (- (get-client-width) 1))]
                     [scaled-x (pixel->frame x)]
                     [y (send evt get-y)]
                     [y-val (if (> y (/ (get-height) 2))
@@ -226,7 +239,7 @@
     
     
     (super-new)
-    (init-auto-scrollbars 1600 #f 0.0 0.0)))
+    (init-auto-scrollbars virtual-width #f 0.0 0.0)))
 
 
 (define (vectors-draw title left-getter right-getter len width height data-left
