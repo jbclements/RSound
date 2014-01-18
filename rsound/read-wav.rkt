@@ -36,6 +36,10 @@
 (define global-bytespersample (* global-bitspersample 1/8))
 (define global-samplemax (exact->inexact #x8000))
 
+(when (not (integer? global-bytespersample))
+    (error 'parse-main-chunk/info "expected multiple of 8 bits per second, got ~a" global-bitspersample))
+
+
 (struct chunk (id len body-offset))
 (struct formatchunk (id len body-offset channels samplerate))
 
@@ -43,7 +47,10 @@
 (define (parse-main-chunk/info port)
   (match-define (list next-chunk-offset channels samplerate) (read-formatting-info port 0))
   (match-define (list data-chunk-len data-offset) (scan-for-data-chunk port next-chunk-offset))
-  (define frames-in-file (/ data-chunk-len (* channels global-bitspersample 1/8)))
+  (define frames-in-file (/ data-chunk-len (* channels global-bytespersample)))
+  (when (not (integer? frames-in-file))
+    (error 'parse-main-chunk/info "expected integer number of frames, got: ~s"
+           frames-in-file))
   (list frames-in-file samplerate))
 
 ;; port nat nat (or/c nat #f) -> (list/c s16vector? nat nat)
@@ -117,7 +124,7 @@
 ;; parse-data-chunk : port nat nat nat nat nat -> (list/c s16vector nat)
 ;; read the desired data from the data chunk
 (define (parse-data-chunk port data-len data-offset channels begin-frame end-frame)
-  (match-let* ([frames-in-file (/ data-len (* channels global-bitspersample 1/8))]
+  (match-let* ([frames-in-file (/ data-len (* channels global-bytespersample))]
                [end-frame/real (or end-frame frames-in-file)])
     (unless (integer? frames-in-file)
       (error 'parse-data-chunk "data chunk contains a non-integer number of frames: ~s" frames-in-file))
