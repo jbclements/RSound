@@ -87,7 +87,7 @@
   (define last-t 0)
   (define (get-last-t) last-t)
   (define volume-box (box 1.0))
-  (define (signal/block cpointer frames)
+  (define (signal/block/unsafe cpointer frames)
     (when (< frames 0)
       (error 'sequencer "callback called with frames < 0: ~e\n" frames))
     (define next-last-t (+ frames last-t))
@@ -101,7 +101,7 @@
     (trigger-ready-semaphores! uncallbacked next-last-t)
     (set! last-t next-last-t))
   (values 
-   signal/block
+   signal/block/unsafe
    get-last-t
    volume-box))
 

@@ -33,23 +33,37 @@
                    (or/c false? exact-integer?)
                    nonnegative-real?
                    void?))
-  #;(buffer-loop (-> cpointer?
-                     frames?
-                     nonnegative-real?
-                     void?))
   [signal->signal/block/unsafe
-   (-> procedure? procedure?)]
+   (-> procedure? signal/block/unsafe/c)]
   [signal/16->signal/block/unsafe
-   (-> procedure? procedure?)]
-  [signal/block-play 
-   (-> procedure? nonnegative-real? 
+   (-> procedure? signal/block/unsafe/c)]
+  [signal/block-play
+   (-> signal/block/unsafe/c 
+       nonnegative-real? 
        (or/c nonnegative-real? false?) 
        (-> nonnegative-real?))]
-  [signal/block-play/unsafe (-> procedure? nonnegative-real? (or/c nonnegative-real? false?) 
+  [signal/block-play/unsafe (-> signal/block/unsafe/c nonnegative-real? (or/c nonnegative-real? false?) 
                                 (-> nonnegative-real?))]
   [stop-playing (-> void?)]
   [channels exact-nonnegative-integer?])
  s16vec-record)
+
+(define nat? exact-nonnegative-integer?)
+(define frames? nat?)
+
+(define signal/block/unsafe/c
+  (-> cpointer?
+      frames?
+      void?))
+
+(define signal-block/c
+  (-> procedure?
+      ;; don't want to impose a per-frame contract check:
+      #;(-> nat? ;; index
+          nat? ;; value
+          void?)
+      frames?
+      void?))
 
 (define (false? x) (eq? x #f))
 
