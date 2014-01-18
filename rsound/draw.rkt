@@ -13,6 +13,7 @@
          vector-pair-draw/magnitude
          vector-draw/real/imag
          ffts-draw
+         rsound/left-1-fft-draw ;; undocumented
          rsound-fft-draw
          ;; for testing
          interpolate
@@ -128,11 +129,11 @@
     (init-field y-value-text)
     (init-field left-getter)
     (init-field right-getter)
-    ;; should always be an exact integer
     (init-field frames-per-pixel)
     
-    (unless (exact-positive-integer? frames-per-pixel)
-      (raise-argument-error 'sound-canvas-creation "exact positive integer" 0 frames-per-pixel))
+    (unless (< 0 frames-per-pixel)
+      (raise-argument-error 'sound-canvas-init
+                            "positive number" 0 frames-per-pixel))
     
     (define cur-mouse-x 0)
     
@@ -148,52 +149,15 @@
       
       (define client-width (get-client-width))
       (define-values (view-start-x _1) (get-view-start))
-      (define data-left (* frames-per-pixel view-start-x))
+      (define data-left (floor (* frames-per-pixel view-start-x)))
       (define frames (floor (* frames-per-pixel client-width)))
       ;; given an x coordinate, return the corresponding frame
       (define (pixel->frame x)
-          (+ data-left (* frames-per-pixel x)))
+          (+ data-left (floor (* frames-per-pixel x))))
       
       (match key-code
-        [#\+ (set-frames-per-pixel! (ceiling (/ frames-per-pixel 2)))]
+        [#\+ (set-frames-per-pixel! (/ frames-per-pixel 2))]
         [#\- (set-frames-per-pixel! (* frames-per-pixel 2))]
-        ;; zoom way in (100x)
-        #;[#\i 
-         (init-auto-scrollbars 16000 #f 0.0 0.0)
-         #;(let* ([x (min (max 0 cur-mouse-x) (- (get-width) 1))]
-                    [scaled-x (pixel->frame x)]
-                    [orig-range (- data-right data-left)]
-                    [smaller-range (max 2 (floor (/ orig-range 100)))]
-                    [maybe-new-left (round (- scaled-x (/ smaller-range 2)))]
-                    [maybe-new-right (round (+ scaled-x (/ smaller-range 2)))])
-               (cond [(< orig-range 400) 
-                      ;; too small, ignore
-                      (void)]
-                     ;; bump to the right:
-                     [(< maybe-new-left 0)
-                      (let ()
-                        (define fixed-up-left 0)
-                        (define fixed-up-right (+ maybe-new-right (- maybe-new-left)))
-                        (vectors-draw "zoomed" left-getter right-getter len 
-                                      (send (get-parent) get-width) 
-                                      (send (get-parent) get-height)
-                                      fixed-up-left fixed-up-right))]
-                     ;; bump to the left
-                     [(< data-right maybe-new-left)
-                      (let ()
-                        (define fixed-up-right data-right)
-                        (define fixed-up-left (- maybe-new-left 
-                                                 (- data-right maybe-new-right)))
-                        (vectors-draw "zoomed" left-getter right-getter len 
-                                      (send (get-parent) get-width) 
-                                      (send (get-parent) get-height)
-                                      fixed-up-left fixed-up-right))]
-                     ;; zoom here:
-                     [else
-                      (vectors-draw "zoomed" left-getter right-getter len 
-                                    (send (get-parent) get-width) 
-                                    (send (get-parent) get-height)
-                                    maybe-new-left maybe-new-right)]))]
         [other #f]))
     
     (define/override (on-event evt)
@@ -206,33 +170,42 @@
       (define frames (floor (* frames-per-pixel client-width)))
       ;; given an x coordinate, return the corresponding frame
       (define (pixel->frame x)
-          (+ data-left (* frames-per-pixel x)))
+          (+ data-left (floor (* frames-per-pixel x))))
       
-      (cond [(send evt button-down?)
+      (cond #;[(send evt button-down?)
              (set-frames-per-pixel! (ceiling (/ frames-per-pixel 2)))]
             [else
-             (let* ([x (min (max 0 (send evt get-x)) (- (get-client-width) 1))]
-                    [scaled-x (pixel->frame x)]
-                    [y (send evt get-y)]
-                    [y-val (if (> y (/ (get-height) 2))
-                               (right-getter scaled-x)
-                               (left-getter scaled-x))])
-               (send frame-num-text begin-edit-sequence #f)
-               (send frame-num-text erase)
-               (send frame-num-text insert (format "frame #: ~a" (number->string scaled-x)))
-               (send frame-num-text end-edit-sequence)
-               (send y-value-text begin-edit-sequence #f)
-               (send y-value-text erase)
-               (send y-value-text insert 
-                     (format "y value: ~a" 
-                             (format-sample
-                              y-val)))
-               (send y-value-text end-edit-sequence))]))
+             (define x (min (max 0 (send evt get-x)) (- (get-client-width) 1)))
+             (define scaled-x (pixel->frame x))
+             
+             (define y (send evt get-y))
+             
+             (define y-val 
+               (cond [(< scaled-x len)
+                      (format-sample
+                       (if (> y (/ (get-height) 2))
+                           (right-getter scaled-x)
+                           (left-getter scaled-x)))]
+                     [else "undefined"]))
+             (define frame-num-str
+               (cond [(< scaled-x len) scaled-x]
+                     [else "undefined"]))
+             (send frame-num-text begin-edit-sequence #f)
+             (send frame-num-text erase)
+             (send frame-num-text insert
+                   (format "frame #: ~a" frame-num-str))
+             (send frame-num-text end-edit-sequence)
+             (send y-value-text begin-edit-sequence #f)
+             (send y-value-text erase)
+             (send y-value-text insert 
+                   (format "y value: ~a" y-val))
+             (send y-value-text end-edit-sequence)]))
     
     ;; change the frames-per-pixel (and reset the virtual width)
     (define (set-frames-per-pixel! fpp)
-      (unless (exact-positive-integer? fpp)
-        (raise-argument-error 'set-frames-per-pixel! "exact positive integer" 0 fpp))
+      (unless (< 0 fpp)
+        (raise-argument-error 'set-frames-per-pixel!
+                              "positive number" 0 fpp))
       (set! frames-per-pixel fpp)
       (reset-virtual-width!))
     
@@ -262,7 +235,7 @@
                  [left-getter left-getter]
                  [right-getter right-getter]
                  [style '(hscroll)]
-                 [frames-per-pixel (floor (/ len width))])]
+                 [frames-per-pixel (/ len width)])]
          [ecx (new editor-canvas%
                    [parent f]
                    [editor tx]
@@ -334,6 +307,18 @@
                 height
                 0
                 (vector-length vec)))
+
+(define (array-draw/mag/phase arr #:title [title "magnitude and phase"] #:width [width 800] #:height [height 200])
+  (unless (= (array-dims arr) 1)
+    (raise-argument-error array-draw/mag/phase "array of dimension 1" 0 arr))
+  (vectors-draw title
+                (lambda (i) (magnitude (array-ref arr (vector i))))
+                (lambda (i) (phase (array-ref arr (vector i))))
+                (array-size arr)
+                width
+                height
+                0
+                (array-size arr)))
 
 (define (vector-draw/log-mag/phase vec #:title [title "log magnitude and phase"] #:width [width 800] #:height [height 200])
   (vectors-draw title
@@ -460,8 +445,6 @@
                          #:height [height 200]
                          #:zoom-freq [zoom-freq #f]
                          #:window-size [window-size 2048])
-  
-  (define window-size 2048)
   (define windows (floor (/ (rs-frames rsound) window-size)))
   (when (= windows 0)
     (error 'rsound-fft-draw not-enough-frames-msg
@@ -485,6 +468,19 @@
              #:width width
              #:height height
              #:title title))
+
+(define (rsound/left-1-fft-draw rsound
+                                #:title [title "Fourier Transforms"]
+                                #:width [width 800]
+                                #:height [height 200])
+  
+  (define window-size (rs-frames rsound))
+  (define vec-as-array (build-array (vector window-size) (lambda (i) (rs-ith/left/s16 rsound (vector-ref i 0)))))
+  (define the-fft (array-fft vec-as-array))
+  (array-draw/mag/phase the-fft
+                         #:title title
+                         #:width width
+                         #:height height))
 
 (define not-enough-frames-msg 
   (string-append "this sound has ~s frames, fewer than the ~s needed for "
