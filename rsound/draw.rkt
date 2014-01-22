@@ -162,12 +162,9 @@
     
     (define/override (on-event evt)
       (set! cur-mouse-x (send evt get-x))
-      
-            
       (define client-width (get-client-width))
       (define-values (view-start-x _1) (get-view-start))
-      (define data-left (* frames-per-pixel view-start-x))
-      (define frames (floor (* frames-per-pixel client-width)))
+      (define data-left (floor (* frames-per-pixel view-start-x)))
       ;; given an x coordinate, return the corresponding frame
       (define (pixel->frame x)
           (+ data-left (floor (* frames-per-pixel x))))
@@ -177,9 +174,7 @@
             [else
              (define x (min (max 0 (send evt get-x)) (- (get-client-width) 1)))
              (define scaled-x (pixel->frame x))
-             
              (define y (send evt get-y))
-             
              (define y-val 
                (cond [(< scaled-x len)
                       (format-sample
