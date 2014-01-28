@@ -3,15 +3,18 @@
 (require ffi/vector
          "../rsound.rkt"
          "../private/s16vector-add.rkt"
+         (only-in "../util.rkt" indexed-signal)
          rackunit)
 
 (define sr 44100)
 
 ;; 1 second of noise:
 (define test-rsound
-  (signal->rsound sr sr
-                  (lambda (t)
-                    (- (* 2.0 (random)) 1.0))))
+  (signal->rsound 
+   sr
+   (indexed-signal
+    (lambda (t)
+      (- (* 2.0 (random)) 1.0)))))
 
 (define (gc3) 
   (collect-garbage)

@@ -227,20 +227,22 @@
             1e-4)
    
    ;; RSOUND->SIGNAL
-   (check-= ((rsound->signal/left 
-              (mono 100 x (/ x 1000))) 23)
+   (check-= (signal-nth (rsound->signal/left 
+                         (mono 100 x (/ x 1000))) 23)
             0.023
             1e-4)
    
    ;; off the edge:
-   (check-= ((rsound->signal/left 
+   (check-= (signal-nth 
+             (rsound->signal/left 
               (mono 100 x (/ x 1000))) 150)
             0.0
             1e-4)
    
    (check-exn exn:fail? (lambda () (rsound->signal/left 14)))
    
-   (check-= ((rsound->signal/right
+   (check-= (signal-nth
+             (rsound->signal/right
               (mono 100 x (/ x 1000))) 23)
             0.023
             1e-4)

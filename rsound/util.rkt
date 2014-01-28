@@ -672,9 +672,10 @@ rsound-max-volume
   (unless (rsound? rsound)
     (raise-type-error 'rsound->signal "rsound" 0 rsound))
   (let ([len (rs-frames rsound)])
-    (lambda (t)
-      (cond [(< t len) (ith-fun rsound t)]
-            [else 0.0]))))
+    (indexed-signal
+     (lambda (t)
+       (cond [(< t len) (ith-fun rsound t)]
+             [else 0.0])))))
 
 ;; rsound->signal/left : rsound -> signal
 ;; produce the signal that corresponds to the rsound's 
