@@ -567,6 +567,18 @@ for re-use. In particular, rsound uses samples of c3, c4, c5, and c6, and resamp
 
 }
 
+@section{Envelopes}
+
+@defmodule[rsound/envelope]{
+There are a couple of functions here, but only one is documented:
+
+@defproc[(sine-window [len frames?] [fade-in frames]) rsound?]{
+ Generates an rsound of length @racket[len + fade-in] representing
+ a window with sine-shaped fade-in and fade-out. The fade-in and fade-out
+ periods are identical, and have half-overlap with the center section. Er...
+ that could be worded better.}                            
+}
+
 @section{Frequency Response}
 
 @defmodule[rsound/frequency-response]{
@@ -649,6 +661,7 @@ for re-use. In particular, rsound uses samples of c3, c4, c5, and c6, and resamp
  
  
  }
+
 
 
 @section{Configuration}

@@ -3,11 +3,13 @@
 (require "rsound.rkt"
          "util.rkt"
          "network.rkt"
+         (only-in racket/math pi)
          (only-in racket/list last))
 
 (provide adsr
          #;adsr/exp
-         envelope-signal)
+         envelope-signal
+         sine-window)
 
 ;; unused, now...
 (define (straight-line frames a b)
@@ -114,3 +116,26 @@
        (pair? (cdr p))
        (number? (cadr p))
        (null? (cddr p))))
+
+;; a simple sine envelope for use in windowing. total length is len + fade-in
+(define (sine-window len fade-in)
+  (when (< len fade-in)
+    (raise-argument-error 'sine-window "len < fade-in" 0 len fade-in))
+  (signal->rsound (+ fade-in len)
+                  (indexed-signal
+                   (lambda (t)
+                     (cond [(< t fade-in) (/ (- 1 (cos (* pi (/ t fade-in)))) 2)]
+                           [(< t len) 1]
+                           [else (/ (+ 1.0 
+                                       (cos (* pi (/ (- t len) fade-in)))) 2)])))))
+
+(module+ test
+  (define sw (sine-window 3000 400))
+  (check-= (rs-ith/left sw 0) 0.0 1e-4)
+  (check-= (rs-ith/left sw 200) 0.5 1e-4)
+  (check-= (rs-ith/right sw 400) 1.0 1e-4)
+  (check-= (rs-ith/right sw 1500) 1.0 1e-4)
+  (check-= (rs-ith/right sw 3000) 1.0 1e-4)
+  (check-= (rs-ith/right sw 3200) 0.5 1e-4)
+  (check-= (rs-ith/right sw 3399) 0.0 1e-4)
+  )
