@@ -253,7 +253,7 @@
 ;; create a tap of the given length (we could generalize
 ;; this to allow multiple tap lengths from one vector.)
 ;; for now, it assumes real-valued inputs, and pre-fills
-;; the vector with zeros.
+;; the vector with the init-val.
 ;; nat -> network
 (define (tap len init-val)
   (define the-proc

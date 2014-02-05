@@ -363,6 +363,21 @@ Also note that all of these assume a fixed sample rate of 44.1 KHz.
  Produces a constant signal at @racket[amplitude]. Inaudible unless used to multiply by
  another signal.}
 
+@defproc[(simple-ctr [init real?] [skip real?]) signal?]{
+ Produces a signal whose value starts at @racket[init] and increases by @racket[skip]
+ at each frame.}
+
+@defproc[(loop-ctr [len real?] [skip real?]) signal?]{
+ Produces a signal whose value starts at 0.0 and increases by @racket[skip]
+ at each frame, subtracting @racket[len] when the value rises above @racket[len].}
+
+@defproc[(loop-ctr/variable [len real?]) signal?]{
+ Produces a signal whose value starts at 0.0 and increases by @racket[skip]
+ at each frame, subtracting @racket[len] when the value rises above @racket[len]. In
+ this case, the @racket[skip] value is supplied dynamically.}
+
+
+
 In order to listen to them, you can transform them into rsounds, or play them directly:
 
 @defproc[(signal->rsound (frames nonnegative-integer?) (signal signal?)) rsound?]{
@@ -453,6 +468,29 @@ overhead.
  Is the given value a filter? More precisely, is the given value a procedure whose
  arity includes 1, or a network that takes one input?}
 
+@section{Signal/Blocks}
+
+The signal/block interface can speed up sound generation, by allowing a signal to generate
+a block of samples at once. This is particularly valuable when it is possible for 
+signals to use c-level primitives to copy blocks of samples.
+
+UNFINISHED: 
+
+@defproc[(signal/block-play [signal/block signal/block/unsafe?] 
+                            [sample-rate positive-integer?]
+                            [#:buffer-time buffer-time (or/c nonnegative-number #f)])
+         any]{
+Plays a signal/block/unsafe.
+}
+@;{;; play a signal/block using portaudio:
+(define (signal/block-play signal/block sample-rate #:buffer-time [buffer-time #f])
+  (unless (signal/block? signal/block)
+    (raise-argument-error 'signal/block-play "signal/block" 0 signal/block sample-rate buffer-time))
+  (unless (positive-integer? sample-rate)
+    (raise-argument-error 'signal/block-play "positive integer" 1 signal/block sample-rate buffer-time))
+  (rc:signal/block-play signal/block sample-rate buffer-time))}
+
+
 @section{Visualizing Rsounds}
 
 @defmodule[rsound/draw]
@@ -472,6 +510,15 @@ overhead.
  Draws an fft of the sound by breaking it into windows of 2048 samples and performing an
  FFT on each. Each fft is represented as a column of gray rectangles, where darker grays
  indicate more of the given frequency band.}
+
+@defproc[(rsound/left-1-fft-draw [rsound rsound?]
+                                 [#:title title string?]
+                                 [#:width width 800]
+                                 [#:height height 200]) void?]{
+ Draws an fft of the left channel of the sound, and displays it as a pair of
+ graphs, one for magnitude and one for phase. The whole sound is processed
+ as a single fft frame, so it must be of a length that is a power of 2, and
+ using a sound of more than 16384 frames could be slow.}
                                                                       
 @defproc[(vector-pair-draw/magnitude [left (vectorof complex?)] [right (vectorof complex?)]
                                      [#:title title string?]

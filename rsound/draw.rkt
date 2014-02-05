@@ -9,6 +9,7 @@
 (provide rs-draw
          vectors-draw
          vector-draw/mag/phase ;; undocumented
+         array-draw/mag/phase ;; undocumented
          vector-draw/log-mag/phase ;; undocumented
          vector-pair-draw/magnitude
          vector-draw/real/imag
@@ -285,8 +286,8 @@
 (define (rs-draw sound #:title [title "picture of sound"] 
                      #:width [width 800] #:height [height 230])
   (vectors-draw title
-                (lambda (i) (rs-ith/left/s16 sound i))
-                (lambda (i) (rs-ith/right/s16 sound i))
+                (lambda (i) (/ (rs-ith/left/s16 sound i) s16max))
+                (lambda (i) (/ (rs-ith/right/s16 sound i) s16max))
                 (rs-frames sound)
                 width
                 height
@@ -496,6 +497,6 @@
 
 
 (define (format-sample n)
-  (real->decimal-string (/ n s16max) digits-to-print))
+  (real->decimal-string n digits-to-print))
 
 (define digits-to-print 4)
