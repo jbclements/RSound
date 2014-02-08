@@ -131,12 +131,11 @@
   (roots->coefficients (chebyshev-z-poles scale)))
 
 ;; given a cutoff in radians, produce the poles in z-space of a 4-pole chebyshev
-;; low-pass filter.
+;; low-pass filter. The 'scale' is a cutoff frequency, in radians.
 (: chebyshev-z-poles (Real -> (Listof Complex)))
 (define (chebyshev-z-poles scale)
-  (define pre-warped (* 2.0 (tan (/ scale 0.5))))
   (define s-poles (map (lambda: ([x : Complex])
-                         (* pre-warped x))
+                         (* scale x))
                        chebyshev-s-poles))
   (map s-space->z-space s-poles))
 
@@ -251,7 +250,6 @@
 ;; yes! Bilinear transform seems to work.
 (: s-space->z-space (Complex -> Complex))
 (define (s-space->z-space pole) 
-  #;(exp pole)
   (/ (+ 1.0 (/ pole 2.0))
      (- 1.0 (/ pole 2.0))))
 

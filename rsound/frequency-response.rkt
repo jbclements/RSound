@@ -1,482 +1,55 @@
-#reader(lib"read.ss""wxme")WXME0108 ## 
-#|
-   This file uses the GRacket editor format.
-   Open this file in DrRacket version 6.0.0.1 or later to read it.
+#lang racket/base
 
-   Most likely, it was created by saving a program in DrRacket,
-   and it probably contains a program with non-text elements
-   (such as images or comment boxes).
+(require rackunit
+         plot
+         "filter.rkt"
+         "filter-typed.rkt"
+         racket/flonum
+         (only-in racket/math pi)
+         (only-in racket/match match match-define)
+         racket/contract)
 
-            http://racket-lang.org/
-|#
- 30 7 #"wxtext\0"
-3 1 6 #"wxtab\0"
-1 1 8 #"wximage\0"
-2 0 8 #"wxmedia\0"
-4 1 34 #"(lib \"syntax-browser.ss\" \"mrlib\")\0"
-1 0 16 #"drscheme:number\0"
-3 0 44 #"(lib \"number-snip.ss\" \"drscheme\" \"private\")\0"
-1 0 36 #"(lib \"comment-snip.ss\" \"framework\")\0"
-1 0 93
-(
- #"((lib \"collapsed-snipclass.ss\" \"framework\") (lib \"collapsed-sni"
- #"pclass-wxme.ss\" \"framework\"))\0"
-) 0 0 43 #"(lib \"collapsed-snipclass.ss\" \"framework\")\0"
-0 0 19 #"drscheme:sexp-snip\0"
-0 0 36 #"(lib \"cache-image-snip.ss\" \"mrlib\")\0"
-1 0 68
-(
- #"((lib \"image-core.ss\" \"mrlib\") (lib \"image-core-wxme.rkt\" \"mr"
- #"lib\"))\0"
-) 1 0 29 #"drscheme:bindings-snipclass%\0"
-1 0 88
-(
- #"((lib \"pict-snip.rkt\" \"drracket\" \"private\") (lib \"pict-snip.r"
- #"kt\" \"drracket\" \"private\"))\0"
-) 0 0 34 #"(lib \"bullet-snip.rkt\" \"browser\")\0"
-0 0 25 #"(lib \"matrix.ss\" \"htdp\")\0"
-1 0 22 #"drscheme:lambda-snip%\0"
-1 0 26 #"drracket:spacer-snipclass\0"
-0 0 57
-#"(lib \"hrule-snip.rkt\" \"macro-debugger\" \"syntax-browser\")\0"
-1 0 26 #"drscheme:pict-value-snip%\0"
-0 0 45 #"(lib \"image-snipr.ss\" \"slideshow\" \"private\")\0"
-1 0 38 #"(lib \"pict-snipclass.ss\" \"slideshow\")\0"
-2 0 55 #"(lib \"vertical-separator-snip.ss\" \"stepper\" \"private\")\0"
-1 0 18 #"drscheme:xml-snip\0"
-1 0 31 #"(lib \"xml-snipclass.ss\" \"xml\")\0"
-1 0 21 #"drscheme:scheme-snip\0"
-2 0 34 #"(lib \"scheme-snipclass.ss\" \"xml\")\0"
-1 0 10 #"text-box%\0"
-1 0 32 #"(lib \"text-snipclass.ss\" \"xml\")\0"
-1 0 1 6 #"wxloc\0"
-          0 0 65 0 1 #"\0"
-0 75 1 #"\0"
-0 12 90 -1 90 -1 3 -1 0 1 0 1 0 0 0 0 0 0 0 0 0 0 0 255 255 255 1 -1 0 9
-#"Standard\0"
-0 75 9 #"Consolas\0"
-0 16 90 -1 90 -1 3 -1 0 1 0 1 0 0 0 0 0 0 0 0 0 0 0 255 255 255 1 -1 2 1
-#"\0"
-0 -1 1 #"\0"
-1 0 -1 -1 -1 -1 -1 -1 0 0 0 0 0 0 1 1 1 1 1 1 0 0 0 0 0 0 -1 -1 2 24
-#"framework:default-color\0"
-0 -1 1 #"\0"
-1 0 -1 -1 -1 -1 -1 -1 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 255 255 255 -1 -1 2
-1 #"\0"
-0 -1 1 #"\0"
-1 0 -1 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 1 1 1 150 0 150 0 0 0 -1 -1 2 15
-#"text:ports out\0"
-0 -1 1 #"\0"
-1 0 -1 92 -1 93 -1 -1 0 1 0 0 0 0 0 0 0 1 1 1 150 0 150 0 0 0 -1 -1 2 1
-#"\0"
-0 -1 1 #"\0"
-1.0 0 -1 -1 93 -1 -1 -1 0 0 0 0 0 0 0 0 0 1.0 1.0 1.0 255 0 0 0 0 0 -1
--1 2 15 #"text:ports err\0"
-0 -1 1 #"\0"
-1 0 -1 92 93 -1 -1 -1 0 1 0 0 0 0 0 0 0 1 1 1 255 0 0 0 0 0 -1 -1 2 1
-#"\0"
-0 -1 1 #"\0"
-1 0 -1 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 1 1 1 0 0 175 0 0 0 -1 -1 2 17
-#"text:ports value\0"
-0 -1 1 #"\0"
-1 0 -1 92 -1 93 -1 -1 0 1 0 0 0 0 0 0 0 1 1 1 0 0 175 0 0 0 -1 -1 2 1
-#"\0"
-0 -1 1 #"\0"
-1.0 0 92 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 1.0 1.0 1.0 34 139 34 0 0 0 -1
--1 2 27 #"Matching Parenthesis Style\0"
-0 -1 1 #"\0"
-1.0 0 92 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 1.0 1.0 1.0 34 139 34 0 0 0 -1
--1 2 1 #"\0"
-0 -1 1 #"\0"
-1 0 -1 92 -1 93 -1 -1 0 1 0 0 0 0 0 0 0 1 1 1 38 38 128 0 0 0 -1 -1 2 37
-#"framework:syntax-color:scheme:symbol\0"
-0 -1 1 #"\0"
-1 0 -1 92 -1 93 -1 -1 0 1 0 0 0 0 0 0 0 1 1 1 38 38 128 0 0 0 -1 -1 2 38
-#"framework:syntax-color:scheme:keyword\0"
-0 -1 1 #"\0"
-1 0 -1 92 -1 93 -1 -1 0 1 0 0 0 0 0 0 0 1 1 1 38 38 128 0 0 0 -1 -1 2 1
-#"\0"
-0 -1 1 #"\0"
-1 0 -1 92 -1 93 -1 -1 0 1 0 0 0 0 0 0 0 1 1 1 194 116 31 0 0 0 -1 -1 2
-38 #"framework:syntax-color:scheme:comment\0"
-0 -1 1 #"\0"
-1 0 -1 92 -1 93 -1 -1 0 1 0 0 0 0 0 0 0 1 1 1 194 116 31 0 0 0 -1 -1 2 1
-#"\0"
-0 -1 1 #"\0"
-1 0 -1 92 -1 93 -1 -1 0 1 0 0 0 0 0 0 0 1 1 1 41 128 38 0 0 0 -1 -1 2 37
-#"framework:syntax-color:scheme:string\0"
-0 -1 1 #"\0"
-1 0 -1 92 -1 93 -1 -1 0 1 0 0 0 0 0 0 0 1 1 1 41 128 38 0 0 0 -1 -1 2 35
-#"framework:syntax-color:scheme:text\0"
-0 -1 1 #"\0"
-1 0 -1 92 -1 93 -1 -1 0 1 0 0 0 0 0 0 0 1 1 1 41 128 38 0 0 0 -1 -1 2 39
-#"framework:syntax-color:scheme:constant\0"
-0 -1 1 #"\0"
-1 0 -1 92 -1 93 -1 -1 0 1 0 0 0 0 0 0 0 1 1 1 41 128 38 0 0 0 -1 -1 2 1
-#"\0"
-0 -1 1 #"\0"
-1 0 -1 92 -1 93 -1 -1 0 1 0 0 0 0 0 0 0 1 1 1 132 60 36 0 0 0 -1 -1 2 49
-#"framework:syntax-color:scheme:hash-colon-keyword\0"
-0 -1 1 #"\0"
-1 0 -1 92 -1 93 -1 -1 0 1 0 0 0 0 0 0 0 1 1 1 132 60 36 0 0 0 -1 -1 2 42
-#"framework:syntax-color:scheme:parenthesis\0"
-0 -1 1 #"\0"
-1 0 -1 92 -1 93 -1 -1 0 1 0 0 0 0 0 0 0 1 1 1 132 60 36 0 0 0 -1 -1 2 1
-#"\0"
-0 -1 1 #"\0"
-1 0 -1 92 -1 93 -1 -1 0 1 0 0 0 0 0 0 0 1 1 1 255 0 0 0 0 0 -1 -1 2 36
-#"framework:syntax-color:scheme:error\0"
-0 -1 1 #"\0"
-1 0 -1 92 -1 93 -1 -1 0 1 0 0 0 0 0 0 0 1 1 1 255 0 0 0 0 0 -1 -1 2 1
-#"\0"
-0 -1 1 #"\0"
-1 0 -1 92 -1 93 -1 -1 0 1 0 0 0 0 0 0 0 1 1 1 0 0 0 0 0 0 -1 -1 2 36
-#"framework:syntax-color:scheme:other\0"
-0 -1 1 #"\0"
-1 0 -1 92 -1 93 -1 -1 0 1 0 0 0 0 0 0 0 1 1 1 0 0 0 0 0 0 -1 -1 2 16
-#"Misspelled Text\0"
-0 -1 1 #"\0"
-1 0 -1 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 1 1 1 0 0 0 0 0 0 -1 -1 2 1
-#"\0"
-0 -1 1 #"\0"
-1 0 -1 92 -1 93 -1 -1 0 1 0 0 0 0 0 0 0 1 1 1 81 112 203 0 0 0 -1 -1 2
-38 #"drracket:check-syntax:lexically-bound\0"
-0 -1 1 #"\0"
-1 0 -1 92 -1 93 -1 -1 0 1 0 0 0 0 0 0 0 1 1 1 81 112 203 0 0 0 -1 -1 2 1
-#"\0"
-0 -1 1 #"\0"
-1 0 -1 92 -1 93 -1 -1 0 1 0 0 0 0 0 0 0 1 1 1 178 34 34 0 0 0 -1 -1 2 28
-#"drracket:check-syntax:set!d\0"
-0 -1 1 #"\0"
-1 0 -1 92 -1 93 -1 -1 0 1 0 0 0 0 0 0 0 1 1 1 178 34 34 0 0 0 -1 -1 2 37
-#"drracket:check-syntax:unused-require\0"
-0 -1 1 #"\0"
-1 0 -1 92 -1 93 -1 -1 0 1 0 0 0 0 0 0 0 1 1 1 255 0 0 0 0 0 -1 -1 2 36
-#"drracket:check-syntax:free-variable\0"
-0 -1 1 #"\0"
-1 0 -1 92 -1 93 -1 -1 0 1 0 0 0 0 0 0 0 1 1 1 255 0 0 0 0 0 -1 -1 2 1
-#"\0"
-0 -1 1 #"\0"
-1 0 -1 92 -1 93 -1 -1 0 1 0 0 0 0 0 0 0 1 1 1 68 0 203 0 0 0 -1 -1 2 31
-#"drracket:check-syntax:imported\0"
-0 -1 1 #"\0"
-1 0 -1 92 -1 93 -1 -1 0 1 0 0 0 0 0 0 0 1 1 1 68 0 203 0 0 0 -1 -1 2 47
-#"drracket:check-syntax:my-obligation-style-pref\0"
-0 -1 1 #"\0"
-1 0 -1 92 -1 93 -1 -1 0 1 0 0 0 0 0 0 0 1 1 1 178 34 34 0 0 0 -1 -1 2 1
-#"\0"
-0 -1 1 #"\0"
-1 0 -1 92 -1 93 -1 -1 0 1 0 0 0 0 0 0 0 1 1 1 0 116 0 0 0 0 -1 -1 2 50
-#"drracket:check-syntax:their-obligation-style-pref\0"
-0 -1 1 #"\0"
-1 0 -1 92 -1 93 -1 -1 0 1 0 0 0 0 0 0 0 1 1 1 0 116 0 0 0 0 -1 -1 2 48
-#"drracket:check-syntax:unk-obligation-style-pref\0"
-0 -1 1 #"\0"
-1 0 -1 92 -1 93 -1 -1 0 1 0 0 0 0 0 0 0 1 1 1 0 0 0 0 0 0 -1 -1 2 1
-#"\0"
-0 -1 1 #"\0"
-1 0 -1 92 -1 93 -1 -1 0 1 0 0 0 0 0 0 0 1 1 1 139 142 28 0 0 0 -1 -1 2
-49 #"drracket:check-syntax:both-obligation-style-pref\0"
-0 -1 1 #"\0"
-1 0 -1 92 -1 93 -1 -1 0 1 0 0 0 0 0 0 0 1 1 1 139 142 28 0 0 0 -1 -1 2
-26 #"plt:htdp:test-coverage-on\0"
-0 -1 1 #"\0"
-1 0 -1 92 -1 93 -1 -1 0 1 0 0 0 0 0 0 0 1 1 1 0 0 0 0 0 0 -1 -1 2 1
-#"\0"
-0 -1 1 #"\0"
-1 0 -1 92 -1 93 -1 -1 0 1 0 0 0 1 0 0 0 0 0 0 255 165 0 0 0 0 -1 -1 2 27
-#"plt:htdp:test-coverage-off\0"
-0 -1 1 #"\0"
-1 0 -1 92 -1 93 -1 -1 0 1 0 0 0 1 0 0 0 0 0 0 255 165 0 0 0 0 -1 -1 4 1
-#"\0"
-0 70 1 #"\0"
-1.0 0 -1 -1 -1 -1 -1 -1 0 0 0 0 0 0 1.0 1.0 1.0 1.0 1.0 1.0 0 0 0 0 0 0
--1 -1 4 4 #"XML\0"
-0 70 1 #"\0"
-1.0 0 -1 -1 -1 -1 -1 -1 0 0 0 0 0 0 1.0 1.0 1.0 1.0 1.0 1.0 0 0 0 0 0 0
--1 -1 2 37 #"plt:module-language:test-coverage-on\0"
-0 -1 1 #"\0"
-1 0 -1 92 -1 93 -1 -1 0 1 0 0 0 0 0 0 0 1 1 1 0 0 0 0 0 0 -1 -1 2 38
-#"plt:module-language:test-coverage-off\0"
-0 -1 1 #"\0"
-1 0 -1 92 -1 93 -1 -1 0 1 0 0 0 1 0 0 0 0 0 0 255 165 0 0 0 0 -1 -1 4 1
-#"\0"
-0 71 1 #"\0"
-1.0 0 -1 -1 -1 -1 -1 -1 0 0 0 0 0 0 1.0 1.0 1.0 1.0 1.0 1.0 0 0 0 0 0 0
--1 -1 4 1 #"\0"
-0 -1 1 #"\0"
-1.0 0 -1 -1 -1 -1 -1 -1 1 0 0 0 0 0 0 0 0 1.0 1.0 1.0 0 0 255 0 0 0 -1
--1 4 1 #"\0"
-0 71 1 #"\0"
-1.0 0 -1 -1 -1 -1 -1 -1 1 0 0 0 0 0 0 0 0 1.0 1.0 1.0 0 0 255 0 0 0 -1
--1 4 1 #"\0"
-0 71 1 #"\0"
-1.0 0 -1 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 1.0 1.0 1.0 0 100 0 0 0 0 -1
--1 4 1 #"\0"
-0 -1 1 #"\0"
-1 0 -1 -1 -1 -1 -1 -1 0 0 0 0 0 0 1 1 1 1 1 1 0 0 0 0 0 0 -1 -1 49 1
-#"\0"
-0 -1 1 #"\0"
-1.0 0 -1 -1 -1 -1 -1 -1 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 255 255 255 -1 -1
-50 1 #"\0"
-0 -1 1 #"\0"
-1.0 0 -1 -1 -1 -1 -1 -1 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 255 255 255 -1 -1
-4 1 #"\0"
-0 -1 1 #"\0"
-1.0 0 -1 -1 -1 -1 -1 -1 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 255 255 255 -1 -1
-0 1 #"\0"
-0 -1 1 #"\0"
-0 13 -1 -1 -1 -1 -1 -1 0 0 0 0 0 0 1.0 1.0 1.0 1.0 1.0 1.0 0 0 0 0 0 0
--1 -1 2 1 #"\0"
-0 -1 1 #"\0"
-0 13 -1 -1 -1 -1 -1 -1 0 0 0 0 0 0 1.0 1.0 1.0 1.0 1.0 1.0 0 0 0 0 0 0
--1 -1 17 1 #"\0"
-0 -1 1 #"\0"
-1.0 0 -1 -1 -1 -1 -1 -1 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 255 255 255 -1 -1
-24 1 #"\0"
-0 -1 1 #"\0"
-1.0 0 -1 -1 -1 -1 -1 -1 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 255 255 255 -1 -1
-4 1 #"\0"
-0 -1 1 #"\0"
-1.0 0 92 -1 -1 -1 -1 -1 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 255 255 0 -1 -1 2
-1 #"\0"
-0 -1 1 #"\0"
-1 0 -1 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 1 1 1 200 0 0 0 0 0 -1 -1
-          0 235 0 49 3 17 #"#lang racket/base"
-0 0 49 29 1 #"\n"
-0 0 49 29 1 #"\n"
-0 0 49 3 1 #"("
-0 0 49 3 7 #"require"
-0 0 49 3 1 #" "
-0 0 49 3 8 #"rackunit"
-0 0 49 29 1 #"\n"
-0 0 49 3 9 #"         "
-0 0 49 3 4 #"plot"
-0 0 49 29 1 #"\n"
-0 0 49 3 9 #"         "
-0 0 49 3 12 #"\"filter.rkt\""
-0 0 49 29 1 #"\n"
-0 0 49 3 9 #"         "
-0 0 49 3 18 #"\"filter-typed.rkt\""
-0 0 49 29 1 #"\n"
-0 0 49 3 9 #"         "
-0 0 49 3 13 #"racket/flonum"
-0 0 49 29 1 #"\n"
-0 0 49 3 10 #"         ("
-0 0 49 3 7 #"only-in"
-0 0 49 3 1 #" "
-0 0 49 3 11 #"racket/math"
-0 0 49 3 1 #" "
-0 0 49 3 2 #"pi"
-0 0 49 3 1 #")"
-0 0 49 29 1 #"\n"
-0 0 49 3 10 #"         ("
-0 0 49 3 7 #"only-in"
-0 0 49 3 1 #" "
-0 0 49 3 12 #"racket/match"
-0 0 49 3 1 #" "
-0 0 49 3 5 #"match"
-0 0 49 3 1 #" "
-0 0 49 3 12 #"match-define"
-0 0 49 3 1 #")"
-0 0 49 29 1 #"\n"
-0 0 49 3 9 #"         "
-0 0 49 3 15 #"racket/contract"
-0 0 49 3 1 #")"
-0 0 49 29 1 #"\n"
-0 0 49 29 1 #"\n"
-0 0 50 3 1 #"("
-0 0 50 3 7 #"provide"
-0 0 50 3 2 #" ("
-0 0 50 3 12 #"contract-out"
-0 0 50 3 17 #" [response-plot ("
-0 0 50 3 3 #"->*"
-0 0 50 3 3 #" (("
-0 0 50 3 2 #"->"
-0 0 50 3 34 #" number? number?) number? number?)"
-0 0 50 29 1 #"\n"
-0 0 50 3 44 #"                                           ("
-0 0 50 3 4 #"#:db"
-0 0 50 3 10 #" boolean?)"
-0 0 50 29 1 #"\n"
-0 0 50 3 43 #"                                           "
-0 0 50 3 3 #"any"
-0 0 50 3 2 #")]"
-0 0 50 29 1 #"\n"
-0 0 50 3 43 #"                       [lpf-response-plot ("
-0 0 50 3 3 #"->*"
-0 0 50 3 26 #" (number? number? number?)"
-0 0 50 29 1 #"\n"
-0 0 50 3 48 #"                                               ("
-0 0 50 3 4 #"#:db"
-0 0 50 3 10 #" boolean?)"
-0 0 50 29 1 #"\n"
-0 0 50 3 47 #"                                               "
-0 0 50 3 7 #"any)]))"
-0 0 49 29 1 #"\n"
-0 0 49 29 1 #"\n"
-0 0 50 3 1 #"("
-0 0 50 3 6 #"define"
-0 0 50 3 13 #" i (sqrt -1))"
-0 0 49 29 1 #"\n"
-0 0 50 3 1 #"("
-0 0 50 3 6 #"define"
-0 0 50 3 16 #" twopi (* 2 pi))"
-0 0 49 29 1 #"\n"
-0 0 49 29 1 #"\n"
-0 0 49 3 67
-#";; draw a plot of the frequency response from min-freq to max-freq:"
-0 0 49 29 1 #"\n"
-0 0 50 3 1 #"("
-0 0 50 3 6 #"define"
-0 0 50 3 39 #" (response-plot poly min-freq max-freq "
-0 0 50 3 4 #"#:db"
-0 0 50 3 2 #" ["
-0 0 50 3 3 #"db?"
-0 0 50 3 5 #" #t])"
-0 0 50 29 1 #"\n"
-0 0 50 3 3 #"  ("
-0 0 50 3 4 #"plot"
-0 0 50 3 2 #" ("
-0 0 50 3 4 #"line"
-0 0 50 3 2 #" ("
-0 0 50 3 12 #"response/mag"
-0 0 50 3 11 #" poly db?))"
-0 0 50 29 1 #"\n"
-0 0 50 3 8 #"        "
-0 0 50 3 7 #"#:x-min"
-0 0 50 3 9 #" min-freq"
-0 0 50 29 1 #"\n"
-0 0 50 3 8 #"        "
-0 0 50 3 7 #"#:x-max"
-0 0 50 3 9 #" max-freq"
-0 0 50 29 1 #"\n"
-0 0 50 3 8 #"        "
-0 0 50 3 7 #"#:width"
-0 0 50 3 6 #" 600))"
-0 0 49 29 1 #"\n"
-0 0 49 29 1 #"\n"
-0 0 49 3 1 #" "
-0 0 49 3 10 #"; max-freq"
-0 0 49 29 1 #"\n"
-0 0 49 29 1 #"\n"
-0 0 49 3 51 #";; plot the frequency response of a low-pass filter"
-0 0 49 29 1 #"\n"
-0 0 49 3 50 #";; frequencies in Hz, assuming 44.1K sample rate. "
-0 0 49 29 1 #"\n"
-0 0 49 3 57 #";; min-freq and max-freq just control what portion of the"
-0 0 49 29 1 #"\n"
-0 0 49 3 64
-#";; frequency domain is displayed. The #:db flag controls whether"
-0 0 49 29 1 #"\n"
-0 0 49 3 34 #";; the result is shown in decibels"
-0 0 49 29 1 #"\n"
-0 0 50 3 1 #"("
-0 0 50 3 6 #"define"
-0 0 50 3 44 #" (lpf-response-plot scale min-freq max-freq "
-0 0 50 3 4 #"#:db"
-0 0 50 3 2 #" ["
-0 0 50 3 3 #"db?"
-0 0 50 3 5 #" #t])"
-0 0 50 29 1 #"\n"
-0 0 50 3 3 #"  ("
-0 0 50 3 12 #"match-define"
-0 0 50 3 2 #" ("
-0 0 50 3 6 #"vector"
-0 0 50 3 26 #" fir-taps iir-taps gain) ("
-0 0 50 3 15 #"lpf-tap-vectors"
-0 0 50 3 8 #" scale))"
-0 0 50 29 1 #"\n"
-0 0 50 3 3 #"  ("
-0 0 50 3 6 #"define"
-0 0 50 3 1 #" "
-0 0 50 3 9 #"fir-terms"
-0 0 50 3 7 #" (map ("
-0 0 50 3 6 #"lambda"
-0 0 50 3 2 #" ("
-0 0 50 3 1 #"x"
-0 0 50 3 52 #") (* x gain)) (cons 1.0 (flvector->list fir-taps))))"
-0 0 50 29 1 #"\n"
-0 0 50 3 3 #"  ("
-0 0 50 3 6 #"define"
-0 0 50 3 1 #" "
-0 0 50 3 9 #"iir-terms"
-0 0 50 3 17 #" (cons 1.0 (map ("
-0 0 50 3 6 #"lambda"
-0 0 50 3 2 #" ("
-0 0 50 3 1 #"x"
-0 0 50 3 42 #") (* -1.0 x)) (flvector->list iir-taps))))"
-0 0 50 29 1 #"\n"
-0 0 50 3 3 #"  ("
-0 0 50 3 6 #"define"
-0 0 50 3 1 #" "
-0 0 50 3 3 #"fun"
-0 0 50 3 1 #" "
-0 0 50 29 1 #"\n"
-0 0 50 3 5 #"    ("
-0 0 50 3 22 #"coefficient-sets->poly"
-0 0 50 29 1 #"\n"
-0 0 50 3 14 #"     fir-terms"
-0 0 50 29 1 #"\n"
-0 0 50 3 16 #"     iir-terms))"
-0 0 50 29 1 #"\n"
-0 0 50 3 2 #"  "
-0 0 50 3 2 #"#;"
-0 0 50 3 1 #"("
-0 0 50 3 6 #"define"
-0 0 50 3 1 #" "
-0 0 50 3 3 #"fun"
-0 0 50 3 1 #" "
-0 0 50 29 1 #"\n"
-0 0 50 3 5 #"    ("
-0 0 50 3 22 #"coefficient-sets->poly"
-0 0 50 29 1 #"\n"
-0 0 50 3 5 #"     "
-0 0 50 3 1 #"'"
-0 0 50 3 1 #"("
-0 0 50 3 1 #"1"
-0 0 50 3 1 #" "
-0 0 50 3 1 #"4"
-0 0 50 3 1 #" "
-0 0 50 3 1 #"6"
-0 0 50 3 1 #" "
-0 0 50 3 1 #"4"
-0 0 50 3 1 #" "
-0 0 50 3 1 #"1"
-0 0 50 3 1 #")"
-0 0 50 29 1 #"\n"
-0 0 50 3 6 #"     ("
-0 0 50 3 16 #"lpf-coefficients"
-0 0 50 3 1 #" "
-0 0 50 3 5 #"scale"
-0 0 50 3 3 #")))"
-0 0 50 29 1 #"\n"
-0 0 50 3 3 #"  ("
-0 0 50 3 13 #"response-plot"
-0 0 50 3 23 #" fun min-freq max-freq "
-0 0 50 3 4 #"#:db"
-0 0 50 3 6 #" db?))"
-0 0 49 29 1 #"\n"
-0 0 49 29 1 #"\n"
-0 0 50 3 1 #"("
-0 0 50 3 6 #"define"
-0 0 50 3 17 #" (flvector->list "
-0 0 50 3 1 #"f"
-0 0 50 3 1 #")"
-0 0 50 29 1 #"\n"
-0 0 50 3 3 #"  ("
-0 0 50 3 8 #"for/list"
-0 0 50 3 3 #" (["
-0 0 50 3 1 #"v"
-0 0 50 3 2 #" ("
-0 0 50 3 11 #"in-flvector"
-0 0 50 3 9 #" f)]) v))"
-0 0 49 29 1 #"\n"
-0 0 49 29 1 #"\n"
-0 0 49 29 1 #"\n"
-0 0 50 3 1 #"("
-0 0 50 3 17 #"lpf-response-plot"
-0 0 50 3 18 #" (/ pi 8) 0 22050 "
-0 0 50 3 4 #"#:db"
-0 0 50 3 4 #" #t)"
-0           0
+(provide (contract-out [response-plot (->* ((-> number? number?) number? number?)
+                                           (#:db boolean?)
+                                           any)]
+                       [lpf-response-plot (->* (number? number? number?)
+                                               (#:db boolean?)
+                                               any)]))
+
+(define i (sqrt -1))
+(define twopi (* 2 pi))
+
+;; draw a plot of the frequency response from min-freq to max-freq:
+(define (response-plot poly min-freq max-freq #:db [db? #t])
+  (plot (line (response/mag poly db?))
+        #:x-min min-freq
+        #:x-max max-freq
+        #:width 600))
+
+ ; max-freq
+
+;; plot the frequency response of a low-pass filter
+;; frequencies in Hz, assuming 44.1K sample rate. 
+;; min-freq and max-freq just control what portion of the
+;; frequency domain is displayed. The #:db flag controls whether
+;; the result is shown in decibels
+(define (lpf-response-plot scale min-freq max-freq #:db [db? #t])
+  (match-define (vector fir-taps iir-taps gain) (lpf-tap-vectors scale))
+  (define fir-terms (map (lambda (x) (* x gain)) (cons 1.0 (flvector->list fir-taps))))
+  (define iir-terms (cons 1.0 (map (lambda (x) (* -1.0 x)) (flvector->list iir-taps))))
+  (define fun 
+    (coefficient-sets->poly
+     fir-terms
+     iir-terms))
+  #;(define fun 
+    (coefficient-sets->poly
+     '(1 4 6 4 1)
+     (lpf-coefficients scale)))
+  (response-plot fun min-freq max-freq #:db db?))
+
+(define (flvector->list f)
+  (for/list ([v (in-flvector f)]) v))
+
+;(define cutoff-theta (* pi (/ 3600 22050)))
+
+;(lpf-response-plot cutoff-theta 0 22050 #:db #t)
