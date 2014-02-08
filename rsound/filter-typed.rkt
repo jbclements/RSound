@@ -16,6 +16,7 @@
          coefficient-sets->poly
          roots->coefficients
          chebyshev-s-poles
+         chebyshev-z-poles
          s-space->z-space
          real-part/ck
          lpf-coefficients
@@ -127,12 +128,17 @@
 ;; iir coefficient
 (: lpf-coefficients (Real -> (Listof Flonum)))
 (define (lpf-coefficients scale)
+  (roots->coefficients (chebyshev-z-poles scale)))
+
+;; given a cutoff in radians, produce the poles in z-space of a 4-pole chebyshev
+;; low-pass filter.
+(: chebyshev-z-poles (Real -> (Listof Complex)))
+(define (chebyshev-z-poles scale)
   (define pre-warped (* 2.0 (tan (/ scale 0.5))))
   (define s-poles (map (lambda: ([x : Complex])
                          (* pre-warped x))
                        chebyshev-s-poles))
-  (define z-poles (map s-space->z-space s-poles))
-  (roots->coefficients z-poles))
+  (map s-space->z-space s-poles))
 
 ;; given a scale, produce a vector containing fir and iir tap mults
 ;; and gain
