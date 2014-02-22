@@ -187,19 +187,19 @@
 
 ;; A network that maps scale values into fir/iir vectors 
 (define lpf-sig
-  (lambda (scale)
-    (when (not (<= min-scale-val scale max-scale-val))
+  (lambda (theta)
+    (when (not (<= min-scale-val theta max-scale-val))
       (error 'dynamic-lpf "scale value ~s not between ~s and ~s"
-             scale
+             theta
              min-scale-val
              max-scale-val))
     (define table-index (inexact->exact
                          (round
-                          (/ (- scale min-scale-val)
+                          (/ (- theta min-scale-val)
                              perceptible-interval))))
     (define results
       (match (vector-ref coefficient-table table-index)
-        [#f (define result-vec (lpf-tap-vectors scale))
+        [#f (define result-vec (lpf-tap-vectors theta))
             (vector-set! coefficient-table table-index result-vec)
             result-vec]
         [other other]))
@@ -215,11 +215,5 @@
            [(fir-terms iir-terms gain) (lpf-sig lpf-control)]
            [out ((dynamic-lti-signal 4) fir-terms iir-terms gain audio-sig)]))
 
-(define (flvector-sum vec)
-  (for/fold ([sum 0.0]) ([f (in-flvector vec)]) (fl+ sum f)))
-
-
-;; it looks like 1/100 is close enough not to notice. This
-;; is totally a guess on my part
 
 

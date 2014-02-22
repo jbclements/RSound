@@ -26,8 +26,12 @@
          product-of
          sum-of
          num-poles
-         zeros-at-negative-one)
+         zeros-at-negative-one
+         MIN-DB)
 
+;; mag->db uses this as the floor:
+(: MIN-DB Inexact-Real)
+(define MIN-DB -120.0)
 
 (: i Complex)
 (define i (exact->inexact (sqrt -1)))
@@ -67,14 +71,22 @@
   (cond [db? (mag->db mag)]
         [else mag]))
 
-;; convert a magnitude into decibels
-(: mag->db (Inexact-Real -> Real))
-(define (mag->db mag)
-  (* 10 (/ (ann (log (ann (filter-out-nan (max 1.0e-6 mag))
-                          Positive-Real))
-                Real)
-           (/ (log 10) 2))))
+;; a constant computed from MIN-DB to ensure that mag->db has a 
+;; floor.
+(: mag-floor Positive-Inexact-Real)
+(define mag-floor 
+  (let ()
+    ;; jump through hoops to make through it's not zero:
+    (define mag-floor (exact->inexact (expt 10 (/ MIN-DB 20))))
+    (cond [(= 0.0 mag-floor) 
+           (error 'mag-floor "mag-floor came out to be zero")]
+          [else mag-floor])))
 
+;; convert a magnitude into decibels. Put the floor at MIN-DB.
+(: mag->db (Nonnegative-Inexact-Real -> Real))
+(define (mag->db mag)
+  (* 20 (/ (log (max mag-floor mag))
+           (log 10))))
 
 ;; given a set of zeros, compute the corresponding
 ;; polynomial
@@ -139,11 +151,12 @@
                        chebyshev-s-poles))
   (map s-space->z-space s-poles))
 
-;; given a scale, produce a vector containing fir and iir tap mults
+;; given an angle in radians representing frequency, 
+;; produce a vector containing fir and iir tap mults
 ;; and gain
 (: lpf-tap-vectors (Real -> (Vector FlVector FlVector Real)))
-(define (lpf-tap-vectors scale)
-  (define coefficients (lpf-coefficients scale))
+(define (lpf-tap-vectors theta)
+  (define coefficients (lpf-coefficients theta))
   (define gain (/ (apply + coefficients)
                   zeros-at-negative-one/sum))
   (define tap-multipliers 
@@ -339,16 +352,5 @@
         (vector-set! m i (sig2 i)))
   13)|#
 
-
-;; this only seems necessary pre 5.3.0.20
-(define-predicate is-irnan? Inexact-Real-Nan)
-
-(: filter-out-nan ((U Positive-Inexact-Real Inexact-Real-Nan) 
-                   ->
-                   Positive-Inexact-Real))
-
-(define (filter-out-nan n)
-  (cond [(is-irnan? n) (error 'boo)]
-        [else n]))
 
 ;;filter-typed.rkt:68:14: Type Checker: Expected Positive-Inexact-Real, but got (U Positive-Inexact-Real Inexact-Real-Nan) in: n

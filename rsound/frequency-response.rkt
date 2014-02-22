@@ -24,6 +24,7 @@
   (plot (line (response/mag poly db?))
         #:x-min min-freq
         #:x-max max-freq
+        #:y-min MIN-DB
         #:width 600))
 
  ; max-freq
@@ -50,6 +51,6 @@
 (define (flvector->list f)
   (for/list ([v (in-flvector f)]) v))
 
-;(define cutoff-theta (* pi (/ 3600 22050)))
+(define cutoff-theta (* pi (/ 3600 22050)))
 
-;(lpf-response-plot cutoff-theta 0 22050 #:db #t)
+(lpf-response-plot cutoff-theta 0 22050 #:db #t)
