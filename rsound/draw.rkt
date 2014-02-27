@@ -7,14 +7,14 @@
          math/array)
 
 (provide rs-draw
-         vectors-draw
+         vector-display-frame
          vector-draw/mag/phase ;; undocumented
          array-draw/mag/phase ;; undocumented
          vector-draw/log-mag/phase ;; undocumented
          vector-pair-draw/magnitude
          vector-draw/real/imag
          ffts-draw
-         rsound/left-1-fft-draw ;; undocumented
+         rsound/left-1-fft-draw
          rsound-fft-draw
          ;; for testing
          interpolate
@@ -22,67 +22,77 @@
          abs-max-from
          phase)
 
+;; for scaling, use something nonzero if the maxes are zero. 
+;; it doesn't matter what number we use, because the displayed
+;; value will be zero anyway.
+(define (make-nonzero n)
+  (cond [(or (= n 0) (= n 0.0)) 1.0]
+        [else n]))
+
 ;; make-sound-drawing-callback 
-;;  : (nat -> real) (nat->real) nat nat nat -> canvas dc -> void
 ;; given a function that gets a sample from the left channel, a function that 
 ;; gets a sample from the right channel, the number of frames, and ... er ... two things that 
 ;; are going to go away, produce a function to be used as a drawer.
-(define (make-sound-drawing-callback left-getter right-getter vec-len)
-  (let ([sound-max (max (abs-max-from left-getter vec-len)
-                        (abs-max-from right-getter vec-len))])
-    (when (= sound-max 0.0)
-      (error
-       'make-sound-drawing-callback
-       "max value is 0.0, vectors are uniformly 0."))
-    (lambda (canvas dc)
-      ;; the x position on the virtual canvas:
-      (define-values (view-start-x _1) (send canvas get-view-start))
-      ;; the width in pixels of the area to be drawn:
-      (define-values (client-width _2) (send canvas get-client-size))
-      ;; the total width of the virtual canvas:
-      (define-values (virtual-canvas-width _3) (send canvas get-virtual-size))
-      (define frames-per-pixel (/ vec-len virtual-canvas-width))
-      (define data-left (floor (* frames-per-pixel view-start-x)))
-      (define frames (floor (* frames-per-pixel client-width)))
-      ;; because of canvas resizing or zooming, the window may extend 
-      ;; beyond the edge of the sound. Stop at the 
-      (define proposed-data-right (+ data-left frames))
-      (define actual-data-right (min vec-len proposed-data-right))
-      (define stop-pixel (- (/ actual-data-right frames-per-pixel) view-start-x))
-      (let* ([h (- (send canvas get-height) 1)]
-             [half-h (floor (/ h 2))]
-             [h-scale (/ (- frames 1) (- client-width 1))]
-             [v-scale (/ (/ half-h 2) sound-max)]
-             [upper-centerline (* 1/2 half-h)]
-             [lower-centerline (* 3/2 half-h)]
-             [offset-left-getter (lambda (i) (left-getter (+ i data-left)))]
-             [offset-right-getter (lambda (i) (right-getter (+ i data-left)))])
-        ;; basically, this is a rasterization problem.
-        ;; the very left and right edges are special cases.
-        ;; ... in fact, I'll just skip them for now :)
-        (define-values (a b c d)
-          (time-apply
-           (lambda ()
-             (for ([i (in-range 1 (- stop-pixel #;client-width 1))])
-               (let ([raster-left (* h-scale (- i 1/2))]
-                     [raster-right (* h-scale (+ i 1/2))])
-                 (let*-values ([(left-min left-max) 
-                                (rasterize-column offset-left-getter
-                                                  raster-left raster-right)]
-                               [(right-min right-max) 
-                                (rasterize-column offset-right-getter
-                                                  raster-left
-                                                  raster-right)])
-                   (define (num->pixel centerline n)
-                     (inexact->exact (floor (- centerline (* v-scale n)))))
-                   (send dc draw-line
-                         (+ view-start-x i) (num->pixel upper-centerline left-max)
-                         (+ view-start-x i) (num->pixel upper-centerline left-min))
-                   (send dc draw-line
-                         (+ view-start-x i) (num->pixel lower-centerline right-max)
-                         (+ view-start-x i) (num->pixel lower-centerline right-min))))))
-           (list)))
-        (printf "time: ~s ~s ~s\n" b c d)))))
+(define (make-sound-drawing-callback left-getter right-getter vec-len common-scale?)
+  (define left-actual-max (abs-max-from left-getter vec-len))
+  (define right-actual-max (abs-max-from right-getter vec-len))
+  (define common-actual-max (max left-actual-max right-actual-max))
+  (define left-display-max (make-nonzero
+                            (if common-scale? common-actual-max left-actual-max)))
+  (define right-display-max (make-nonzero
+                            (if common-scale? common-actual-max right-actual-max)))
+  (lambda (canvas dc)
+    ;; the x position on the virtual canvas:
+    (define-values (view-start-x _1) (send canvas get-view-start))
+    ;; the width in pixels of the area to be drawn:
+    (define-values (client-width _2) (send canvas get-client-size))
+    ;; the total width of the virtual canvas:
+    (define-values (virtual-canvas-width _3) (send canvas get-virtual-size))
+    (define frames-per-pixel (/ vec-len virtual-canvas-width))
+    (define data-left (floor (* frames-per-pixel view-start-x)))
+    (define frames (floor (* frames-per-pixel client-width)))
+    ;; because of canvas resizing or zooming, the window may extend 
+    ;; beyond the edge of the sound. Stop at the 
+    (define proposed-data-right (+ data-left frames))
+    (define actual-data-right (min vec-len proposed-data-right))
+    (define stop-pixel (- (/ actual-data-right frames-per-pixel) view-start-x))
+    (let* ([h (- (send canvas get-height) 1)]
+           [half-h (floor (/ h 2))]
+           [h-scale (/ (- frames 1) (- client-width 1))]
+           [v-scale-left (/ (/ half-h 2) left-display-max)]
+           [v-scale-right (/ (/ half-h 2) right-display-max)]
+           [upper-centerline (* 1/2 half-h)]
+           [lower-centerline (* 3/2 half-h)]
+           [offset-left-getter (lambda (i) (left-getter (+ i data-left)))]
+           [offset-right-getter (lambda (i) (right-getter (+ i data-left)))])
+      ;; basically, this is a rasterization problem.
+      ;; the very left and right edges are special cases.
+      ;; ... in fact, I'll just skip them for now :)
+      (define-values (a b c d)
+        (time-apply
+         (lambda ()
+           (for ([i (in-range 1 (- stop-pixel 1))])
+             (let ([raster-left (* h-scale (- i 1/2))]
+                   [raster-right (* h-scale (+ i 1/2))])
+               (let*-values ([(left-min left-max) 
+                              (rasterize-column offset-left-getter
+                                                raster-left raster-right)]
+                             [(right-min right-max) 
+                              (rasterize-column offset-right-getter
+                                                raster-left
+                                                raster-right)])
+                 (define (num->pixel/left n)
+                   (inexact->exact (floor (- upper-centerline (* v-scale-left n)))))
+                 (define (num->pixel/right n)
+                   (inexact->exact (floor (- lower-centerline (* v-scale-right n)))))
+                 (send dc draw-line
+                       (+ view-start-x i) (num->pixel/left left-max)
+                       (+ view-start-x i) (num->pixel/left left-min))
+                 (send dc draw-line
+                       (+ view-start-x i) (num->pixel/right right-max)
+                       (+ view-start-x i) (num->pixel/right right-min))))))
+         (list)))
+      (printf "time: ~s ~s ~s\n" b c d))))
 
 
 
@@ -216,15 +226,17 @@
     ))
 
 
-(define (vectors-draw title left-getter right-getter len width height data-left
-                      data-right)
+;; given ... a bunch of stuff, create a new window for displaying vector data
+;; and show it.
+(define (vector-display-frame title left-getter right-getter len width height data-left
+                      data-right common-scale?)
   (let* ([f (new frame% [label title] [width width] [height height])]
          [tx (new text%)]
          [ty (new text%)]
          [c (new sound-canvas%
                  [parent f]
                  [paint-callback 
-                  (make-sound-drawing-callback left-getter right-getter len)]
+                  (make-sound-drawing-callback left-getter right-getter len common-scale?)]
                  [len len]
                  [frame-num-text tx]
                  [y-value-text   ty]
@@ -263,68 +275,74 @@
            "expected two vectors of the same length, got ~s and ~s" 
            (vector-length left-vec)
            (vector-length right-vec)))
-  (vectors-draw title 
+  (vector-display-frame title 
                 (lambda (i) (magnitude (vector-ref left-vec i)))
                 (lambda (i) (magnitude (vector-ref right-vec i)))
                 (vector-length left-vec)
                 width
                 height
                 0
-                (vector-length left-vec)))
+                (vector-length left-vec)
+                #f))
 
 (define (vector-draw/real/imag vec #:title [title "real and imaginary parts"]
                                #:width [width 800] #:height [height 230])
-  (vectors-draw title
+  (vector-display-frame title
                 (lambda (i) (real-part (vector-ref vec i)))
                 (lambda (i) (imag-part (vector-ref vec i)))
                 (vector-length vec)
                 width
                 height
                 0
-                (vector-length vec)))
+                (vector-length vec)
+                #f))
 
 (define (rs-draw sound #:title [title "picture of sound"] 
                      #:width [width 800] #:height [height 230])
-  (vectors-draw title
+  (vector-display-frame title
                 (lambda (i) (/ (rs-ith/left/s16 sound i) s16max))
                 (lambda (i) (/ (rs-ith/right/s16 sound i) s16max))
                 (rs-frames sound)
                 width
                 height
                 0
-                (rs-frames sound)))
+                (rs-frames sound)
+                #t))
 
 (define (vector-draw/mag/phase vec #:title [title "magnitude and phase"] #:width [width 800] #:height [height 200])
-  (vectors-draw title
+  (vector-display-frame title
                 (lambda (i) (magnitude (vector-ref vec i)))
                 (lambda (i) (phase (vector-ref vec i)))
                 (vector-length vec)
                 width
                 height
                 0
-                (vector-length vec)))
+                (vector-length vec)
+                #f))
 
 (define (array-draw/mag/phase arr #:title [title "magnitude and phase"] #:width [width 800] #:height [height 200])
   (unless (= (array-dims arr) 1)
     (raise-argument-error array-draw/mag/phase "array of dimension 1" 0 arr))
-  (vectors-draw title
+  (vector-display-frame title
                 (lambda (i) (magnitude (array-ref arr (vector i))))
                 (lambda (i) (phase (array-ref arr (vector i))))
                 (array-size arr)
                 width
                 height
                 0
-                (array-size arr)))
+                (array-size arr)
+                #f))
 
 (define (vector-draw/log-mag/phase vec #:title [title "log magnitude and phase"] #:width [width 800] #:height [height 200])
-  (vectors-draw title
+  (vector-display-frame title
                 (lambda (i) (log (magnitude (vector-ref vec i))))
                 (lambda (i) (phase (vector-ref vec i)))
                 (vector-length vec)
                 width
                 height
                 0
-                (vector-length vec)))
+                (vector-length vec)
+                #f))
 
 ;; FFTS
 
