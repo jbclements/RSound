@@ -220,6 +220,12 @@ These procedures allow the creation, analysis, and manipulation of rsounds.
 @defproc[(rs-scale (scalar nonnegative-number?) (rsound rsound?)) rsound?]{
  Scale the given sound by multiplying all of its samples by the given scalar.}
 
+@defproc[(rearrange (length frames?) (mapping-fun procedure?) (rsound rsound?)) rsound?]{
+ Returns a new sound with samples drawn from the original according to the @racket[mapping-fun].
+ Specifically, a sound of length @racket[length] is constructed by calling @racket[mapping-fun]
+ once for each sample with the frame number, and using the resulting number to select a frame
+ from the input sound @racket[rsound].}
+
 @section{Signals and Networks}
 
 For signal processing, RSound adopts a dataflow-like paradigm, where elements
