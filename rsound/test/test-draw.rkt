@@ -63,14 +63,16 @@
 
 (let ([lvec (vector 3 4123 2 4 3 2 2 2 4 2 3 4 1 2 2 23  4 3 3)]
       [rvec (vector 3 23 298 4 2 23 1 2 3 4 9 8 2 24 2 79 1 23 9)])
-  (vectors-draw "non-rsound vectors"
-                (lambda (i) (vector-ref lvec i))
-                (lambda (i) (vector-ref rvec i))
-                19
-                800
-                200
-                0
-                19))
+  (vector-display-frame
+   "non-rsound vectors"
+   (lambda (i) (vector-ref lvec i))
+   (lambda (i) (vector-ref rvec i))
+   19
+   800
+   200
+   0
+   19
+   #f))
 
 ;; phase:
 

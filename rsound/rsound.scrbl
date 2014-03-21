@@ -208,9 +208,9 @@ These procedures allow the creation, analysis, and manipulation of rsounds.
  Evaluating
  
  @racketblock[
-  (rs-overlay* (list (list a 5000)
-                         (list b 0)
-                         (list b 11000)))]
+ (assemble (list (list a 5000)
+                 (list b 0)
+                 (list b 11000)))]
  
  ... would produce a sound of 21000 frames, where each instance of 'b' overlaps with the central
  instance of 'a'.
