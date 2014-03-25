@@ -29,11 +29,17 @@
   (cond [(or (= n 0) (= n 0.0)) 1.0]
         [else n]))
 
+;; how frequently can the window be redrawn? (in ms)
+;; this prevents total bog-down when scrolling 
+;; side-to-side in a sound.
+(define MIN-REDRAW-INTERVAL 500.0)
+
 ;; make-sound-drawing-callback 
 ;; given a function that gets a sample from the left channel, a function that 
 ;; gets a sample from the right channel, the number of frames, and ... er ... two things that 
 ;; are going to go away, produce a function to be used as a drawer.
 (define (make-sound-drawing-callback left-getter right-getter vec-len common-scale?)
+  (define last-draw-time-box (box (- (current-inexact-milliseconds) MIN-REDRAW-INTERVAL)))
   (define left-actual-max (abs-max-from left-getter vec-len))
   (define right-actual-max (abs-max-from right-getter vec-len))
   (define common-actual-max (max left-actual-max right-actual-max))
@@ -42,57 +48,63 @@
   (define right-display-max (make-nonzero
                             (if common-scale? common-actual-max right-actual-max)))
   (lambda (canvas dc)
-    ;; the x position on the virtual canvas:
-    (define-values (view-start-x _1) (send canvas get-view-start))
-    ;; the width in pixels of the area to be drawn:
-    (define-values (client-width _2) (send canvas get-client-size))
-    ;; the total width of the virtual canvas:
-    (define-values (virtual-canvas-width _3) (send canvas get-virtual-size))
-    (define frames-per-pixel (/ vec-len virtual-canvas-width))
-    (define data-left (floor (* frames-per-pixel view-start-x)))
-    (define frames (floor (* frames-per-pixel client-width)))
-    ;; because of canvas resizing or zooming, the window may extend 
-    ;; beyond the edge of the sound. Stop at the 
-    (define proposed-data-right (+ data-left frames))
-    (define actual-data-right (min vec-len proposed-data-right))
-    (define stop-pixel (- (/ actual-data-right frames-per-pixel) view-start-x))
-    (let* ([h (- (send canvas get-height) 1)]
-           [half-h (floor (/ h 2))]
-           [h-scale (/ (- frames 1) (- client-width 1))]
-           [v-scale-left (/ (/ half-h 2) left-display-max)]
-           [v-scale-right (/ (/ half-h 2) right-display-max)]
-           [upper-centerline (* 1/2 half-h)]
-           [lower-centerline (* 3/2 half-h)]
-           [offset-left-getter (lambda (i) (left-getter (+ i data-left)))]
-           [offset-right-getter (lambda (i) (right-getter (+ i data-left)))])
-      ;; basically, this is a rasterization problem.
-      ;; the very left and right edges are special cases.
-      ;; ... in fact, I'll just skip them for now :)
-      (define-values (a b c d)
-        (time-apply
-         (lambda ()
-           (for ([i (in-range 1 (- stop-pixel 1))])
-             (let ([raster-left (* h-scale (- i 1/2))]
-                   [raster-right (* h-scale (+ i 1/2))])
-               (let*-values ([(left-min left-max) 
-                              (rasterize-column offset-left-getter
-                                                raster-left raster-right)]
-                             [(right-min right-max) 
-                              (rasterize-column offset-right-getter
-                                                raster-left
-                                                raster-right)])
-                 (define (num->pixel/left n)
-                   (inexact->exact (floor (- upper-centerline (* v-scale-left n)))))
-                 (define (num->pixel/right n)
-                   (inexact->exact (floor (- lower-centerline (* v-scale-right n)))))
-                 (send dc draw-line
-                       (+ view-start-x i) (num->pixel/left left-max)
-                       (+ view-start-x i) (num->pixel/left left-min))
-                 (send dc draw-line
-                       (+ view-start-x i) (num->pixel/right right-max)
-                       (+ view-start-x i) (num->pixel/right right-min))))))
-         (list)))
-      (printf "time: ~s ~s ~s\n" b c d))))
+    (cond 
+      #;[(< (- (current-inexact-milliseconds) (unbox last-draw-time-box)) MIN-REDRAW-INTERVAL)
+       #f]
+      [else
+       (set-box! last-draw-time-box (current-inexact-milliseconds))
+       ;; the x position on the virtual canvas:
+       (define-values (view-start-x _1) (send canvas get-view-start))
+       ;; the width in pixels of the area to be drawn:
+       (define-values (client-width _2) (send canvas get-client-size))
+       ;; the total width of the virtual canvas:
+       (define-values (virtual-canvas-width _3) (send canvas get-virtual-size))
+       (define frames-per-pixel (/ vec-len virtual-canvas-width))
+       (define data-left (floor (* frames-per-pixel view-start-x)))
+       (define frames (floor (* frames-per-pixel client-width)))
+       ;; because of canvas resizing or zooming, the window may extend 
+       ;; beyond the edge of the sound. Stop at the 
+       (define proposed-data-right (+ data-left frames))
+       (define actual-data-right (min vec-len proposed-data-right))
+       (define stop-pixel (- (/ actual-data-right frames-per-pixel) view-start-x))
+       (let* ([h (- (send canvas get-height) 1)]
+              [half-h (floor (/ h 2))]
+              [h-scale (/ (- frames 1) (- client-width 1))]
+              [v-scale-left (/ (/ half-h 2) left-display-max)]
+              [v-scale-right (/ (/ half-h 2) right-display-max)]
+              [upper-centerline (* 1/2 half-h)]
+              [lower-centerline (* 3/2 half-h)]
+              [offset-left-getter (lambda (i) (left-getter (+ i data-left)))]
+              [offset-right-getter (lambda (i) (right-getter (+ i data-left)))])
+         ;; basically, this is a rasterization problem.
+         ;; the very left and right edges are special cases.
+         ;; ... in fact, I'll just skip them for now :)
+         (define-values (a b c d)
+           (time-apply
+            (lambda ()
+              (for ([i (in-range 1 (- stop-pixel 1))])
+                (let ([raster-left (* h-scale (- i 1/2))]
+                      [raster-right (* h-scale (+ i 1/2))])
+                  (let*-values ([(left-min left-max) 
+                                 (rasterize-column offset-left-getter
+                                                   raster-left raster-right)]
+                                [(right-min right-max) 
+                                 (rasterize-column offset-right-getter
+                                                   raster-left
+                                                   raster-right)])
+                    (define (num->pixel/left n)
+                      (inexact->exact (floor (- upper-centerline (* v-scale-left n)))))
+                    (define (num->pixel/right n)
+                      (inexact->exact (floor (- lower-centerline (* v-scale-right n)))))
+                    (send dc draw-line
+                          (+ view-start-x i) (num->pixel/left left-max)
+                          (+ view-start-x i) (num->pixel/left left-min))
+                    (send dc draw-line
+                          (+ view-start-x i) (num->pixel/right right-max)
+                          (+ view-start-x i) (num->pixel/right right-min))))))
+            (list)))
+         #f
+         #;(printf "time: ~s ~s ~s\n" b c d))])))
 
 
 
@@ -142,9 +154,22 @@
     (init-field right-getter)
     (init-field frames-per-pixel)
     
+    ;; given a number of frames per pixel, compute the required
+    ;; virtual canvas width
+    (define (fpp->virtual-width frames-per-pixel)
+      (ceiling (/ len frames-per-pixel)))
+    
+    (unless (positive-integer? len)
+      (raise-argument-error 'sound-canvas-init
+                            "positive integer" 0 len))
     (unless (< 0 frames-per-pixel)
       (raise-argument-error 'sound-canvas-init
                             "positive number" 0 frames-per-pixel))
+    (unless (dimension-integer?
+             (fpp->virtual-width frames-per-pixel))
+      (raise-argument-error 'sound-canvas-init
+                            "number implying legal canvas width"
+                            0 frames-per-pixel))
     
     (define cur-mouse-x 0)
     
@@ -180,49 +205,54 @@
       (define (pixel->frame x)
           (+ data-left (floor (* frames-per-pixel x))))
       
-      (cond #;[(send evt button-down?)
-             (set-frames-per-pixel! (ceiling (/ frames-per-pixel 2)))]
-            [else
-             (define x (min (max 0 (send evt get-x)) (- (get-client-width) 1)))
-             (define scaled-x (pixel->frame x))
-             (define y (send evt get-y))
-             (define y-val 
-               (cond [(< scaled-x len)
-                      (format-sample
-                       (if (> y (/ (get-height) 2))
-                           (right-getter scaled-x)
-                           (left-getter scaled-x)))]
-                     [else "undefined"]))
-             (define frame-num-str
-               (cond [(< scaled-x len) scaled-x]
-                     [else "undefined"]))
-             (send frame-num-text begin-edit-sequence #f)
-             (send frame-num-text erase)
-             (send frame-num-text insert
-                   (format "frame #: ~a" frame-num-str))
-             (send frame-num-text end-edit-sequence)
-             (send y-value-text begin-edit-sequence #f)
-             (send y-value-text erase)
-             (send y-value-text insert 
-                   (format "y value: ~a" y-val))
-             (send y-value-text end-edit-sequence)]))
+      (define x (min (max 0 (send evt get-x)) (- (get-client-width) 1)))
+      (define scaled-x (pixel->frame x))
+      (define y (send evt get-y))
+      (define y-val 
+        (cond [(< scaled-x len)
+               (format-sample
+                (if (> y (/ (get-height) 2))
+                    (right-getter scaled-x)
+                    (left-getter scaled-x)))]
+              [else "undefined"]))
+      (define frame-num-str
+        (cond [(< scaled-x len) scaled-x]
+              [else "undefined"]))
+      (send frame-num-text begin-edit-sequence #f)
+      (send frame-num-text erase)
+      (send frame-num-text insert
+            (format "frame #: ~a" frame-num-str))
+      (send frame-num-text end-edit-sequence)
+      (send y-value-text begin-edit-sequence #f)
+      (send y-value-text erase)
+      (send y-value-text insert 
+            (format "y value: ~a" y-val))
+      (send y-value-text end-edit-sequence))
     
     ;; change the frames-per-pixel (and reset the virtual width)
     (define (set-frames-per-pixel! fpp)
       (unless (< 0 fpp)
         (raise-argument-error 'set-frames-per-pixel!
                               "positive number" 0 fpp))
-      (set! frames-per-pixel fpp)
-      (reset-virtual-width!))
-    
-    ;; reset the virtual width based on the current frames-per-pixel
-    ;; (we'll have to get the scroll position right as well, soon)
-    (define (reset-virtual-width!)
-      (define virtual-width (ceiling (/ len frames-per-pixel)))
-      (init-auto-scrollbars virtual-width #f 0.0 0.0))
+      (define virtual-width (fpp->virtual-width fpp))
+      (cond [(dimension-integer? virtual-width)
+             (set! frames-per-pixel fpp)
+             ;; it would be lovely if the position of the 
+             ;; scroll-bar were set correctly here:
+             (init-auto-scrollbars virtual-width #f 0.0 0.0)]
+            [else
+             (message-box 
+              "Too Much Zoom!"
+              (string-append
+               "Zooming in to this level requires a virtual " 
+               "canvas size that the platform can't handle. "
+               "To zoom in further, cut the source data into "
+               "smaller pieces (e.g., using (clip ...))."))]))
     
     (super-new)
-    (reset-virtual-width!)
+    ;; this shouldn't fail, we checked it up above:
+    (init-auto-scrollbars (fpp->virtual-width frames-per-pixel)
+                          #f 0.0 0.0)
     ))
 
 
