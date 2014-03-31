@@ -63,7 +63,7 @@
        (define data-left (floor (* frames-per-pixel view-start-x)))
        (define frames (floor (* frames-per-pixel client-width)))
        ;; because of canvas resizing or zooming, the window may extend 
-       ;; beyond the edge of the sound. Stop at the 
+       ;; beyond the edge of the sound. Stop at the last real frame.
        (define proposed-data-right (+ data-left frames))
        (define actual-data-right (min vec-len proposed-data-right))
        (define stop-pixel (- (/ actual-data-right frames-per-pixel) view-start-x))
@@ -79,32 +79,27 @@
          ;; basically, this is a rasterization problem.
          ;; the very left and right edges are special cases.
          ;; ... in fact, I'll just skip them for now :)
-         (define-values (a b c d)
-           (time-apply
-            (lambda ()
-              (for ([i (in-range 1 (- stop-pixel 1))])
-                (let ([raster-left (* h-scale (- i 1/2))]
-                      [raster-right (* h-scale (+ i 1/2))])
-                  (let*-values ([(left-min left-max) 
-                                 (rasterize-column offset-left-getter
-                                                   raster-left raster-right)]
-                                [(right-min right-max) 
-                                 (rasterize-column offset-right-getter
-                                                   raster-left
-                                                   raster-right)])
-                    (define (num->pixel/left n)
-                      (inexact->exact (floor (- upper-centerline (* v-scale-left n)))))
-                    (define (num->pixel/right n)
-                      (inexact->exact (floor (- lower-centerline (* v-scale-right n)))))
-                    (send dc draw-line
-                          (+ view-start-x i) (num->pixel/left left-max)
-                          (+ view-start-x i) (num->pixel/left left-min))
-                    (send dc draw-line
-                          (+ view-start-x i) (num->pixel/right right-max)
-                          (+ view-start-x i) (num->pixel/right right-min))))))
-            (list)))
-         #f
-         #;(printf "time: ~s ~s ~s\n" b c d))])))
+         (for ([i (in-range 1 (- stop-pixel 1))])
+           (let ([raster-left (* h-scale (- i 1/2))]
+                 [raster-right (* h-scale (+ i 1/2))])
+             (let*-values ([(left-min left-max) 
+                            (rasterize-column offset-left-getter
+                                              raster-left raster-right)]
+                           [(right-min right-max) 
+                            (rasterize-column offset-right-getter
+                                              raster-left
+                                              raster-right)])
+               (define (num->pixel/left n)
+                 (inexact->exact (floor (- upper-centerline (* v-scale-left n)))))
+               (define (num->pixel/right n)
+                 (inexact->exact (floor (- lower-centerline (* v-scale-right n)))))
+               (send dc draw-line
+                     (+ view-start-x i) (num->pixel/left left-max)
+                     (+ view-start-x i) (num->pixel/left left-min))
+               (send dc draw-line
+                     (+ view-start-x i) (num->pixel/right right-max)
+                     (+ view-start-x i) (num->pixel/right right-min)))))
+         #f)])))
 
 
 
@@ -141,6 +136,10 @@
          [frac (- n fl)])
     (+ (* (- 1 frac) (get-sample fl)) (* frac (get-sample (+ fl 1))))))
 
+;; NB: DEFINING THIS TO MAINTAIN BACKWARD COMPATIBILITY WITH 5.3.6. DELETE
+;; AND REPLACE WITH JUST dimension-integer? WHEN NO LONGER REQUIRED.
+(define my-dimension-integer? (integer-in 0 1000000))
+
 ;; SOUND-CANVAS%
 ;;
 ;; the canvas that draws a sound
@@ -165,7 +164,7 @@
     (unless (< 0 frames-per-pixel)
       (raise-argument-error 'sound-canvas-init
                             "positive number" 0 frames-per-pixel))
-    (unless (dimension-integer?
+    (unless (my-dimension-integer?
              (fpp->virtual-width frames-per-pixel))
       (raise-argument-error 'sound-canvas-init
                             "number implying legal canvas width"
@@ -235,7 +234,7 @@
         (raise-argument-error 'set-frames-per-pixel!
                               "positive number" 0 fpp))
       (define virtual-width (fpp->virtual-width fpp))
-      (cond [(dimension-integer? virtual-width)
+      (cond [(my-dimension-integer? virtual-width)
              (set! frames-per-pixel fpp)
              ;; it would be lovely if the position of the 
              ;; scroll-bar were set correctly here:
