@@ -9,7 +9,8 @@
 (provide adsr
          #;adsr/exp
          envelope-signal
-         sine-window)
+         sine-window
+         hann-window)
 
 ;; unused, now...
 (define (straight-line frames a b)
@@ -138,4 +139,20 @@
   (check-= (rs-ith/right sw 3000) 1.0 1e-4)
   (check-= (rs-ith/right sw 3200) 0.5 1e-4)
   (check-= (rs-ith/right sw 3399) 0.0 1e-4)
+  )
+
+;; a "hann" window is a special case of the sine window where the fade-in is 
+;; followed immediately by the fade-out. In other words, the envelope is just
+;; a simple sine wave.
+(define (hann-window len)
+  (sine-window (floor (/ len 2)) (floor (/ len 2))))
+
+(module+ test
+  (define hw (hann-window 300))
+  (check-equal? (rs-frames hw) 300)
+  (check-= (rs-ith/left hw 0) 0.0 1e-4)
+  (check-= (rs-ith/left hw 75) 0.5 1e-4)
+  (check-= (rs-ith/right hw 150) 1.0 1e-4)
+  (check-= (rs-ith/right hw 225) 0.5 1e-4)
+  (check-= (rs-ith/left hw 299) (- 1.0 (cos (* 2 pi 1/300))) 1e-4)
   )
