@@ -129,6 +129,14 @@
                 (rs-ith/left o i)
                 1e-9)))
    
+   (let ()
+     (define n (noise 500))
+     (define o (rs-scale -0.75 n))
+     (for ([i 500])
+       (check-= (- (s16->real (truncate (* 0.75 (rs-ith/left/s16 n i)))))
+                (rs-ith/left o i)
+                1e-9)))
+   
    
    ;; vectors->rsound
    

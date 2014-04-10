@@ -217,7 +217,7 @@ These procedures allow the creation, analysis, and manipulation of rsounds.
  
  }
 
-@defproc[(rs-scale (scalar nonnegative-number?) (rsound rsound?)) rsound?]{
+@defproc[(rs-scale (scalar real?) (rsound rsound?)) rsound?]{
  Scale the given sound by multiplying all of its samples by the given scalar.}
 
 @defproc[(rearrange (length frames?) (mapping-fun procedure?) (rsound rsound?)) rsound?]{

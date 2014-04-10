@@ -29,7 +29,7 @@
                   s 9
                   11
                   50)
-    (for/and ([i (in-range 9 11)]
+    (for/and ([i (in-range 9 20)]
               [j (in-range 15 26)])
       (check-= (rs-ith/left t j)
                (+ 0.01 (rs-ith/left s i))
@@ -38,6 +38,24 @@
                (+ 0.01 (rs-ith/right s i))
                1e-3)))
   
+  
+  (let ()
+    
+    (define s (noise 50))
+    (define t (mono 50 t 0.01))
+    
+    (rs-copy-mult-add! (s16vector->cpointer (rsound-data t)) 15
+                  s 9
+                  11 50
+                  -0.5)
+    (for/and ([i (in-range 9 20)]
+              [j (in-range 15 26)])
+      (check-= (rs-ith/left t j)
+               (+ 0.01 (* -0.5 (rs-ith/left s i)))
+               1e-3)
+      (check-= (rs-ith/right t j)
+               (+ 0.01 (* -0.5 (rs-ith/right s i)))
+               1e-3)))
   
   (let ()
     
@@ -109,6 +127,7 @@
       (check-= (rs-ith/right t j)
                (+ 0.01 (rs-ith/right s i))
                1e-3)))
+  
   
   
   ))

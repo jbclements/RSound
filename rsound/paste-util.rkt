@@ -67,7 +67,7 @@
            src-offset 
            (+ src-offset copy-frames)
            (rs-frames src)))
-  (unless (and (number? factor) (<= 0 factor))
+  (unless (real? factor)
     (raise-argument-error 'rs-copy-mult-add! "nonnegative number" 6
                           tgt tgt-offset src src-offset copy-frames buf-frames factor))
   (define tgt-ptr (ptr-add tgt (frames->bytes tgt-offset)))

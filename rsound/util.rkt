@@ -129,8 +129,8 @@ rsound-max-volume
 ;; this uses C subroutines. It will behave badly when
 ;; clipping occurs (not crashy, but noisy)
 (define (rs-scale scalar rsound)
-  (unless (number? scalar)
-    (raise-argument-error 'rs-scale "number" 0 scalar rsound))
+  (unless (real? scalar)
+    (raise-argument-error 'rs-scale "real number" 0 scalar rsound))
   (unless (rsound? rsound)
     (raise-argument-error 'rs-scale "rsound" 1 scalar rsound))
   (define inexact-scalar (exact->inexact scalar))
