@@ -15,7 +15,8 @@
                   stream-play
                   stream-play/unsafe
                   s16vec-record
-                  host-api)
+                  host-api
+                  all-host-apis)
          racket/contract
          (only-in ffi/unsafe cpointer? ptr-set! _sint16 cast _pointer)
          ffi/vector
@@ -175,9 +176,11 @@
     [(windows) 0.06]
     [(macosx unix) 0.05]))
 
-;; set default API on windows to be WASAPI....
+;; set default API on windows to be WASAPI, if it's legal:
 (case (system-type)
-  [(windows) (host-api 'paWASAPI)]
+  [(windows) (cond [(member 'paWASAPI (all-host-apis)) 
+                    (host-api 'paWASAPI)]
+                   [else (void)])]
   [else (void)])
 
 
