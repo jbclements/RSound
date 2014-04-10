@@ -22,7 +22,7 @@
   
   (let ()
     
-    (define s (noise 50))
+    (define s (mono 50 t (* 0.1 (random))))
     (define t (mono 50 t 0.01))
     
     (rs-copy-add! (s16vector->cpointer (rsound-data t)) 15
