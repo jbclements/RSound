@@ -230,7 +230,7 @@ These procedures allow the creation, analysis, and manipulation of rsounds.
 
 For signal processing, RSound adopts a dataflow-like paradigm, where elements
 may be joined together to form a directed acyclic graph, which is itself an
-elemnt that can be joined together, and so forth. So, for instance,
+element that can be joined together, and so forth. So, for instance,
 you might have a sine wave generator connected to the amplitude input of
 another sine wave generator, and the result pass through a distortion filter. 
 Each node accepts a stream of inputs, and produces a stream of outputs. I will
@@ -686,12 +686,15 @@ for re-use. In particular, rsound uses samples of c3, c4, c5, and c6, and resamp
  number produces a low cutoff frequency. The input signal is the audio signal
  to be processed. For instance, here's a time-varying low-pass filtered sawtooth:
  
-@racketblock[
- (define (control f) (+ 0.5 (* 0.2 (sin (* f 7.123792865282977e-05)))))
- (define (sawtooth f) (/ (modulo f 220) 220))
 
- (play (signal->rsound 88200 (lpf/dynamic control sawtooth)))]
- 
+@racketblock[
+ (signal->rsound 
+ 88200 
+ (network ()
+          [f ((simple-ctr 0 1))] ;; the current frame
+          [sawtooth (/ (modulo f 220) 220)]
+          [control (+ 0.5 (* 0.2 (sin (* f 7.123792865282977e-05))))]
+          [out (lpf/dynamic control sawtooth)]))]
  }
 }
 
@@ -723,8 +726,15 @@ for re-use. In particular, rsound uses samples of c3, c4, c5, and c6, and resamp
  
  }
 
+@section{Helper Functions}
 
+@defproc[(nonnegative-integer? [v any]) boolean?]{
+ returns true for nonnegative integers.}
 
+@defproc[(positive-integer? [v any]) boolean?]{
+ returns true for strictly positive integers.}
+
+1
 @section{Configuration}
 
 

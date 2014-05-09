@@ -144,12 +144,12 @@
                      [control ((dc-signal 0.34))]
                      [out (lpf/dynamic control a)])
             199)
+           ;; doesn't work, because lpf/dynamic isn't a procedure any more:
            #;(rs-ith/left
             (signal->rsound 200 (lpf/dynamic (lambda (x) 0.34) (lambda (x) 0.5)))
             199)
            0.5
            1e-3)
-  
   
   
 (check-= ((coefficients->poly '(3.0 1.0 9.0)) 6.0+0.0i) ; 3(6^2)+1(6)+9
