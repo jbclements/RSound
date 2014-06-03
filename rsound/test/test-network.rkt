@@ -5,6 +5,8 @@
 
 (provide the-test-suite)
 
+;; REWRITING TO GET RID OF SIGNAL STRUCTURE ... ooh, no, init still not working.
+
 ;; angles are expressed in 44100ths of a circle....
 
 (define (wraparound angle)
@@ -22,13 +24,13 @@
 
 (define variable-pitch-oscillator
   (network (incr)
-           [angle (cyclic-angle incr (prev angle 0.0))]
-           [wave (lookup angle)]))
+           [angle = (cyclic-angle incr (prev angle 0.0))]
+           [wave = (lookup angle)]))
 
 (define mynet
   (network ()
-           [wave (variable-pitch-oscillator 440)]
-           [gain (* wave 0.1)]))
+           [wave <- variable-pitch-oscillator 440]
+           [gain =  (* wave 0.1)]))
 
 (define the-test-suite
   (test-suite
@@ -42,8 +44,8 @@
      ;; test case that exposes an old bug:
      (define testnet
        (network ()
-                (offby1 (+ 10 (prev offby1 0)))
-                (out ((lambda (i) i) (sub1 offby1)))))
+                [offby1 = (+ 10 (prev offby1 0))]
+                [out = ((lambda (i) i) (sub1 offby1))]))
      
      (define a (network-init testnet))
      
@@ -54,19 +56,19 @@
    
    (check-equal? 
     (signal-samples (network ()
-                             (out ((simple-ctr 10 -1))))
+                             (out <= (simple-ctr 10 -1)))
                     3)
     (vector 10 9 8))
    
    (let ()
      (define testnet 
        (network ()
-                (a1 ((simple-ctr 1 1)))
-                (b1 ((simple-ctr 4 3)))
-                (c1 ((simple-ctr 10 -1)))
-                (a2 (+ (* 2 a1) b1))
-                (b2 (+ a1 c1))
-                (a1 (- a2 b2))))
+                (a1 <= (simple-ctr 1 1))
+                (b1 <= (simple-ctr 4 3))
+                (c1 <= (simple-ctr 10 -1))
+                (a2 = (+ (* 2 a1) b1))
+                (b2 = (+ a1 c1))
+                (a1 = (- a2 b2))))
      (check-equal? (signal-samples testnet 3)
                    (vector -5 0 5)))
    
@@ -75,10 +77,10 @@
        (values idx (+ idx 1)))
      (define testnet 
        (network ()
-                (base-ctr ((simple-ctr 1 3)))
-                ((a b) (dual-counter base-ctr))
-                (c ((simple-ctr 10 -1)))
-                (out (- (* a c) b))))
+                [base-ctr <= (simple-ctr 1 3)]
+                [(a b) = (dual-counter base-ctr)]
+                [c <= (simple-ctr 10 -1)]
+                [out = (- (* a c) b)]))
      (check-equal? (signal-samples testnet 3)
                    (vector 8 31 48)))
    
@@ -88,8 +90,8 @@
        (values (+ 1 a) (+ 2 b) (+ 3 c)))
      (define testnet
        (network ()
-                [(a b c) (addall (prev a 3) (prev b 18) (prev c 9))]
-                [d (+ a b c)]))
+                [(a b c) = (addall (prev a 3) (prev b 18) (prev c 9))]
+                [d = (+ a b c)]))
      
      (check-equal? (signal-samples testnet 3)
                    (vector (+ 4 20 12)
@@ -102,36 +104,22 @@
        (values (+ 1 a) (+ 2 b) (+ 3 c)))
      (define testnet
        (network ()
-                [(a b c) (addall (prev a 0) (prev b 0) (prev c 0))]
-                [d (+ a b c)]))
+                [(a b c) = (addall (prev a 0) (prev b 0) (prev c 0))]
+                [d = (+ a b c)]))
      
      (check-equal? (signal-samples testnet 3)
                    (vector (+ 1 2 3)
                            (+ 2 4 6)
                            (+ 3 6 9))))
    
-   ;; syntax error:
-   #;(let ()
-     ;; multi-init fail
-     (define (addall a b c)
-       (values (+ 1 a) (+ 2 b) (+ 3 c)))
-     (define testnet
-       (network ()
-                [(a b c) (addall (prev a) (prev b) (prev c))
-                         #:init (1 2)]
-                [d (+ a b c)]))
-     
-       13)
-     
-     
    
    (let ()
      
      ;; try out new "init"
      (define testnet
        (network ()
-                (a (add1 (prev a 147)))
-                (b (+ a a))))
+                [a = (add1 (prev a 147))]
+                [b = (+ a a)]))
      
      (define a (network-init testnet))
      (check-equal? (a) (* 148 2))
@@ -152,8 +140,8 @@
    
    (let ()
      (define ctr1 (network ()
-                           [incrs ((simple-ctr 0 1))]
-                           [out ((loop-ctr/variable 34) incrs)]))
+                           [incrs <= (simple-ctr 0 1)]
+                           [out <= (loop-ctr/variable 34) incrs]))
      (define sigfun (network-init ctr1))
      (check-equal? (sigfun) 0)
      (check-equal? (sigfun) 0)
@@ -193,7 +181,7 @@
    ;; fixed-inputs
    (let ()
      
-     (define net (network (a b c) [out (+ a b)]))
+     (define net (network (a b c) [out = (+ a b)]))
      (define sig (fixed-inputs net 3 14 "hello"))
      (check-equal? (signal-samples sig 4)
                    (vector 17 17 17 17)))
@@ -202,8 +190,8 @@
    (let ()
      
      (define net (network () 
-                          [ctr ((simple-ctr 4 0.5))]
-                          [tapped ((tap 3 #f) ctr)]))
+                          [ctr <= (simple-ctr 4 0.5)]
+                          [tapped <= (tap 3 #f) ctr]))
      (check-equal? (signal-samples net 5)
                    (vector #f #f #f 4 4.5)))
    

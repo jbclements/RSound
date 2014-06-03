@@ -691,10 +691,10 @@ for re-use. In particular, rsound uses samples of c3, c4, c5, and c6, and resamp
  (signal->rsound 
  88200 
  (network ()
-          [f ((simple-ctr 0 1))] ;; the current frame
+          [f <- (simple-ctr 0 1)] ;; the current frame
           [sawtooth (/ (modulo f 220) 220)]
           [control (+ 0.5 (* 0.2 (sin (* f 7.123792865282977e-05))))]
-          [out (lpf/dynamic control sawtooth)]))]
+          [out <- lpf/dynamic control sawtooth]))]
  }
 }
 

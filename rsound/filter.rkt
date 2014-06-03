@@ -209,8 +209,7 @@
 
 ;; dynamic low-pass filter: the first argument is a signal that controls
 ;; the filter cutoff, the second is the signal being filtered.
-(define lpf/dynamic
-  
+(define lpf/dynamic  
   (network (lpf-control audio-sig)
            [(fir-terms iir-terms gain) (lpf-sig lpf-control)]
            [out ((dynamic-lti-signal 4) fir-terms iir-terms gain audio-sig)]))
