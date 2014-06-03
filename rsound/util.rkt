@@ -302,25 +302,25 @@ rsound-max-volume
 ;; indexed-signal : (idx -> sample) -> signal
 (define (indexed-signal fun)
   (network ()
-           (idx ((simple-ctr 0 1)))
-           (out (fun idx))))
+           [idx <= (simple-ctr 0 1)]
+           [out = (fun idx)]))
 
 ;; SYNTHESIS OF SINE WAVES
 
 (define sine-wave
   (network (pitch)
-           [angle (prev added 0.0)]
-           [added (angle-add angle (* pitch TPSRINV))]
-           [output (sin angle)]))
+           [angle = (prev added 0.0)]
+           [added = (angle-add angle (* pitch TPSRINV))]
+           [output = (sin angle)]))
 
 ;; SYNTHESIS OF THREE-PARTIAL SINE
 
 (define harm3-wave
   (network (pitch)
-           (ctr ((simple-ctr 0 SRINV)))
-           (out (+ (sin (* twopi pitch ctr))
-                   (* 0.5 (sin (* twopi 2.0 pitch ctr)))
-                   (* 0.25 (sin (* twopi 3.0 pitch ctr)))))))
+           (ctr <= (simple-ctr 0 SRINV))
+           (out = (+ (sin (* twopi pitch ctr))
+                     (* 0.5 (sin (* twopi 2.0 pitch ctr)))
+                     (* 0.25 (sin (* twopi 3.0 pitch ctr)))))))
 
 
 ;; SYNTHESIS OF SAWTOOTH WAVES:
@@ -332,9 +332,9 @@ rsound-max-volume
       (cond [(< next 1.0) next]
             [else (- next 2.0)]))
     (network (pitch)
-             [b (prev a 0.0)]
-             [a (increment b pitch)]
-             [out b])))
+             [b   = (prev a 0.0)]
+             [a   = (increment b pitch)]
+             [out = b])))
 
 #;(define (sawtooth-wave pitch)
   (when (< (/ SR 2) pitch)
@@ -348,9 +348,9 @@ rsound-max-volume
     (cond [(< next 1.0) next]
           [else (- next 2.0)]))
   (network ()
-           [b (prev a 0.0)]
-           [a (increment b)]
-           [out b]))
+           [b   = (prev a 0.0)]
+           [a   = (increment b)]
+           [out = b]))
 
 
 ;; a memoized 20-term sawtooth; it'll be slow if you don't hit the 
@@ -373,9 +373,9 @@ rsound-max-volume
 ;; also, the angle goes 
 (define pulse-wave
   (network (duty-cycle pitch)
-           [angle (prev added 0.0)]
-           [added (angle-add/unit angle (* pitch SRINV))]
-           [out (pulse-wave-thresh angle duty-cycle)]))
+           [angle = (prev added 0.0)]
+           [added = (angle-add/unit angle (* pitch SRINV))]
+           [out <= pulse-wave-thresh angle duty-cycle]))
 
 ;; add args, subtract 2pi if greater than 2pi. assumes all values
 ;; are positive, and that the sum can't be greater than 4pi
@@ -399,7 +399,7 @@ rsound-max-volume
 
 (define square-wave 
   (network (pitch)
-           [out (pulse-wave 0.5 pitch)]))
+           [out <= pulse-wave 0.5 pitch]))
 
 ;; create a looping signal from the left channel of an rsound
 ;; no interpolation, just flooring.
@@ -411,14 +411,14 @@ rsound-max-volume
                           0 wt))
   (define (fetch s) (rs-ith/left wt (inexact->exact (floor s))))
   (network (vol pitch)
-           [idx ((loop-ctr/variable SR) pitch)]
-           [out (* vol (fetch idx))]))
+           [idx <= (loop-ctr/variable SR) pitch]
+           [out = (* vol (fetch idx))]))
 
 ;;fader : frames -> signal
 (define (fader fade-frames)
   (let ([p (expt 0.001 (/ 1 fade-frames))])
     (network ()
-             (out (* p (prev out 1.0))))))
+             (out = (* p (prev out 1.0))))))
 
 ;; frisellinator : frames -> signal
 (define (frisellinator intro-frames)
@@ -430,24 +430,24 @@ rsound-max-volume
 ;; multiply two signals together
 (define (signal-* a b)
   (network ()
-           [a-out (a)]
-           [b-out (b)]
-           (out (* a-out b-out))))
+           [a-out <= a]
+           [b-out <= b]
+           (out = (* a-out b-out))))
 
 ;; add two signals together
 (define (signal-+ a b)
   (network ()
-           (a-out (a))
-           (b-out (b))
-           (out (+ a-out b-out))))
+           (a-out <= a)
+           (b-out <= b)
+           (out = (+ a-out b-out))))
 
 ;; given a number and a signal, scale the number by the signal
 ;; this can be done using signal-* and dc-signal, but this
 ;; turns out to be a lot faster
 (define (sig-scale volume signal)
   (network ()
-           (s (signal))
-           (out (* volume s))))
+           (s <= signal)
+           (out = (* volume s))))
 
 ;; convert a wavefun into a tone-maker; basically just keep a hash table
 ;; of previously generated sounds.
@@ -567,8 +567,8 @@ rsound-max-volume
        (cond [(< idx on-samples) up]
              [else down]))
      (network ()
-              (idx ((loop-ctr total-samples 1)))
-              (out (hi-lo idx))))))
+              (idx <= (loop-ctr total-samples 1))
+              (out = (hi-lo idx))))))
 
 (define (make-ding pitch)
   (parameterize ([default-sample-rate SR])
@@ -704,16 +704,16 @@ rsound-max-volume
           [else abs-threshold]))
   ;; this pattern is looking very abstract-able...
   (network ()
-           (base (signal))
-           (out (limit-fun base))))
+           (base <= signal)
+           (out = (limit-fun base))))
 
 ;; scale : number signal -> signal
 ;; scale the signal by the given number
 (define (signal-scale volume signal)
   (define mult (lambda (s) (* volume s)))
   (network ()
-           (s (signal))
-           (out (mult s))))
+           (s <= signal)
+           (out = (mult s))))
 
 ;; clip&volume : number signal -> signal
 ;; clip the given signal to 1.0, then multiply by the volume.

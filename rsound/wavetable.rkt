@@ -35,8 +35,8 @@
   (define skip-rate (inexact->exact (round relative-pitch)))
   (define index-net (loop-ctr wavetable-build-sample-rate skip-rate))
   (network ()
-           (idx (index-net))
-           (out (flvector-ref vec idx))))
+           (idx <= index-net)
+           (out = (flvector-ref vec idx))))
 
 ;; this is independent, but it should be nice and high to get 
 ;; good wavetables

@@ -10,15 +10,10 @@
 
 (define ps (make-pstream))
 
-(define (network-apply n constant)
-  (network ()
-     [o (n constant)]))
-
 (define (g p)
   (pstream-play ps 
                 (signal->rsound 44100 
-                                (signal-scale 0.2 (network-apply
-                                                   harm3-wave p)))))
+                                (signal-scale 0.2 (fixed-inputs harm3-wave p)))))
 (define kbd-frame
   (new frame% [label "foo"]
        [width 200]

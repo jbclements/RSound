@@ -252,14 +252,17 @@ A node that takes one input is called a @deftech{filter}.
                   network-clause
                   ...)
          #:grammar
-         [(in identifier?)
-          (network-clause [node-label = expression?]
-                          [node-label <= network expression? ...])
+         [(in identifier)
+          (network-clause [node-label = expression]
+                          [node-label <= network expression ...]
+                          [(node-label ...) = expression]
+                          [(node-label ...) <= network expression ...])
           (node-label identifier)]]{
  Produces a network. The @racket[in] names specify input arguments to the
  network.  Each network clause describes a node.  Each node must have a 
  label, which may be used later to refer to the value that is the result 
- of that node. 
+ of that node. Multiple labels are used for clauses that produce multiple
+ values.
  
  There are two kinds of clause. A clause that uses @racket[=] simply gives
  the name to the result of evaluating the right-hand-side expression. A clause
@@ -267,7 +270,7 @@ A node that takes one input is called a @deftech{filter}.
  inputs to the given network.
  
  The special @racket[(prev node-label init-val)] form may be used to refer
- to the previous value of the corresponding node. It's fine to have "forward"
+ to the previous value of the corresponding node. It's fine to have ``forward''
  references to clauses that haven't been evaluated yet. 
  
  The final clause's node
@@ -312,13 +315,6 @@ a sample rate of 44.1KHz:
               [b <= sine-wave 46]
               [out = (+ a b)]))]
 
-Several things to note:
-@itemlist[@item{a network can have many clauses; each clause contains a name and a right-hand-side.}
-           @item{a right-hand-side must be a constant, or an application, either of a primitive function or of a network.}
-           @item{the last clause is used as the output, regardless of its name.}
-           @item{clauses can produce multiple values; in this case, the name is replaced by a parenthesized list.}
-          ]
-
 In order to use a signal with @racket[signal-play], it should produce a real number in the range @racket[-1.0] to @racket[1.0].
 
 Here's an example that uses one sine-wave (often called an "LFO") to control the pitch of another one:
@@ -343,18 +339,18 @@ Also note that all of these assume a fixed sample rate of 44.1 KHz.
 
 @defproc[#:kind "signal"
                 (sine-wave [frequency nonnegative-number?]) real?]{
- Produces a signal representing a sine wave of the given
+ A signal representing a sine wave of the given
  frequency, at the default sample rate, of amplitude 1.0.}
 
 @defproc[#:kind "signal"
                 (sawtooth-wave [frequency nonnegative-number?]) real?]{
- Produces a signal representing a naive sawtooth wave of the given
+ A signal representing a naive sawtooth wave of the given
  frequency, of amplitude 1.0. Note that since this is a simple -1.0 up to 1.0 sawtooth wave, it's got horrible 
  aliasing all over the spectrum.}
 
 @defproc[#:kind "signal"
                 (square-wave [frequency nonnegative-number?]) real?]{
- Produces a signal representing a naive square wave of the given
+ A signal representing a naive square wave of the given
  frequency, of amplitude 1.0, at the default sample rate. It alternates
  between 1.0 and 0.0, which makes it more useful in, e.g., gating 
  applications.
@@ -364,7 +360,7 @@ Also note that all of these assume a fixed sample rate of 44.1 KHz.
 
 @defproc[#:kind "signal"
                 (pulse-wave [duty-cycle real?] [frequency nonnegative-number?]) real?]{
- Produces a signal representing a "pulse wave", with part of the signal at 1.0 and
+ A signal representing a "pulse wave", with part of the signal at 1.0 and
  the rest of the signal at 0.0. The @racket[duty-cycle] determines the fraction of the
  cycle that is 1.0. So, for instance, when @racket[duty-cycle] is 0.5, the result is
  a square wave.
@@ -372,8 +368,10 @@ Also note that all of these assume a fixed sample rate of 44.1 KHz.
 
 @defproc[#:kind "signal"
                 (dc-signal [amplitude real?]) real?]{
- Produces a constant signal at @racket[amplitude]. Inaudible unless used to multiply by
+ A constant signal at @racket[amplitude]. Inaudible unless used to multiply by
  another signal.}
+
+The following are functions that @emph{return} signals.
 
 @defproc[(simple-ctr [init real?] [skip real?]) signal?]{
  Produces a signal whose value starts at @racket[init] and increases by @racket[skip]
@@ -387,8 +385,6 @@ Also note that all of these assume a fixed sample rate of 44.1 KHz.
  Produces a signal whose value starts at 0.0 and increases by @racket[skip]
  at each frame, subtracting @racket[len] when the value rises above @racket[len]. In
  this case, the @racket[skip] value is supplied dynamically.}
-
-
 
 In order to listen to them, you can transform them into rsounds, or play them directly:
 
