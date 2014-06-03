@@ -435,13 +435,20 @@ There are several functions that produce signals.
 
 
 
-There are also a number of functions that combine existing signals, called "signal combinators":
+There are also a number of functions that combine existing signals, 
+called "signal combinators":
+
+@defproc[(signal+ [a signal?] [b signal?]) signal?]{
+ Produces the signal that is the sum of the two input signals.}
 
 @defproc[(signal-+s [signals (listof signal?)]) signal?]{
- Produces the signal that is the sum of the input signals.}
+ Produces the signal that is the sum of the list of input signals.}
+
+@defproc[(signal* [a signal?] [b signal?]) signal?]{
+ Produces the signal that is the product of the two input signals.}
 
 @defproc[(signal-*s [signals (listof signal?)]) signal?]{
- Produces the signal that is the product of the input signals.}
+ Produces the signal that is the product of the list of input signals.}
 
 We can turn an rsound back into a signal, using rsound->signal:
 
