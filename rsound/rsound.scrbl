@@ -249,22 +249,28 @@ converted to rsounds, using @racket[signal->rsound] or @racket[signals->rsound].
 A node that takes one input is called a @deftech{filter}.
 
 @defform[(network (in ...)
-                  [node-label node]
+                  network-clause
                   ...)
          #:grammar
          [(in identifier?)
-          (node-label identifier)
-          (node (network-or-proc node-arg ...)
-                expression?)
-          (network-or-proc expression?)
-          (node-arg node-label
-                    (prev node-label)
-                    expression?)]]{
+          (network-clause [node-label = expression?]
+                          [node-label <= network expression? ...])
+          (node-label identifier)]]{
  Produces a network. The @racket[in] names specify input arguments to the
  network.  Each network clause describes a node.  Each node must have a 
  label, which may be used later to refer to the value that is the result 
- of that node. The special @racket[(prev ...)] form may be used to refer
- to the previous value of the corresponding node. The final clause's node
+ of that node. 
+ 
+ There are two kinds of clause. A clause that uses @racket[=] simply gives
+ the name to the result of evaluating the right-hand-side expression. A clause
+ that uses @racket[<=] evaluates the input expressions, and uses them as 
+ inputs to the given network.
+ 
+ The special @racket[(prev node-label init-val)] form may be used to refer
+ to the previous value of the corresponding node. It's fine to have "forward"
+ references to clauses that haven't been evaluated yet. 
+ 
+ The final clause's node
  is used as the output of the network.
  
  The @racket[network] form is useful because it manages the initialization
@@ -280,7 +286,7 @@ Here's the same signal, written using @racket[network]:
 
 @racketblock[
 (network ()
-         [out 3])]
+         [out = 3])]
 
 This is the signal that always produces 3.
 
@@ -289,7 +295,7 @@ Here's another one, that counts upward:
 @racketblock[
 (define counter/sig
   (network ()
-           [counter (+ 1 (prev counter 0))]))]
+           [counter = (+ 1 (prev counter 0))]))]
 
 The @racket[prev] form is special, and is used to refer to the prior value of the
 signal component.
@@ -301,10 +307,10 @@ a sample rate of 44.1KHz:
 
 @racketblock[
 (define sum-of-sines
-  (network ()
-           [a (sine-wave 34)]
-           [b (sine-wave 46)]
-           [out (+ a b)]))]
+     (network ()
+              [a <= sine-wave 34]
+              [b <= sine-wave 46]
+              [out = (+ a b)]))]
 
 Several things to note:
 @itemlist[@item{a network can have many clauses; each clause contains a name and a right-hand-side.}
@@ -320,9 +326,9 @@ Here's an example that uses one sine-wave (often called an "LFO") to control the
 @racketblock[
 (define vibrato-tone
   (network ()
-           [lfo (sine-wave 2)]
-           [sin (sine-wave (+ 400 (* 50 lfo)))]
-           [out (* 0.1 sin)]))
+           [lfo <= sine-wave 2]
+           [sin <= sine-wave (+ 400 (* 50 lfo))]
+           [out = (* 0.1 sin)]))
 (signal-play vibrato-tone)
 (sleep 5)
 (stop)
@@ -396,8 +402,8 @@ In order to listen to them, you can transform them into rsounds, or play them di
  @racketblock[
 (define sig1
   (network ()
-           [a (sine-wave 560)]
-           [out (* 0.1 a)]))
+           [a <= sine-wave 560]
+           [out = (* 0.1 a)]))
 
 (define r (signal->rsound 44100 sig1))
 
@@ -691,10 +697,10 @@ for re-use. In particular, rsound uses samples of c3, c4, c5, and c6, and resamp
  (signal->rsound 
  88200 
  (network ()
-          [f <- (simple-ctr 0 1)] ;; the current frame
-          [sawtooth (/ (modulo f 220) 220)]
-          [control (+ 0.5 (* 0.2 (sin (* f 7.123792865282977e-05))))]
-          [out <- lpf/dynamic control sawtooth]))]
+          [f <= (simple-ctr 0 1)] ;; the current frame
+          [sawtooth = (/ (modulo f 220) 220)]
+          [control = (+ 0.5 (* 0.2 (sin (* f 7.123792865282977e-05))))]
+          [out <= lpf/dynamic control sawtooth]))]
  }
 }
 
@@ -791,17 +797,17 @@ square-wave tones. This one runs in the Intermediate student language:
        (cond [(= l 0) (+ lo-f (random freq-range))]
              [else f]))]
     (network ()
-             [looper ((loop-ctr change-interval 1))]
-             [freq (maybe-change (prev freq 400) looper)]
-             [a (square-wave freq)])))
+             [looper <= (loop-ctr change-interval 1)]
+             [freq = (maybe-change (prev freq 400) looper)]
+             [a = square-wave freq])))
 
 (define my-signal
   (network ()
-           [a ((scrobble 4000 200 600))]
-           [b ((scrobble 40000 100 200))]
-           [lpf-wave (sine-wave 0.1)]
-           [c (lpf/dynamic (max 0.01 (abs (* 0.5 lpf-wave))) (+ a b))]
-           [b (* c 0.1)]))
+           [a <= (scrobble 4000 200 600)]
+           [b <= (scrobble 40000 100 200)]
+           [lpf-wave <= sine-wave 0.1]
+           [c <= lpf/dynamic (max 0.01 (abs (* 0.5 lpf-wave))) (+ a b)]
+           [b = (* c 0.1)]))
 
 ;; write 20 seconds to a file, if uncommented:
 ; (rs-write (signal->rsound (* 20 44100) my-signal) "/tmp/foo.wav")
@@ -829,14 +835,14 @@ racket
 ;; a signal that plays from a waveform:
 (define loop-sig
   (network (pitch)
-    [i (maybe-wrap (+ (prev i 0) (round pitch)))]
-    [out (rs-ith/left waveform i)]))
+    [i = (maybe-wrap (+ (prev i 0) (round pitch)))]
+    [out = (rs-ith/left waveform i)]))
 
 (signal-play
  (network ()
-   [alternator (square-wave 2)]
-   [s (loop-sig (+ (* 200 (inexact->exact alternator)) 400))]
-   [out (* s 0.1)]))
+   [alternator <= square-wave 2]
+   [s <= loop-sig (+ (* 200 (inexact->exact alternator)) 400)]
+   [out = (* s 0.1)]))
 )
 
 

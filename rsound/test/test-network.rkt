@@ -29,7 +29,7 @@
 
 (define mynet
   (network ()
-           [wave <- variable-pitch-oscillator 440]
+           [wave <= variable-pitch-oscillator 440]
            [gain =  (* wave 0.1)]))
 
 (define the-test-suite
@@ -164,7 +164,7 @@
    (check-equal? (signal? (lambda () 14)) #t)
    (check-equal? (signal? (lambda (x y) 14)) #f)
    (check-equal? (signal? (lambda args 14)) #t)
-   (check-equal? (signal? (network () (out 3))) #t)
+   (check-equal? (signal? (network () [out = 3])) #t)
    
    ;; signal-+s
    
