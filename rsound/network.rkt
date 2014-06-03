@@ -53,7 +53,8 @@
 (define-syntax (network/inr stx)
   (define-syntax-class network-clause
     #:description "network/inr clause"
-    (pattern ((out:id ...) (node:expr input:expr ...))))
+    (pattern ((out:id ...) <= node:expr input:expr ...))
+    (pattern ((out:id ...) = rhs:expr)))
   (syntax-parse stx
     [(_ (in:id ...)
         clause:network-clause ...+)
@@ -69,7 +70,7 @@
            (syntax-parse (car (reverse lhses))
              [(out:id) #'out]
              [(out:id out2:id ...+) #'(values out out2 ...)])])
-       (with-syntax 
+       (with-syntax
            (;; this one just reduces to the init:
             [init-prev
              #`(lambda (stx)
@@ -137,7 +138,7 @@
   (define-syntax-class network-clause
     #:description "network clause"
     #:literals (prev)
-    (pattern (outs:oneormoreids rhs:rhs)))
+    (pattern (outs:oneormoreids connector:id rhs:rhs)))
   ;; right here: split rewrite into two functions!
   (define (ensure-parens ids)
     (syntax-parse ids
@@ -150,23 +151,15 @@
       [(prev named:id init:expr) #'((lambda (x) x) (prev named init))]
       [(node:expr input:expr ...) #'(node input ...)]
       [node:expr #'((lambda (x) x) node)]))
-  (define (rewrite clause)
-    (syntax-parse clause
-      [(out1a:id  (node:expr input:expr ...))
-       #'((out1a) (node input ...))]
-      [(out1b:id  node:expr)
-       #'((out1b) ((lambda (x) x) node))]
-      [((out*a:id ...) (node:expr input:expr ...))
-       #'((out*a ...) (node input ...))]))
   (syntax-parse stx
     [(_ (in:id ...)
         clause:network-clause ...+)
      (with-syntax ([((outs ...) ...)
                     (map ensure-parens (syntax->list #'(clause.outs ...)))]
-                   [(rhs ...)
+                   #;[(rhs ...)
                     (map maybe-wrap (syntax->list #'(clause.rhs ...)))])
        #'(network/inr (in ...)
-                      [(outs ...) rhs] ...))])
+                      [(outs ...) clause.connector clause.rhs] ...))])
   )
 
 
@@ -185,7 +178,7 @@
 (define-syntax (fixed-inputs stx)
   (syntax-parse stx
     [(_ net arg ...)
-     #'(network () [out (net arg ...)])]))
+     #'(network () [out <= (net arg ...)])]))
 
 ;; multiply the signals together:
 (define (signal-*s los)
@@ -213,9 +206,9 @@
     (cond [(< next-p len) next-p]
           [else (- next-p len)]))
   (network ()
-           [a (prev b 0)]
-           [b (increment a)]
-           [out a]))
+           [a = (prev b 0)]
+           [b = (increment a)]
+           [out = a]))
 
 ;; a simple signal that starts at 0 and increments by "skip"
 ;; until it passes "len", then jumps back by "len", but "skip"
@@ -226,17 +219,17 @@
     (cond [(< next-p len) next-p]
           [else (- next-p len)]))
   (network (skip)
-           [a (prev b 0)]
-           [b (increment a skip)]
-           [out a]))
+           [a = (prev b 0)]
+           [b = (increment a skip)]
+           [out = a]))
 
 ;; a signal that simply starts at "init"  and adds "skip"
 ;; each time
 (define (simple-ctr init skip)
   (network ()
-           [a (prev b init)]
-           [b (+ skip a)]
-           [out a]))
+           [a = (prev b init)]
+           [b = (+ skip a)]
+           [out = a]))
 
 
 ;; a vector containing the first 'n' samples of a signal
