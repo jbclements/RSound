@@ -588,30 +588,6 @@ Plays a signal/block/unsafe.
  Returns the midi note number that corresponds to a given frequency (in Hz). Inverse of the previous function.
 }
 
-@defproc[(fir-filter [delay-lines (listof (list/c nonnegative-exact-integer? real-number?))]) procedure?]{
- Given a list of delay times (in frames) and amplitudes for each, produces a function that maps signals
- to new signals where each frame is the sum of the current signal frame and the multiplied versions of 
- the delayed @emph{input} signals (that's what makes it FIR).
- 
- So, for instance,
- 
- @racketblock[(fir-filter (list (list 13 0.4) (list 4 0.1)))]
- 
- ...would produce a filter that added the current frame to 4/10 of the input frame 13 frames ago and 1/10 of
- the input frame 4 frames ago.}
-
-@defproc[(iir-filter [delay-lines (listof (list/c nonnegative-exact-integer? real-number?))]) procedure?]{
- Given a list of delay times (in frames) and amplitudes for each, produces a function that maps signals
- to new signals where each frame is the sum of the current signal frame and the multiplied versions of 
- the delayed @emph{output} signals (that's what makes it IIR).
- 
- So, for instance,
- 
- @racketblock[(iir-filter (list (list 13 0.4) (list 4 0.1)))]
- 
- ...would produce a filter that added the current frame to 4/10 of the output frame 13 frames ago and 1/10 of
- the output frame 4 frames ago.}
-
 @section{Piano Tones}
 
 @defmodule[rsound/piano-tones]{
@@ -689,7 +665,55 @@ for re-use. In particular, rsound uses samples of c3, c4, c5, and c6, and resamp
 
 @defmodule[rsound/filter]{
  This module provides a dynamic low-pass filter, among other things.
+
+
+
+@defproc[(fir-filter [delay-lines (listof (list/c nonnegative-exact-integer? real-number?))]) network?]{
+ Given a list of delay times (in frames) and amplitudes for each, produces a function that maps signals
+ to new signals where each frame is the sum of the current signal frame and the multiplied versions of 
+ the delayed @emph{input} signals (that's what makes it FIR).
  
+ So, for instance,
+ 
+ @racketblock[(fir-filter (list (list 13 0.4) (list 4 0.1)))]
+ 
+ ...would produce a filter that added the current frame to 4/10 of the input frame 13 frames ago and 1/10 of
+ the input frame 4 frames ago.
+ }
+
+@defproc[(iir-filter [delay-lines (listof (list/c nonnegative-exact-integer? real-number?))]) network?]{
+ Given a list of delay times (in frames) and amplitudes for each, produces a function that maps signals
+ to new signals where each frame is the sum of the current signal frame and the multiplied versions of 
+ the delayed @emph{output} signals (that's what makes it IIR).
+ 
+ So, for instance,
+ 
+ @racketblock[(iir-filter (list (list 13 0.4) (list 4 0.1)))]
+ 
+ ...would produce a filter that added the current frame to 4/10 of the output 
+ frame 13 frames ago and 1/10 of the output frame 4 frames ago.
+ 
+ Here's an example of code that uses a simple comb 
+ filter to extract a 3-second buzzing sound at 
+ 300 Hz from noise:
+ 
+@#reader scribble/comment-reader
+(racketblock
+(define comb-level 0.99)
+
+(play
+ (signal->rsound
+  (* 44100 3)
+  (network ()
+           [r = (random)]    ;; a random number from 0 to 1
+           [r2 = (* r 0.1)]  ;; scaled to make it less noisy
+                             ;; apply the comb filter:
+           [o2 <= (iir-filter (list (list 147 comb-level))) r]
+                             ;; compensate for the filter's gain:
+           [out = (* (- 1 comb-level) o2)])))
+)
+}
+
 @defproc[(lpf/dynamic [control signal?] [input signal?]) signal?]{
  The control signal must produce real numbers in the range 0.01 to 3.0. A small
  number produces a low cutoff frequency. The input signal is the audio signal
