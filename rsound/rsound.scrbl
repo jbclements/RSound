@@ -767,7 +767,6 @@ for re-use. In particular, rsound uses samples of c3, c4, c5, and c6, and resamp
 @defproc[(positive-integer? [v any]) boolean?]{
  returns true for strictly positive integers.}
 
-1
 @section{Configuration}
 
 
