@@ -755,6 +755,11 @@ for re-use. In particular, rsound uses samples of c3, c4, c5, and c6, and resamp
 @defproc[(synth-note/raw [family string?] [spec number-or-path?] [midi-note-number natural?] [duration natural?])
          rsound]{
  Same as above, but no envelope is applied.}
+
+@defproc[(synth-waveform [family string?] [spec number-or-path?])
+         rsound]{
+ Given a family and a spec, produce an rsound representing the waveform; that is, a one-second-long,
+ 1 Hz tone.}
  
  
  }
