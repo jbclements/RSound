@@ -136,10 +136,6 @@
          [frac (- n fl)])
     (+ (* (- 1 frac) (get-sample fl)) (* frac (get-sample (+ fl 1))))))
 
-;; NB: DEFINING THIS TO MAINTAIN BACKWARD COMPATIBILITY WITH 5.3.6. DELETE
-;; AND REPLACE WITH JUST dimension-integer? WHEN NO LONGER REQUIRED.
-(define my-dimension-integer? (integer-in 0 1000000))
-
 ;; SOUND-CANVAS%
 ;;
 ;; the canvas that draws a sound
@@ -164,7 +160,7 @@
     (unless (< 0 frames-per-pixel)
       (raise-argument-error 'sound-canvas-init
                             "positive number" 0 frames-per-pixel))
-    (unless (my-dimension-integer?
+    (unless (dimension-integer?
              (fpp->virtual-width frames-per-pixel))
       (raise-argument-error 'sound-canvas-init
                             "number implying legal canvas width"
@@ -234,7 +230,7 @@
         (raise-argument-error 'set-frames-per-pixel!
                               "positive number" 0 fpp))
       (define virtual-width (fpp->virtual-width fpp))
-      (cond [(my-dimension-integer? virtual-width)
+      (cond [(dimension-integer? virtual-width)
              (set! frames-per-pixel fpp)
              ;; it would be lovely if the position of the 
              ;; scroll-bar were set correctly here:
