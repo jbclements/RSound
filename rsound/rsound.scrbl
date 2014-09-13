@@ -337,6 +337,12 @@ as opaque values; you can pass them to various signal functions, etc.
 
 Also note that all of these assume a fixed sample rate of 44.1 KHz.
 
+@defproc[#:kind "signal" 
+                (frame-ctr) signal?]{
+ A signal that counts up from zero, representing the number of frames
+ since the beginning of the signal.}
+
+
 @defproc[#:kind "signal"
                 (sine-wave [frequency nonnegative-number?]) real?]{
  A signal representing a sine wave of the given

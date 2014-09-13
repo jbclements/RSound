@@ -17,6 +17,7 @@
          loop-ctr
          loop-ctr/variable
          simple-ctr
+         frame-ctr
          signal-samples
          signal-nth
          tap)
@@ -244,6 +245,8 @@
            [b = (+ skip a)]
            [out = a]))
 
+;; a signal that counts up from zero
+(define frame-ctr (simple-ctr 0 1))
 
 ;; a vector containing the first 'n' samples of a signal
 (define (signal-samples signal n)
