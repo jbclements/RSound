@@ -20,25 +20,32 @@
          frame-ctr
          signal-samples
          signal-nth
-         tap)
+         tap
+         choose-net)
 
-;; a network is either a function or (make-network number number procedure)
+;; a network is either a function or (make-network ins outs producer-maker)
+;; where ins is a natural number representing the number of inputs, 
+;; outs is a natural number representing the number of outputs, and
+;; producer-maker is a procedure of no arguments that returns a procedure
+;; (possibly taking arguments) that returns signal values.
 
 ;; ins and outs not currently used, could be used for static checking...
 ;; or for better error messages, at any rate.
 
 (struct network/s (ins outs maker))
 
+
+
 (define network/c (or/c network/s? procedure?))
 
 ;; given a network/c, initialize it and return a thunk that 
 ;; produces samples
-(define (network-init signal)
-  (cond [(network/s? signal) ((network/s-maker signal))]
-        [(procedure? signal) signal]
+(define (network-init net)
+  (cond [(network/s? net) ((network/s-maker net))]
+        [(procedure? net) net]
         [else (raise-argument-error
                'signal-init
-               "network or procedure" signal)]))
+               "network or procedure" net)]))
 
 ;; for uses of <=, we must initialize the network
 (define-syntax (maybe-init stx)
@@ -67,7 +74,15 @@
 (define-syntax-parameter prev (lambda (stx)
                                 #'(error "can't use prev outside of a network definition")))
 
-;; this is the cleaned-up version. It insists on having a sequence of ids for the out-names
+;; a network consists of a list of inputs, and a collection of clauses.
+;; each clause represents a node in a dataflow-like network. Cycles
+;; may be modeled by using the 'prev' form which allows references
+;; to prior node values.
+;;
+;; The expansion uses mutable variables to store values associated with
+;; nodes. Currently, it stores values for all nodes, though this is 
+;; required only for nodes that are referred to using 'prev' clauses.
+;; 
 (define-syntax (network/inr stx)
   (define-syntax-class network-clause
     #:description "network/inr clause"
@@ -147,26 +162,33 @@
                         (quote #,num-outs)
                         maker))))]))
 
-
+;; the syntactic form that is exported. It tries to 
+;; give reasonable error messages (using syntax-parse),
+;; wraps lonely lhs ids in parens, and rewrites into
+;; network/inr
 (define-syntax (network stx)
+  ;; id or (id ...)
   (define-syntax-class oneormoreids
     #:description "id or (id ...)"
     (pattern out:id)
     (pattern (outs:id ...)))
+  ;; the rhs of a network clause
   (define-syntax-class network-clause-rhs
     #:description "network clause rhs"
     #:literals (prev <= =)
     (pattern (= konst:expr))
     (pattern (<= node:expr input:expr ...)))
+  ;; a network clause
   (define-syntax-class network-clause
     #:description "network clause"
     #:literals (prev <= =)
     (pattern (outs:oneormoreids . rhs:network-clause-rhs)))
-  ;; right here: split rewrite into two functions!
+  ;; map id to (id), leave (id ...) alone
   (define (ensure-parens ids)
     (syntax-parse ids
       [out:id #'(out)]
       [(outs:id ...) #'(outs ...)]))
+  ;; rewrite into network/inr
   (syntax-parse stx
     [(_ (in:id ...)
         clause:network-clause ...+)
@@ -279,3 +301,28 @@
   (network/s 1 1 the-proc))
 
 
+
+;; choose between one of two signals. If the first signal is #t, call
+;; the first signal with the remainder of the arguments. If not, call
+;; the second signal with the remainder of the arguments.
+;; network network -> network
+(define (choose-net network1 network2)
+  (unless (network/s? network1)
+    (raise-argument-error 'choose "network" 0 network1 network2))
+  (unless (network/s? network2)
+    (raise-argument-error 'choose "network" 1 network1 network2))
+  (unless (= (network/s-ins network1) (network/s-ins network2))
+    (raise-argument-error 'choose "networks with same number of inputs"
+                          1 network1 network2))
+  (unless (= (network/s-outs network1) (network/s-outs network2))
+    (raise-argument-error 'choose "networks with same number of outputs"
+                          1 network1 network2))
+  (network/s (network/s-ins network1)
+             (network/s-outs network1)
+             (lambda ()
+               (define net1proc (network-init network1))
+               (define net2proc (network-init network2))
+               (lambda (use-first? . args)
+                 (if use-first?
+                     (apply net1proc args)
+                     (apply net2proc args))))))
