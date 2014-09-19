@@ -667,10 +667,7 @@ for re-use. In particular, rsound uses samples of c3, c4, c5, and c6, and resamp
  }}
 
 @section{Filtering}
-
-
-@defmodule[rsound/filter]{
- This module provides a dynamic low-pass filter, among other things.
+ RSound provides a dynamic low-pass filter, among other things.
 
 
 
@@ -720,7 +717,7 @@ for re-use. In particular, rsound uses samples of c3, c4, c5, and c6, and resamp
 )
 }
 
-@defproc[(lpf/dynamic [control signal?] [input signal?]) signal?]{
+@defproc[#:kind "signal" (lpf/dynamic [control number?] [input number?]) signal?]{
  The control signal must produce real numbers in the range 0.01 to 3.0. A small
  number produces a low cutoff frequency. The input signal is the audio signal
  to be processed. For instance, here's a time-varying low-pass filtered sawtooth:
@@ -735,7 +732,11 @@ for re-use. In particular, rsound uses samples of c3, c4, c5, and c6, and resamp
           [control = (+ 0.5 (* 0.2 (sin (* f 7.123792865282977e-05))))]
           [out <= lpf/dynamic control sawtooth]))]
  }
-}
+
+@defproc[#:kind "signal" (reverb [input number?]) number?]{
+ Apply a nice basic reverb to the input. Uses the algorithm and
+ the constants from Moorer 1979.}
+
 
 @section{Single-cycle sounds}
 

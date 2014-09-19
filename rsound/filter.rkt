@@ -5,10 +5,15 @@
          "rsound.rkt"
          "network.rkt"
          "filter-typed.rkt"
+         "reverb.rkt"
          racket/flonum)
 
-(provide (except-out (all-defined-out)
-                      twopi i))
+(provide fir-filter
+         iir-filter
+         dynamic-lti-signal
+         lpf-sig
+         lpf/dynamic
+         (all-from-out "reverb.rkt"))
 
 (define i (sqrt -1))
 (define twopi (* 2 pi))

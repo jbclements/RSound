@@ -17,7 +17,7 @@
          "checked-funs.rkt"
          "diagnose.rkt"
          "stream-play.rkt"
-         "reverb.rkt")
+         "filter.rkt")
 
 
 (provide (all-from-out "rsound.rkt")
@@ -31,4 +31,4 @@
          ;; I'm not going to... it could maybe be useful.
          (all-from-out "network.rkt")
          (all-from-out "stream-play.rkt")
-         (all-from-out "reverb.rkt"))
+         (all-from-out "filter.rkt"))
