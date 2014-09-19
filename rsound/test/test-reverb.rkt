@@ -14,11 +14,10 @@
    (let ()
      (define snd-vec
        (signal-samples (network ()
-                                [ctr ((simple-ctr 0 1))]
-                                [impulse ((lambda (ctr) (cond [(= ctr 0) 1.0]
-                                                              [else 0.0]))
-                                          ctr)]
-                                [out (reverb impulse)])
+                         [ctr <= frame-ctr]
+                         [impulse = (cond [(= ctr 0) 1.0]
+                                          [else 0.0])]
+                         [out <= reverb impulse])
                        5000))
      ;; check for the impulse:
      (check-= (vector-ref snd-vec 0) 1.0 1e-9)

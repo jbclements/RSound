@@ -309,18 +309,22 @@ rsound-max-volume
 
 (define sine-wave
   (network (pitch)
-           [angle = (prev added 0.0)]
-           [added = (angle-add angle (* pitch TPSRINV))]
-           [output = (sin angle)]))
+    [_ = (unless (number? pitch)
+           (raise-argument-error 'sine-wave "number" 0 pitch))]
+    [angle = (prev added 0.0)]
+    [added = (angle-add angle (* pitch TPSRINV))]
+    [output = (sin angle)]))
 
 ;; SYNTHESIS OF THREE-PARTIAL SINE
 
 (define harm3-wave
   (network (pitch)
-           (ctr <= (simple-ctr 0 SRINV))
-           (out = (+ (sin (* twopi pitch ctr))
-                     (* 0.5 (sin (* twopi 2.0 pitch ctr)))
-                     (* 0.25 (sin (* twopi 3.0 pitch ctr)))))))
+    [_ = (unless (number? pitch)
+           (raise-argument-error 'harm3-wave "number" 0 pitch))]
+    (ctr <= (simple-ctr 0 SRINV))
+    (out = (+ (sin (* twopi pitch ctr))
+              (* 0.5 (sin (* twopi 2.0 pitch ctr)))
+              (* 0.25 (sin (* twopi 3.0 pitch ctr)))))))
 
 
 ;; SYNTHESIS OF SAWTOOTH WAVES:
@@ -332,26 +336,11 @@ rsound-max-volume
       (cond [(< next 1.0) next]
             [else (- next 2.0)]))
     (network (pitch)
-             [b   = (prev a 0.0)]
-             [a   = (increment b pitch)]
-             [out = b])))
-
-#;(define (sawtooth-wave pitch)
-  (when (< (/ SR 2) pitch)
-    (raise-argument-error 
-     'raw-sawtooth-wave 
-     (format "pitch lower than ~s Hz" (/ SR 2))
-     0 pitch))
-  (define scalar (exact->inexact (* 2 (* pitch SRINV))))
-  (define (increment p)
-    (define next (fl+ p scalar))
-    (cond [(< next 1.0) next]
-          [else (- next 2.0)]))
-  (network ()
-           [b   = (prev a 0.0)]
-           [a   = (increment b)]
-           [out = b]))
-
+      [_ = (unless (number? pitch)
+             (raise-argument-error 'sawtooth-wave "number" 0 pitch))]
+      [b   = (prev a 0.0)]
+      [a   = (increment b pitch)]
+      [out = b])))
 
 ;; a memoized 20-term sawtooth; it'll be slow if you don't hit the 
 ;; wavetable.
@@ -373,9 +362,11 @@ rsound-max-volume
 ;; also, the angle goes 
 (define pulse-wave
   (network (duty-cycle pitch)
-           [angle = (prev added 0.0)]
-           [added = (angle-add/unit angle (* pitch SRINV))]
-           [out <= pulse-wave-thresh angle duty-cycle]))
+    [_ = (unless (number? pitch)
+           (raise-argument-error 'pulse-wave "number" 0 pitch))]
+    [angle = (prev added 0.0)]
+    [added = (angle-add/unit angle (* pitch SRINV))]
+    [out <= pulse-wave-thresh angle duty-cycle]))
 
 ;; add args, subtract 2pi if greater than 2pi. assumes all values
 ;; are positive, and that the sum can't be greater than 4pi
@@ -399,7 +390,9 @@ rsound-max-volume
 
 (define square-wave 
   (network (pitch)
-           [out <= pulse-wave 0.5 pitch]))
+    [_ = (unless (number? pitch)
+           (raise-argument-error 'square-wave "number" 0 pitch))]
+    [out <= pulse-wave 0.5 pitch]))
 
 ;; create a looping signal from the left channel of an rsound
 ;; no interpolation, just flooring.

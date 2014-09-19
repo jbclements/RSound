@@ -433,7 +433,15 @@
  (lambda ()
    (signal->rsound (default-sample-rate) (signal testfun 340))))
 |#
-   )))
+   
+   
+   (check-exn
+    (lambda (exn) (regexp-match #px"sine-wave: contract violation" (exn-message exn)))
+    (lambda ()
+      (signal-nth
+       (network ()
+         [out <= sine-wave #f])
+       1))))))
 
 (module+ test
   (require rackunit/text-ui)

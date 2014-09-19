@@ -26,9 +26,9 @@
 
 (define (add-ticker n)
   (network ()
-           [frame (prev adder 0)]
-           [adder (add1 frame)]
-           (out (n frame))))
+    [frame = (prev adder 0)]
+    [adder = (add1 frame)]
+    (out = (n frame))))
 
 (define the-test-suite
   (test-suite "rsound"
@@ -82,7 +82,8 @@
     (check-equal? (rs-ith/right/s16 s i) 0)))
 (check-equal? (rs-frames (silence 22050)) 22050)
 (check-equal? (rsound-sample-rate (silence 22050)) (default-sample-rate))
-(check-exn (lambda (exn) (regexp-match #px"expected: positive integer" (exn-message exn)))
+(check-exn (lambda (exn) 
+             (regexp-match #px"expected: positive integer" (exn-message exn)))
            (lambda () (silence 0)))
 
 ;; sound-list-total-frames:
@@ -275,8 +276,8 @@
     ;; a stateful filter, so we can make sure left and right are independent:
     (define my-filter 
       (network (in)
-               [ctr ((simple-ctr 0 (/ 1.0 200.0)))]
-               [out (+ in ctr)]))
+        [ctr <= (simple-ctr 0 (/ 1.0 200.0))]
+        [out = (+ in ctr)]))
     (define n (noise 100))
     (define p (rs-filter n my-filter))
     (for ([i 100])
