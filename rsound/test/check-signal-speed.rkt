@@ -61,11 +61,9 @@
 (let ()
   (define sig 
     (network ()
-             [ctr ((simple-ctr 0 1))]
-             [out ((lambda (ctr)
-                     (cond [(< (modulo ctr 143) 70) 0.7]
-                           [else -0.7]))
-                   ctr)]))
+      [ctr <= (simple-ctr 0 1)]
+      [out = (cond [(< (modulo ctr 143) 70) 0.7]
+                   [else -0.7])]))
   (printf "simple integer computation signal using network form:\n")
   (check-signal (network-init sig)))
 
@@ -73,12 +71,10 @@
 (let ()
   (define sig 
     (network ()
-             [ctr ((simple-ctr 0 1))]
-             [out ((lambda (ctr)
-                     (cond [(< (modulo ctr 143) 70) 0.7]
-                           [else -0.7]))
-                   ctr)]
-             [out2 (reverb out)]))
+      [ctr <= (simple-ctr 0 1)]
+      [out = (cond [(< (modulo ctr 143) 70) 0.7]
+                   [else -0.7])]
+      [out2 <= reverb out]))
   (printf "simple integer computation signal using network form and reverb:\n")
   (check-signal (network-init sig)))
 
