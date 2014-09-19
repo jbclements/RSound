@@ -30,8 +30,8 @@
    (define filter (fir-filter '((0 0.3) (2 0.15))))
    (check-equal?
     (signal-samples (network () 
-                             [a ((simple-ctr 0.1 0.01))]
-                             [b (filter a)])
+                      [a <= (simple-ctr 0.1 0.01)]
+                      [b <= filter a])
                     3)
     
     (vector 0.03 0.033 (+ 0.036 0.015)))
@@ -47,13 +47,13 @@
    
    (check-equal?
     (signal-samples (network ()
-                             [a ((simple-ctr 0.1 0.01))]
-                             [(f i g) (simple-param-signal)]
-                             [out ((dynamic-lti-signal 2) f i g a)])
+                      [a <= (simple-ctr 0.1 0.01)]
+                      [(f i g) = (simple-param-signal)]
+                      [out <= (dynamic-lti-signal 2) f i g a])
                     3)
     (signal-samples (network () 
-                             [a ((simple-ctr 0.1 0.01))]
-                             [b ((fir-filter '((0 0.3) (2 0.15))) a)])
+                      [a <= (simple-ctr 0.1 0.01)]
+                      [b <= (fir-filter '((0 0.3) (2 0.15))) a])
                     3))
    
    ;; test ordering of terms in dynamic-lti-filter
@@ -61,12 +61,13 @@
    (check-equal?
     (signal-samples 
      (network ()
-              [a ((simple-ctr 10 1))]
-              [out ((dynamic-lti-signal 4) (flvector 0.1 0.0 0.0 0.0)
-                                           (flvector 0.0 0.0 0.0 0.5)
-                                           1.0
-                                           a)])
-                    6)
+       [a <= (simple-ctr 10 1)]
+       [out <= (dynamic-lti-signal 4)
+            (flvector 0.1 0.0 0.0 0.0)
+            (flvector 0.0 0.0 0.0 0.5)
+            1.0
+            a])
+     6)
     (vector 10.0 12.0 13.1 14.2 20.3 22.4))
    
    )
@@ -84,11 +85,10 @@
             0.7))
   (define testnet
     (network ()
-             [(f i g) (param-maker)]
-             [test-sigout (test-sig)]
-             [out 
-              ((dynamic-lti-signal 2)
-               f i g test-sigout)]))
+      [(f i g) = (param-maker)]
+      [test-sigout <= test-sig]
+      [out <= (dynamic-lti-signal 2)
+           f i g test-sigout]))
   (let ()
     (define snd (signal->rsound 10 
                                 testnet))
@@ -101,27 +101,26 @@
              1e-5)
     3)
   
-   (define (identity-params) (values (flvector 0.0) (flvector 0.0) 1.0))
    (check-exn exn:fail?
               (lambda () (signal->rsound 
                           10 
                           (network ()
-                                   [a (test-sig)]
-                                   [(f i g) (identity-params)]
-                                   [out ((dynamic-lti-signal 0) f i g a)]))))
+                            [a <= test-sig]
+                            [(f i g) = (values (flvector 0.0) (flvector 0.0) 1.0)]
+                            [out <= (dynamic-lti-signal 0) f i g a]))))
    (check-not-exn (lambda () (signal->rsound 
                               10 
                               (network ()
-                                       [a (test-sig)]
-                                       [(f i g) (identity-params)]
-                                       [out ((dynamic-lti-signal 1) f i g a)]))))
+                                [a <= test-sig]
+                                [(f i g) = (values (flvector 0.0) (flvector 0.0) 1.0)]
+                                [out <= (dynamic-lti-signal 1) f i g a]))))
   (check-not-exn
    (lambda () (signal->rsound 
                20 
                (network ()
-                        [a (test-sig)]
-                        [control ((dc-signal 0.1))]
-                        [out (lpf/dynamic control a)]))))
+                 [a <= test-sig]
+                 [control <= (dc-signal 0.1)]
+                 [out <= lpf/dynamic control a]))))
   
   ;; should be the identity on a dc signal (after a while)
   (let ()
@@ -130,9 +129,9 @@
   (check-=
    (signal-nth
     (network ()
-             [a ((dc-signal 0.75))]
-             [(f i g) ((lambda () (values zero-vec tap-mult-vec 2.0)))]
-             [out ((dynamic-lti-signal 4) f i g a)])
+      [a <= (dc-signal 0.75)]
+      [(f i g) = (values zero-vec tap-mult-vec 2.0)]
+      [out <= (dynamic-lti-signal 4) f i g a])
     199)
    0.75
    1e-3))
@@ -140,13 +139,9 @@
   ;; same test with lpf:
   (check-= (signal-nth
             (network ()
-                     [a ((dc-signal 0.5))]
-                     [control ((dc-signal 0.34))]
-                     [out (lpf/dynamic control a)])
-            199)
-           ;; doesn't work, because lpf/dynamic isn't a procedure any more:
-           #;(rs-ith/left
-            (signal->rsound 200 (lpf/dynamic (lambda (x) 0.34) (lambda (x) 0.5)))
+              [a = 0.5]
+              [control = 0.34]
+              [out <= lpf/dynamic control a])
             199)
            0.5
            1e-3)
@@ -170,8 +165,8 @@
        [test-sound 
         (signal-samples
          (network ()
-                  [a ((simple-ctr 0 1/500))]
-                  [out (my-filter a)])
+           [a <= (simple-ctr 0 1/500)]
+           [out <= my-filter a])
          79)])
   (check-= (vector-ref test-sound 0) 0 1e-7)
   (check-= (vector-ref test-sound 1) 1/500 1e-7)
@@ -187,8 +182,8 @@
        [test-sound
         (signal-samples 
          (network ()
-                  [a ((simple-ctr 0 1/500))]
-                  [out (my-filter a)])
+           [a <= (simple-ctr 0 1/500)]
+           [out <= my-filter a])
          20)])
   (check-= (vector-ref test-sound 0) 0 1e-7)
   (check-= (vector-ref test-sound 1) 1/500 1e-7)
