@@ -2,7 +2,7 @@
 
 
 (require "../network.rkt"
-         "../reverb-typed.rkt"
+         "../reverb.rkt"
          "../rsound.rkt"
          rackunit)
 

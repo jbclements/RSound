@@ -6,7 +6,7 @@
          "../filter.rkt"
          "../network.rkt"
          "../filter-typed.rkt"
-         "../reverb-typed.rkt"
+         "../reverb.rkt"
          rackunit
          racket/flonum)
 

@@ -4,7 +4,7 @@
 
 (require "../rsound-commander.rkt"
          "../network.rkt"
-         "../reverb-typed.rkt")
+         "../reverb.rkt")
 
 (define buffer-frames 10000000)
 (define frame-rate 44100)
