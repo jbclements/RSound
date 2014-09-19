@@ -4,7 +4,7 @@
 (require/typed "network.rkt"
                [#:struct network/s ([ins : Index] 
                                    [outs : Index]
-                                   [maker : Any])])
+                                   [maker : (-> (Float -> Float))])])
 
 ;; this file provides the "reverb" network
 (provide reverb)
