@@ -837,7 +837,7 @@ square-wave tones. This one runs in the Intermediate student language:
     (network ()
              [looper <= (loop-ctr change-interval 1)]
              [freq = (maybe-change (prev freq 400) looper)]
-             [a = square-wave freq])))
+             [a <= square-wave freq])))
 
 (define my-signal
   (network ()
