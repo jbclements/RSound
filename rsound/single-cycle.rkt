@@ -7,7 +7,7 @@
          racket/match
          (for-syntax racket/base)
          (for-syntax syntax/parse)
-         "define-memo.rkt"
+         memoize
          racket/runtime-path)
 
 ;; this module provides access to single-cycle waveforms from 

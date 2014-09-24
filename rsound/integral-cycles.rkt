@@ -1,6 +1,6 @@
 #lang racket/base
 
-(require "define-memo.rkt")
+(require memoize)
 ;; this module figures out what number of cycles comes "close"
 ;; to being a whole number of frames.
 
