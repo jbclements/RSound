@@ -226,6 +226,35 @@ These procedures allow the creation, analysis, and manipulation of rsounds.
  once for each sample with the frame number, and using the resulting number to select a frame
  from the input sound @racket[rsound].}
 
+@defproc[(resample [factor positive-real?] [sound rsound?]) rsound]{
+ Returns a new sound that is resampled by the given factor. So, for 
+ instance, calling @racket[(resample 2 ding)] will produce a sound that 
+ is half as long and one octave higher. The sample rate of the new sound
+ is the same as the old one.
+ 
+ Samples are chosen using rounding; there is no interpolation done.}
+
+@defproc[(resample/interp [factor positive-real?] [sound rsound?]) rsound]{
+ Similar to @racket[resample], except that it performs linear interpolation.
+ The resulting sound should sound better, but the function takes slightly
+ longer.
+ 
+ My tests of 2014-09-22 suggest that interpolating takes about twice as long.
+ In command-line racket, this amounts to a jump from 1.7% CPU usage to 3.0%
+ CPU usage.}
+
+@defproc[(resample-to-rate [frame-rate frame-rate?] [sound rsound?]) rsound]{
+ Similar to @racket[resample/interp], except that it accepts a new desired
+ frame rate rather than a factor, and produces a sound whose frame rate is
+ the given one.
+ 
+ Put differently, the sounds that result from @racket[(resample/interp 2.0 ding)]
+ and @racket[(resample-to-rate 22050 ding)] should contain exactly the same set
+ of samples, but the first will have a frame rate of 44100, and the second a frame 
+ rate of 22050.
+}
+
+
 @section{Signals and Networks}
 
 For signal processing, RSound adopts a dataflow-like paradigm, where elements
