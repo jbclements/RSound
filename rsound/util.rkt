@@ -91,6 +91,8 @@ rsound-max-volume
 
 ;; don't allow resampling to higher than this sample-rate:
 (define MAX-FRAME-RATE 100000)
+(define FRAME-RATE-DESCRIPTION (format "number in the range 0<n<=~a"
+                                       MAX-FRAME-RATE))
 
 (define twopi (* 2 pi))
 
@@ -107,7 +109,11 @@ rsound-max-volume
 
 ;; given a number of frames and a left and right generator and a sample
 ;; rate, produce a sound.
-(define (rs-generate frames left-fun right-fun sample-rate)
+(define/argcheck (rs-generate [frames nonnegative-integer?
+                                      "non-negative integer"]
+                              [left-fun procedure? "procedure"]
+                              [right-fun procedure? "procedure"]
+                              [sample-rate frame-rate? FRAME-RATE-DESCRIPTION])
   (define vec (make-s16vector (* CHANNELS frames)))
   (for ([i frames])
     (unsafe-s16vector-set! vec (* CHANNELS i) (real->s16 (left-fun i)))
@@ -213,16 +219,13 @@ rsound-max-volume
                      left
                      right)))
 
+
 ;; resample-to-rate : like resample/interp, but produces a sound with a 
 ;; given sample rate.
 ;; That is, it resamples but also resets the sample rate, so the result should
 ;; sound the same, just be at a different sample rate.
-(define/argcheck (resample-to-rate [frame-rate (lambda (fr)
-                                                 (and (real? fr) 
-                                                      (< 0 fr)
-                                                      (<= fr MAX-FRAME-RATE)))
-                                               (format "positive real number in range 0<r<=~a"
-                                                       MAX-FRAME-RATE)]
+(define/argcheck (resample-to-rate [frame-rate frame-rate?
+                                               FRAME-RATE-DESCRIPTION]
                                    [sound rsound? "rsound"])
   (define old-rate (rsound-sample-rate sound))
   (define factor (/ old-rate frame-rate))
@@ -803,3 +806,9 @@ rsound-max-volume
 
 (define (positive-real? x)
   (and (real? x) (< 0 x)))
+
+
+(define (frame-rate? fr)
+  (and (real? fr)
+       (< 0 fr)
+       (<= fr MAX-FRAME-RATE)))
