@@ -608,10 +608,10 @@ rsound-max-volume
   (channel-fft (lambda (i) (rs-ith/right/s16 rsound i)) (rs-frames rsound)))
 
 ;; the common left-right abstraction
-(define (channel-fft [accessor procedure? "procedure"]
-                     [len (lambda (len) 
-                            (and (integer? len) (power-of-two? len)))
-                          "integer power of two"])
+(define/argcheck (channel-fft [accessor procedure? "procedure"]
+                              [len (lambda (len) 
+                                     (and (integer? len) (power-of-two? len)))
+                                   "integer power of two"])
   (let* ([v (build-array (vector len) 
                          (lambda (i) 
                            (/ (exact->inexact (accessor (vector-ref i 0))) s16max)))])
