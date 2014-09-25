@@ -21,13 +21,12 @@ rsound-max-volume
          "network.rkt"
          "paste-util.rkt"
          racket/flonum
-         racket/fixnum
          ffi/vector
          (only-in racket/math pi)
          (only-in racket/match match-define match)
          (for-syntax racket/base syntax/parse)
-         (only-in racket/list last)
-         racket/unsafe/ops)
+         racket/unsafe/ops
+         "define-argcheck.rkt")
 
 (provide rs-map
          rs-map/idx
@@ -128,11 +127,8 @@ rsound-max-volume
 ;; rsound-scale : number rsound -> rsound
 ;; this uses C subroutines. It will behave badly when
 ;; clipping occurs (not crashy, but noisy)
-(define (rs-scale scalar rsound)
-  (unless (real? scalar)
-    (raise-argument-error 'rs-scale "real number" 0 scalar rsound))
-  (unless (rsound? rsound)
-    (raise-argument-error 'rs-scale "rsound" 1 scalar rsound))
+(define/argcheck (rs-scale [scalar real? "real number"]
+                           [rsound rsound? "rsound"])
   (define inexact-scalar (exact->inexact scalar))
   (define samp (silence (rs-frames rsound)))
   (rs-copy-mult-add! (s16vector->cpointer (rsound-data samp)) 0 
@@ -169,11 +165,8 @@ rsound-max-volume
 ;; no interpolation)
 ;; to obtain a new one. Using e.g. factor of 2 will make the sound one
 ;; octave higher and half as long.
-(define (resample factor sound)
-  (unless (and (real? factor) (< 0 factor))
-    (raise-argument-error 'resample "positive real number" 0 factor sound))
-  (unless (rsound? sound)
-    (raise-argument-error 'resample "rsound" 1 factor sound))
+(define/argcheck (resample [factor positive-real? "positive real number"]
+                           [sound rsound? "rsound"])
   (define new-sound-len 
     (inexact->exact (floor (/ (rs-frames sound) factor))))
   (unless (< 0 new-sound-len)
@@ -194,11 +187,8 @@ rsound-max-volume
 ;; given a factor and a sound, resample the sound (using linear interpolation)
 ;; to obtain a new one. Using e.g. factor of 2 will make the sound one
 ;; octave higher and half as long.
-(define (resample/interp factor sound)
-  (unless (and (real? factor) (< 0 factor))
-    (raise-argument-error 'resample/interp "positive real number" 0 factor sound))
-  (unless (rsound? sound)
-    (raise-argument-error 'resample/interp "rsound" 1 factor sound))
+(define/argcheck (resample/interp [factor positive-real? "positive real number"]
+                                  [sound rsound? "rsound"])
   (define new-sound-len
     (inexact->exact (floor (/ (rs-frames sound) factor))))
   (unless (< 0 new-sound-len)
@@ -227,13 +217,13 @@ rsound-max-volume
 ;; given sample rate.
 ;; That is, it resamples but also resets the sample rate, so the result should
 ;; sound the same, just be at a different sample rate.
-(define (resample-to-rate frame-rate sound)
-  (unless (and (real? frame-rate) (< 0 frame-rate) (< frame-rate MAX-FRAME-RATE))
-    (raise-argument-error 'resample-to-rate 
-                          (format "positive real number in range 0<r<=~a"
-                                  MAX-FRAME-RATE) 0 factor sound))
-  (unless (rsound? sound)
-    (raise-argument-error 'resample-to-rate "rsound" 1 factor sound))
+(define/argcheck (resample-to-rate [frame-rate (lambda (fr)
+                                                 (and (real? fr) 
+                                                      (< 0 fr)
+                                                      (<= fr MAX-FRAME-RATE)))
+                                               (format "positive real number in range 0<r<=~a"
+                                                       MAX-FRAME-RATE)]
+                                   [sound rsound? "rsound"])
   (define old-rate (rsound-sample-rate sound))
   (define factor (/ old-rate frame-rate))
   (define resampled
@@ -244,11 +234,8 @@ rsound-max-volume
 ;; first by each sample in the second. The length and sample
 ;; rate are determined by the first, and nonexistent samples
 ;; in the second are taken to be zeros.
-(define (rs-mult a b)
-  (unless (rsound? a)
-    (raise-argument-error 'rs-mult "rsound" 0 a b))
-  (unless (rsound? b)
-    (raise-argument-error 'rs-mult "rsound" 1 a b))
+(define/argcheck (rs-mult [a rsound? "rsound"]
+                          [b rsound? "rsound"])
   (define len1 (rs-frames a))
   (define len2 (rs-frames b))
   (define new-snd
@@ -396,12 +383,10 @@ rsound-max-volume
 
 ;; create a looping signal from the left channel of an rsound
 ;; no interpolation, just flooring.
-(define (wavetable-osc/l wt)
-  (unless (and (rsound? wt) 
-               (= (rs-frames wt) SR))
-    (raise-argument-error 'wavetable-osc
-                          (format "sound with ~s frames" SR)
-                          0 wt))
+(define/argcheck (wavetable-osc/l [wt (lambda (wt)
+                                        (and (rsound? wt)
+                                             (= (rs-frames wt) SR)))
+                                      (format "sound with ~s frames" SR)])
   (define (fetch s) (rs-ith/left wt (inexact->exact (floor s))))
   (network (vol pitch)
            [idx <= (loop-ctr/variable SR) pitch]
@@ -543,12 +528,9 @@ rsound-max-volume
   (rs-mult (fader-snd 88200 frames)
            (make-harm3tone/unfaded pitch volume frames)))
 
-(define (make-pulse-tone duty-cycle)
-  (when (not (< 0.0 duty-cycle 1.0))
-    (raise-argument-error 'make-pulse-tone
-                          "number between 0 and 1"
-                          0
-                          duty-cycle))
+(define/argcheck (make-pulse-tone [duty-cycle (lambda (cycle)
+                                                (< 0.0 cycle 1.0))
+                                              "number between 0 and 1"])
   (wavefun->tone-maker/periodic
    (lambda (pitch volume)
      (define wavelength (/ (default-sample-rate) pitch))
@@ -626,9 +608,10 @@ rsound-max-volume
   (channel-fft (lambda (i) (rs-ith/right/s16 rsound i)) (rs-frames rsound)))
 
 ;; the common left-right abstraction
-(define (channel-fft accessor len)
-  (unless (and (integer? len) (power-of-two? len))
-    (raise-argument-error 'channel-fft "integer power of two" 1 accessor len))
+(define (channel-fft [accessor procedure? "procedure"]
+                     [len (lambda (len) 
+                            (and (integer? len) (power-of-two? len)))
+                          "integer power of two"])
   (let* ([v (build-array (vector len) 
                          (lambda (i) 
                            (/ (exact->inexact (accessor (vector-ref i 0))) s16max)))])
@@ -817,3 +800,6 @@ rsound-max-volume
     (error 'frame-range-checks 
            "range limits ~v and ~v not in order and separated by at least 1" 
            min-frame max-frame)))
+
+(define (positive-real? x)
+  (and (real? x) (< 0 x)))
