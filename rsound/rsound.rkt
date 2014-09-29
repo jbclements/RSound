@@ -10,6 +10,7 @@
          "read-wav.rkt"
          "write-wav.rkt"
          "network.rkt"
+         "define-argcheck.rkt"
          (prefix-in rc: "rsound-commander.rkt")
          "private/s16vector-add.rkt"
          racket/contract
@@ -23,8 +24,6 @@
   (and (integer? n) (<= 0 n)))
 
 (provide (except-out (all-defined-out)
-                     rs-play/helper
-                     rs-mutator
                      rsound=?
                      s16vector-equal?
                      s16vector-hash-1
@@ -68,15 +67,12 @@
     (raise-argument-error 'rsound/all "s16vector of length > 0" 0 s16vec sample-rate))
   (rsound s16vec 0 (/ (s16vector-length s16vec) CHANNELS) sample-rate))
 
-(define (record-sound frames)
+(define/argcheck (record-sound [frames nonnegative-integer? "non-negative integer"])
   (rsound/all (rc:s16vec-record frames (default-sample-rate)) (default-sample-rate)))
 
 ;; are two rsounds equal?
-(define (rs-equal? r1 r2)
-  (unless (rsound? r1)
-    (raise-argument-error 'rs-equal? "rsound" 0 r1 r2))
-  (unless (rsound? r2)
-    (raise-argument-error 'rs-equal? "rsound" 1 r1 r2))
+(define/argcheck (rs-equal? [r1 rsound? "rsound"]
+                            [r2 rsound? "rsound"])
   (and (= (rs-frames r1)
           (rs-frames r2))
        (= (rsound-sample-rate r1)
@@ -160,9 +156,7 @@
 ;; ** FILE I/O **
 
 ;; just a wrapper around read-sound/floatblock
-(define (rs-read path)
-  (unless (path-string? path)
-    (raise-argument-error 'rs-read "path-string" 0 path))
+(define/argcheck (rs-read [path path-string? "path-string"])
   (unless (file-exists? path)
     (raise-argument-error 'rs-read "name of existing file" 0 path))
   (unless (< 0 (file-size path))
@@ -171,34 +165,23 @@
     [(list data sample-rate) (rsound/all data sample-rate)]))
 
 ;; read a portion of a sound
-(define (rs-read/clip path start-frame end-frame)
-  (unless (path-string? path)
-    (raise-argument-error 'rs-read "path-string" 0 path start-frame end-frame))
-  (unless (nonnegative-integer? start-frame)
-    (raise-argument-error 'rs-read "non-negative integer" 1 path start-frame end-frame))
-  (unless (nonnegative-integer? end-frame)
-    (raise-argument-error 'rs-read "non-negative integer" 2 path start-frame end-frame))
+(define/argcheck (rs-read/clip [path path-string? "path-string"]
+                               [start-frame nonnegative-integer? "non-negative integer"]
+                               [end-frame nonnegative-integer? "non-negative integer"])
   (match (read-sound/s16vector path (inexact->exact start-frame) (inexact->exact end-frame))
     [(list data sample-rate) (rsound/all data sample-rate)]))
 
 ;; what is the sample-rate of a file?
-(define (rs-read-sample-rate path)
-  (unless (path-string? path)
-    (raise-argument-error 'rs-read-sample-rate "path-string" 0 path))
+(define/argcheck (rs-read-sample-rate [path path-string? "path-string"])
   (second (read-sound/formatting path)))
 
 ;; how many frames are in the file?
-(define (rs-read-frames path)
-  (unless (path-string? path)
-    (raise-argument-error 'rs-read-frames "path-string" 0 path))
+(define/argcheck (rs-read-frames [path path-string? "path-string"])
   (first (read-sound/formatting path)))
 
 ;; just a wrapper around write-sound/floatblock
-(define (rs-write sound path)
-  (unless (rsound? sound)
-    (raise-argument-error 'rs-write "rsound" 0 sound path))
-  (unless (path-string? path)
-    (raise-argument-error 'rs-write "path" 1 sound path))
+(define/argcheck (rs-write [sound rsound? "rsound"]
+                           [path path-string? "path-string"])
   (match sound
     [(struct rsound (data start stop sample-rate))
      (define exact-integer-frame-rate
@@ -210,16 +193,12 @@
      (write-sound/s16vector data start stop exact-integer-frame-rate path)]))
 
 ;; play a signal using portaudio:
-(define (signal-play signal)
-  (unless (signal? signal)
-    (raise-argument-error 'signal-play "signal" 0 signal))
+(define/argcheck (signal-play [signal signal? "signal"])
   (define sample-maker (network-init signal))
   (rc:signal/block-play/unsafe (rc:signal->signal/block/unsafe sample-maker) (default-sample-rate) #f))
 
 ;; play an s16-producing signal using portaudio
-(define (signal-play/16 signal)
-  (unless (signal? signal)
-    (raise-argument-error 'signal-play/16 "signal" 0 signal))
+(define/argcheck (signal-play/16 [signal signal? "signal"])
   (define sample-maker (network-init signal))
   (rc:signal/block-play/unsafe (rc:signal/16->signal/block/unsafe sample-maker) (default-sample-rate) #f))
 
@@ -240,24 +219,17 @@
   (rc:signal/block-play/unsafe signal/block sample-rate buffer-time))
 
 ;; play a sound using portaudio:
-(define ((rs-play/helper loop?) sound)
-  (unless (rsound? sound)
-    (raise-argument-error 'play "rsound" 0 sound))
+(define/argcheck (play [sound rsound? "rsound"])
   (match sound
     [(struct rsound (data start finish sample-rate))
-     (if loop?
-         (error 'rs-play/helper "not implemented")
-         (rc:buffer-play data start finish sample-rate))]
+     (rc:buffer-play data start finish sample-rate)]
     [other
+     ;; should be impossible...
      (error 'rs-play/helper "expected an rsound, got: ~e" sound)])
   "played sound")
 
-;; play an rsound
-(define play 
-  (rs-play/helper #f))
-
 ;; backup solution: play from a file:
-#;(define (rs-play sound)
+#;(define (play sound)
   (let ([filename (make-temporary-file "tmpsound~a.wav")])
     ;; don't blow out anyone's eardrums. takes about 
     ;; 1 sec per minute of on my 2006 machine.
@@ -268,24 +240,33 @@
        (play-sound filename #f)
        (delete-file filename)))))
 
-;; return the nth sample of an rsound's left channel.
+;; the following functions are lacking contract-like checks,
+;; in order to make them run faster at 44.1K.
+
+;; return the nth sample of an rsound's left channel as a
+;; signed 16-bit int
 (define (rs-ith/left/s16 sound frame)
   (rs-extractor sound frame #t (lambda (x) x)))
 
 ;; return the nth sample of an rsound's right channel
+;; as a signed 16-bit int
 (define (rs-ith/right/s16 sound frame)
   (rs-extractor sound frame #f (lambda (x) x)))
 
+;; return the nth sample of an rsound's left channel as a real number
 (define (rs-ith/left sound frame)
   (rs-extractor sound frame #t s16->real))
 
+;; return the nth sample of an rsound's right channel
+;; as a real number in the range -1 <= x <= 1
 (define (rs-ith/right sound frame)
   (rs-extractor sound frame #f s16->real))
 
 ;; the abstraction behind the last four functions...
 (define (rs-extractor rsound frame left? scale-fun)
-  (scale-fun (s16vector-ref (rsound-data rsound) (frame->sample (+ (rsound-start rsound) frame) left?))))
-
+  (scale-fun (s16vector-ref (rsound-data rsound) 
+                            (frame->sample (+ (rsound-start rsound) frame)
+                                           left?))))
 
 ;; set the ith frame of the left channel to be new-val
 (define (set-rs-ith/left! sound frame new-val)
@@ -303,8 +284,6 @@
 (define (set-rs-ith/right/s16! sound frame new-val)
   (rs-mutator sound frame #f new-val (lambda (x) x)))
 
-
-
 ;; a mutation abstraction:
 (define (rs-mutator rsound frame left? new-val scale-fun)
   (s16vector-set! (rsound-data rsound)
@@ -319,7 +298,8 @@
 
 
 ;; rs-append : rsound rsound -> rsound
-(define (rs-append sound-a sound-b)
+(define/argcheck (rs-append [sound-a rsound? "rsound"]
+                            [sound-b rsound? "rsound"])
   (rs-append* (list sound-a sound-b)))
 
 ;; rs-append* : (listof rsound) -> rsound
@@ -396,12 +376,9 @@
 ;; make a monaural sound of the given number of frames at the specified sample-rate
 ;; using the signal 'f'. It 
 ;; assumes that the result is a floating-point number between -1 and 1.
-(define (signal->rsound frames f)
+(define/argcheck (signal->rsound [frames nonnegative-integer? "non-negative integer"]
+                                 [f signal? "signal"])
   (define sample-rate (default-sample-rate))
-  (unless (nonnegative-integer? frames)
-    (raise-argument-error 'signal->rsound "non-negative integer" 0 frames f))
-  (unless (signal? f)
-    (raise-argument-error 'signal->rsound "signal" 1 frames f))
   (define sample-maker (network-init f))
   (define int-frames (inexact->exact (floor frames)))
   (define cblock (make-s16vector (* rc:channels int-frames)))
@@ -417,14 +394,10 @@
 ;; make a monaural sound of the given number of frames at the specified sample-rate
 ;; using the function 'f' applied to the frame number to generate each sample. It 
 ;; assumes that the result is a floating-point number between -1 and 1.
-(define (signals->rsound frames fleft fright)
-  (define sample-rate (default-sample-rate))
-  (unless (nonnegative-integer? frames)
-    (raise-argument-error 'signal->rsound/stereo "non-negative integer" 0 frames fleft fright))
-  (unless (signal? fleft)
-    (raise-argument-error 'signal->rsound/stereo "signal" 1 frames fleft fright))  
-  (unless (signal? fright)
-    (raise-argument-error 'signal->rsound/stereo "signal" 2 frames fleft fright)) 
+(define/argcheck (signals->rsound [frames nonnegative-integer? "non-negative integer"]
+                         [fleft signal? "signal"] 
+                         [fright signal? "signal"])
+  (define sample-rate (default-sample-rate)) 
   (define int-frames (inexact->exact frames))
   (define sample-maker/left (network-init fleft))
   (define sample-maker/right (network-init fright))
@@ -437,9 +410,7 @@
     (rsound/all cblock sample-rate)))
 
 ;; special-case silence (it's fast to generate):
-(define (silence frames)
-  (unless (positive-integer? frames)
-    (raise-argument-error 'silence "positive integer" 0 frames))
+(define/argcheck (silence [frames positive-integer? "positive integer"])
   (define sample-rate (default-sample-rate))
   (define int-frames (inexact->exact frames))
   (let* ([cblock (make-s16vector (* rc:channels int-frames))])
@@ -450,7 +421,8 @@
 ;; apply a filter to a sound (left and right are filtered
 ;; individually
 ;; rsound filter -> rsound
-(define (rs-filter sound filter)
+(define/argcheck (rs-filter [sound rsound? "rsound"]
+                            [filter network/s? "network"])
   (define left-filter (network-init filter))
   (define right-filter (network-init filter))
   (define output-s16vec (make-s16vector (* CHANNELS (rs-frames sound))))

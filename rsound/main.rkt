@@ -1,20 +1,17 @@
 #lang racket/base
 
-(require (except-in "rsound.rkt"
-                    rs-ith/left/s16
-                    rs-ith/right/s16
-                    rs-ith/left
-                    rs-ith/right
-                    set-rs-ith/left/s16!
-                    set-rs-ith/right/s16!
-                    set-rs-ith/left!
-                    set-rs-ith/right!)
+(require (except-in
+          "rsound.rkt"
+          rs-extractor
+          rs-mutator
+          frame->sample
+          sound-list-total-frames
+          same-sample-rate-check)
          "network.rkt"
          "util.rkt"
          "single-cycle.rkt"
          "stream-play.rkt"
          "drum-samples.rkt"
-         "checked-funs.rkt"
          "diagnose.rkt"
          "stream-play.rkt"
          "filter.rkt")
@@ -25,7 +22,6 @@
          (all-from-out "single-cycle.rkt")
          (all-from-out "stream-play.rkt")
          (all-from-out "drum-samples.rkt")
-         (all-from-out "checked-funs.rkt")
          (all-from-out "diagnose.rkt")
          ;; should probably hide network-init, but 
          ;; I'm not going to... it could maybe be useful.

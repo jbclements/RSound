@@ -298,7 +298,7 @@ A node that takes one input is called a @deftech{filter}.
  that uses @racket[<=] evaluates the input expressions, and uses them as 
  inputs to the given network.
  
- The special @racket[(prev node-label init-val)] form may be used to refer
+ The special @(deftech #:key "prev" @racket[(prev node-label init-val)]) form may be used to refer
  to the previous value of the corresponding node. It's fine to have ``forward''
  references to clauses that haven't been evaluated yet. 
  
