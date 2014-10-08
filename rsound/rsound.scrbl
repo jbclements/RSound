@@ -106,6 +106,12 @@ RSound now includes basic support for recording sounds.
  using the default sample rate. Blocks until the sound is finished.
 }
 
+@defproc[(record-mono-sound (frames nat?)) rsound?]{
+ Using the default input default device, record a sound of length @racket[frames],
+ using the default sample rate and only one channel. Blocks until the sound is finished.
+ The sound is converted to a stereo sound by simple duplication of channels.
+}
+
 @section{File I/O}
 
 These procedures read and write rsounds from/to disk.

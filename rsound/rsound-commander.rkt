@@ -16,7 +16,8 @@
                   stream-play/unsafe
                   s16vec-record
                   host-api
-                  all-host-apis)
+                  all-host-apis
+                  frame?)
          racket/contract
          (only-in ffi/unsafe cpointer? ptr-set! _sint16 cast _pointer)
          ffi/vector
@@ -45,25 +46,23 @@
        (-> nonnegative-real?))]
   [signal/block-play/unsafe (-> signal/block/unsafe/c nonnegative-real? (or/c nonnegative-real? false?) 
                                 (-> nonnegative-real?))]
-  [stop-playing (-> void?)]
-  [channels exact-nonnegative-integer?])
+  [stop-playing (-> void?)])
+ CHANNELS
+ frame?
  s16vec-record)
-
-(define nat? exact-nonnegative-integer?)
-(define frames? nat?)
 
 (define signal/block/unsafe/c
   (-> cpointer?
-      frames?
+      frame?
       void?))
 
 (define signal-block/c
   (-> procedure?
       ;; don't want to impose a per-frame contract check:
-      #;(-> nat? ;; index
+      #;(-> frame? ;; index
           nat? ;; value
-          void?)
-      frames?
+          s16?)
+      frame?
       void?))
 
 (define (false? x) (eq? x #f))
@@ -73,7 +72,7 @@
 
 ;; channels... don't change this, unless 
 ;; you also change the copying-callback.
-(define channels 2)
+(define CHANNELS 2)
 
 ;; this wrapper just discards its argument, to fit the API for
 ;; register-custodian shutdown
@@ -151,7 +150,7 @@
       (cast ptr _pointer (_s16vector o frames)))
     (for ([frame (in-range 0 frames)])
       (define sample (real->s16 (sample-maker)))
-      (define sample-num (* frame channels))
+      (define sample-num (* frame CHANNELS))
       (unsafe-s16vector-set! s16vec sample-num sample)
       (unsafe-s16vector-set! s16vec (add1 sample-num) sample)))
   signal/block/unsafe)
@@ -165,7 +164,7 @@
                          (_s16vector o frames)))
     (for ([frame (in-range 0 frames)])
       (define sample (sample-maker))
-      (define sample-num (* frame channels))
+      (define sample-num (* frame CHANNELS))
       (unsafe-s16vector-set! s16vec sample-num sample)
       (unsafe-s16vector-set! s16vec (add1 sample-num) sample)))
   signal/block/unsafe)

@@ -31,19 +31,19 @@
                      rsound-hash-1
                      rsound-hash-2))
 
+;; used by files that depend on this one:
+(define CHANNELS rc:CHANNELS)
+
 (define s16max #x7fff)
 (define -s16max (- s16max))
 (define s16max/i (exact->inexact #x7fff))
 (define s16-size 2)
 
-(define CHANNELS rc:channels)
 (define stop rc:stop-playing)
 
 ;; used for creating sounds; specifying the 
 ;; sample rate every time is too much of a pain
 ;; for students. 
-;; ... actually, I'm just going to make it a constant, to
-;; speed things up.
 (define default-sample-rate (make-parameter 44100))
 
 ;; constants that control the speed testing
@@ -65,10 +65,15 @@
 (define (rsound/all s16vec sample-rate)
   (when (= (s16vector-length s16vec) 0)
     (raise-argument-error 'rsound/all "s16vector of length > 0" 0 s16vec sample-rate))
-  (rsound s16vec 0 (/ (s16vector-length s16vec) CHANNELS) sample-rate))
+  (rsound s16vec 0 (/ (s16vector-length s16vec) rc:CHANNELS) sample-rate))
 
-(define/argcheck (record-sound [frames nonnegative-integer? "non-negative integer"])
-  (rsound/all (rc:s16vec-record frames (default-sample-rate)) (default-sample-rate)))
+;; record a stereo sound
+(define/argcheck (record-sound [frames rc:frame? "non-negative integer"])
+  (rsound/all (rc:s16vec-record frames (default-sample-rate) rc:CHANNELS) (default-sample-rate)))
+
+;; record a mono sound (and then convert it to stereo)
+(define/argcheck (record-mono-sound [frames rc:frame? "non-negative integer"])
+  (rsound/all (rc:s16vec-record frames (default-sample-rate) 1) (default-sample-rate)))
 
 ;; are two rsounds equal?
 (define/argcheck (rs-equal? [r1 rsound? "rsound"]
@@ -292,7 +297,7 @@
 
 ;; translate a frame number and a channel into a sample number
 (define (frame->sample f left?)
-  (+ (* f rc:channels) (if left? 0 1)))
+  (+ (* f rc:CHANNELS) (if left? 0 1)))
 
 ;; RSOUND OPERATIONS: subsound, append, overlay, etc...
 
@@ -308,13 +313,13 @@
     (raise-argument-error 'rs-append* "list of rsounds" 0 los))
   (same-sample-rate-check los)
   (define total-frames (apply + (map rs-frames los)))
-  (define cblock (make-s16vector (* rc:channels total-frames)))
+  (define cblock (make-s16vector (* rc:CHANNELS total-frames)))
   (for/fold ([offset-samples 0])
     ([sound (in-list los)])
-    (let ([sound-samples (* rc:channels (rs-frames sound))])
+    (let ([sound-samples (* rc:CHANNELS (rs-frames sound))])
       (memcpy (s16vector->cpointer cblock) offset-samples
               (s16vector->cpointer (rsound-data sound)) 
-              (* rc:channels (rsound-start sound))
+              (* rc:CHANNELS (rsound-start sound))
               sound-samples _sint16)
       (+ offset-samples sound-samples)))
   (rsound/all cblock (rsound-sample-rate (car los))))
@@ -335,16 +340,16 @@
                       0 sound&times))
   (same-sample-rate-check (map car sound&times))
   (let* ([total-frames (inexact->exact (sound-list-total-frames sound&times))]
-         [cblock (make-s16vector (* total-frames rc:channels))])
-    (memset (s16vector->cpointer cblock) 0 #x00 (* total-frames rc:channels) _sint16)
+         [cblock (make-s16vector (* total-frames rc:CHANNELS))])
+    (memset (s16vector->cpointer cblock) 0 #x00 (* total-frames rc:CHANNELS) _sint16)
     (for ([s&t (in-list sound&times)])
       (match-define (list sound offset/i) s&t)
       (define offset (inexact->exact offset/i))
       (match-define (rsound s16vec start stop sample-rate) sound)
       (define frames (rs-frames sound))
-      (define dst-offset (* rc:channels offset))
-      (define src-offset (* rc:channels start))
-      (define num-samples (* rc:channels frames))
+      (define dst-offset (* rc:CHANNELS offset))
+      (define src-offset (* rc:CHANNELS start))
+      (define num-samples (* rc:CHANNELS frames))
       (define p1 (ptr-add (s16vector->cpointer cblock)
                           (* s16-size dst-offset)))
       (define p2 (ptr-add (s16vector->cpointer s16vec)
@@ -381,9 +386,9 @@
   (define sample-rate (default-sample-rate))
   (define sample-maker (network-init f))
   (define int-frames (inexact->exact (floor frames)))
-  (define cblock (make-s16vector (* rc:channels int-frames)))
+  (define cblock (make-s16vector (* rc:CHANNELS int-frames)))
   (for ([i (in-range int-frames)])
-    (let* ([offset (* rc:channels i)]
+    (let* ([offset (* rc:CHANNELS i)]
            [sample (real->s16 (sample-maker))])
       ;; I believe these could safely be unsafe.
       (s16vector-set! cblock offset       sample)
@@ -401,9 +406,9 @@
   (define int-frames (inexact->exact frames))
   (define sample-maker/left (network-init fleft))
   (define sample-maker/right (network-init fright))
-  (let* ([cblock (make-s16vector (* rc:channels int-frames))])
+  (let* ([cblock (make-s16vector (* rc:CHANNELS int-frames))])
     (for ([i (in-range int-frames)])
-      (let* ([offset (* rc:channels i)])
+      (let* ([offset (* rc:CHANNELS i)])
         ;; I believe these could safely be unsafe
         (s16vector-set! cblock offset       (real->s16 (sample-maker/left)))
         (s16vector-set! cblock (+ offset 1) (real->s16 (sample-maker/right)))))
@@ -413,8 +418,8 @@
 (define/argcheck (silence [frames positive-integer? "positive integer"])
   (define sample-rate (default-sample-rate))
   (define int-frames (inexact->exact frames))
-  (let* ([cblock (make-s16vector (* rc:channels int-frames))])
-    (memset (s16vector->cpointer cblock) #x0 (* rc:channels int-frames) _sint16)
+  (let* ([cblock (make-s16vector (* rc:CHANNELS int-frames))])
+    (memset (s16vector->cpointer cblock) #x0 (* rc:CHANNELS int-frames) _sint16)
     (rsound/all cblock sample-rate)))
 
 
@@ -425,11 +430,11 @@
                             [filter network/s? "network"])
   (define left-filter (network-init filter))
   (define right-filter (network-init filter))
-  (define output-s16vec (make-s16vector (* CHANNELS (rs-frames sound))))
+  (define output-s16vec (make-s16vector (* rc:CHANNELS (rs-frames sound))))
   (for ([i (rs-frames sound)])
     ;; could be faster with unsafe write and read...
-    (s16vector-set! output-s16vec       (* i CHANNELS)  (real->s16 (left-filter (rs-ith/left sound i))))
-    (s16vector-set! output-s16vec (add1 (* i CHANNELS)) (real->s16 (right-filter (rs-ith/right sound i))))
+    (s16vector-set! output-s16vec       (* i rc:CHANNELS)  (real->s16 (left-filter (rs-ith/left sound i))))
+    (s16vector-set! output-s16vec (add1 (* i rc:CHANNELS)) (real->s16 (right-filter (rs-ith/right sound i))))
     )
   (rsound/all output-s16vec (rsound-sample-rate sound)))
 
@@ -437,19 +442,19 @@
 ;; test the time taken per frame for a given signal.
 ;; generates an rsound containing a bunch of frames.
 (define (signal-speed-test signal)
-  (define cblock (make-s16vector (inexact->exact (* rc:channels SPEED-TEST-BUFSIZE))))
+  (define cblock (make-s16vector (inexact->exact (* rc:CHANNELS SPEED-TEST-BUFSIZE))))
   (define sample-maker (network-init signal))
   (define (generate-samples n)
     (for ([dc (in-range (floor (/ n SPEED-TEST-BUFSIZE)))])
       (for ([i (in-range SPEED-TEST-BUFSIZE)])
-        (let* ([offset (* rc:channels i)]
+        (let* ([offset (* rc:CHANNELS i)]
                [sample (real->s16 (sample-maker))])
           ;; I believe these could safely be unsafe.
           (s16vector-set! cblock offset       sample)
           (s16vector-set! cblock (+ offset 1) sample))))
     ;; leftovers:
     (for ([i (in-range (remainder n SPEED-TEST-BUFSIZE))])
-      (let* ([offset (* rc:channels i)]
+      (let* ([offset (* rc:CHANNELS i)]
              [sample (real->s16 (sample-maker))])
         ;; I believe these could safely be unsafe.
         (s16vector-set! cblock offset       sample)

@@ -2,7 +2,7 @@
 
 (define collection 'multi)
 
-(define deps (list (list "portaudio" "0.1") 
+(define deps (list (list "portaudio" "1.0.1") 
                    "base"
                    "data-lib"
                    "gui-lib"

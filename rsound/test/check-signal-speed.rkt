@@ -8,7 +8,6 @@
 
 (define buffer-frames 10000000)
 (define frame-rate 44100)
-(define CHANNELS 2)
 
 (define tgt (make-s16vector (* CHANNELS buffer-frames)))
 
