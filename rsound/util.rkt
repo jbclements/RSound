@@ -86,6 +86,8 @@ rsound-max-volume
          rsound-maximize-volume
          midi-note-num->pitch
          pitch->midi-note-num
+         
+         andplay
          )
 
 
@@ -741,7 +743,13 @@ rsound-max-volume
 
 (define i2e inexact->exact)
 
+;; a silly little helper to hide effectfulness
+(define/argcheck (andplay [snd rsound? "rsound"] 
+                          [val any? "value"])
+  (play snd)
+  val)
 
+(define (any? v) #t)
 
 ;; this stuff is a bit of a mess... the frames don't need to be passed around, the 
 ;; whole thing is just a bit wordy.

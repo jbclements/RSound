@@ -41,7 +41,8 @@ volume. Hmm.
 These procedures start and stop playing sounds.
 
 @defproc[(play (rsound rsound?)) void?]{
- Plays an rsound. Plays concurrently with an already-playing sound, if there is one.}
+ Plays an rsound. Plays concurrently with an already-playing sound, if there is one. Returns 
+ immediately (before the sound is played).}
 
 @defproc[(stop) void]{
  Stop all of the the currently playing sounds.}
@@ -622,6 +623,10 @@ Plays a signal/block/unsafe.
 @defproc[(pitch->midi-note-num [pitch nonnegative-real?]) nonnegative-real?]{
  Returns the midi note number that corresponds to a given frequency (in Hz). Inverse of the previous function.
 }
+
+@defproc[(andplay [snd rsound?] [val any/c]) any/c]{
+ plays the given sound and returns the value.}
+
 
 @section{Piano Tones}
 
