@@ -59,7 +59,7 @@
   (queue-for-playing! (pstream-sound-heap pstream) 
                       snd 
                       exact-frame)
-  pstream)
+  "sound is queued")
 
 ;; queue a callback to run at a particular frame
 (define (pstream-queue-callback pstream callback frame)
@@ -76,7 +76,7 @@
   (queue-for-callbacking! (pstream-callback-heap pstream) 
                           callback
                           frame)
-  pstream)
+  "callback is queued")
 
 ;; queue 'snd' for playing at the current frame
 (define (pstream-play pstream snd)
@@ -85,7 +85,7 @@
   (unless (rsound? snd)
     (raise-argument-error 'pstream-play "rsound" 1 pstream snd))
   (pstream-queue pstream snd (pstream-current-frame pstream))
-  pstream)
+  "sound is queued")
 
 ;; check the pstream's volume
 (define (pstream-volume pstream)
