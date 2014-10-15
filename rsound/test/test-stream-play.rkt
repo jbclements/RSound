@@ -73,4 +73,25 @@
                (regexp-match #px"rsound matching pstream's frame rate"
                              (exn-message exn)))
              (lambda () (pstream-queue ps 22ksound 0))))
+
+(let ()
+  (define sub-cust (make-custodian))
+
+  ;; start a stream playing under a fresh
+  ;; custodian
+  (parameterize ([current-custodian sub-cust])
+    (thread
+     (lambda ()
+       (signal-play
+        (indexed-signal (lambda (x) 0.0)))
+       (sleep 10)
+       )))
+
+  ;; now kill the custodian
+  (sleep 2)
+  (printf "calling custodian-shutdown-all\n")
+  (sleep 0.1)
+  ;; this should not crash... 
+  (custodian-shutdown-all sub-cust) 
+)
 ))

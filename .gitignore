@@ -3,3 +3,4 @@ planet-docs
 compiled
 *~
 .DS_Store
+*.bak
