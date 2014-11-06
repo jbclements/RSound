@@ -11,6 +11,7 @@
                    "plot-gui-lib"
                    "rackunit-lib"
                    "typed-racket-lib"
-                   "memoize"
-                   ))
-(define build-deps (list "scribble-lib"))
+                   "memoize" ))
+(define build-deps (list "scribble-lib"
+                         "racket-doc"
+                         "wxme-lib"))
