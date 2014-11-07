@@ -14,6 +14,7 @@ rsound-max-volume
 |#
 
 (require "rsound.rkt"
+         "common.rkt"
          math/base
          math/array
          "integral-cycles.rkt"
@@ -120,7 +121,7 @@ rsound-max-volume
   (for ([i frames])
     (unsafe-s16vector-set! vec (* CHANNELS i) (real->s16 (left-fun i)))
     (unsafe-s16vector-set! vec (add1 (* CHANNELS i)) (real->s16 (right-fun i))))
-  (rsound/all vec sample-rate))
+  (vec->rsound vec sample-rate))
 
 ;; given (a function from sample and index to sample) and an rsound,
 ;; produce a new rsound where every sample is modified 
@@ -233,7 +234,7 @@ rsound-max-volume
   (define factor (/ old-rate frame-rate))
   (define resampled
     (resample/interp factor sound))
-  (rsound/all (rsound-data resampled) frame-rate))
+  (vec->rsound (rsound-data resampled) frame-rate))
 
 ;; produce a new rsound by multiplying each sample in the
 ;; first by each sample in the second. The length and sample

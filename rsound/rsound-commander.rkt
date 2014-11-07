@@ -72,7 +72,8 @@
   (and (real? n) (not (negative? n))))
 
 ;; channels... don't change this, unless 
-;; you also change the copying-callback.
+;; you also change the copying-callback (and all of 
+;; the portaudio package)
 (define channels 2)
 
 ;; this wrapper just discards its argument, to fit the API for

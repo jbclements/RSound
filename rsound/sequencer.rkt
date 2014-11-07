@@ -1,6 +1,7 @@
 #lang racket/base
 
 (require "rsound.rkt"
+         "common.rkt"
          "util.rkt"
          "paste-util.rkt"
          data/heap

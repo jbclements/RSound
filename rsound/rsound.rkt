@@ -2,50 +2,38 @@
 
 ;; to-do:
 ;; check okay for inputs to be inexact integers?
-;; go to time instead of frames?
 ;; tighter sanity checks on sample rate?
 
-(require (only-in ffi/unsafe memcpy _sint16 memset ptr-add)
+(require (only-in ffi/unsafe memcpy _sint16 memset ptr-add ctype-sizeof)
          ffi/vector
          "read-wav.rkt"
          "write-wav.rkt"
          "network.rkt"
          "define-argcheck.rkt"
+         "common.rkt"
          (prefix-in rc: "rsound-commander.rkt")
          "private/s16vector-add.rkt"
          racket/contract
          racket/match
          racket/list)
 
-(define (positive-integer? n)
-  (and (integer? n) (< 0 n)))
-
-(define (nonnegative-integer? n)
-  (and (integer? n) (<= 0 n)))
-
 (provide (except-out (all-defined-out)
-                     rsound=?
-                     s16vector-equal?
                      s16vector-hash-1
                      s16vector-hash-2
                      rsound-hash-1
-                     rsound-hash-2))
+                     rsound-hash-2
+                     HASH-CONSTANT-1
+                     HASH-CONSTANT-2
+                     HASH-CONSTANT-3
+                     HASH-CONSTANT-4))
 
 (define s16max #x7fff)
 (define -s16max (- s16max))
 (define s16max/i (exact->inexact #x7fff))
-(define s16-size 2)
+(define s16-size (ctype-sizeof _sint16))
 
 (define CHANNELS rc:channels)
 (define stop rc:stop-playing)
-
-;; used for creating sounds; specifying the 
-;; sample rate every time is too much of a pain
-;; for students. 
-;; ... actually, I'm just going to make it a constant, to
-;; speed things up.
-(define default-sample-rate (make-parameter 44100))
-
 ;; constants that control the speed testing
 (define SPEED-TEST-MAX-FRAMES 1000000)
 (define SPEED-TEST-TIME-THRESHOLD-MSEC 400)
@@ -57,18 +45,8 @@
 ;; 2-channel int16 only. Also, it discards all meta-information
 ;; except length and sample-rate.
 
-
-(define (rs-frames rsound)
-  (- (rsound-stop rsound) (rsound-start rsound)))
-
-;; fill in 0 and max-frames for a newly created rsound
-(define (rsound/all s16vec sample-rate)
-  (when (= (s16vector-length s16vec) 0)
-    (raise-argument-error 'rsound/all "s16vector of length > 0" 0 s16vec sample-rate))
-  (rsound s16vec 0 (/ (s16vector-length s16vec) CHANNELS) sample-rate))
-
-(define/argcheck (record-sound [frames nonnegative-integer? "non-negative integer"])
-  (rsound/all (rc:s16vec-record frames (default-sample-rate)) (default-sample-rate)))
+;; NB: hashing functions must occur first, so that the hash property
+;; can refer to them.
 
 ;; are two rsounds equal?
 (define/argcheck (rs-equal? [r1 rsound? "rsound"]
@@ -83,12 +61,24 @@
              (and (= (rs-ith/left/s16 r1 i) (rs-ith/left/s16 r2 i))
                   (= (rs-ith/right/s16 r1 i) (rs-ith/right/s16 r2 i)))))))
 
-(define (s16vector-equal? v1 v2 recursive-equal?)
-  (and (= (s16vector-length v1)
-          (s16vector-length v2))
-       (for/and ([i (in-range (s16vector-length v1))])
-         (= (s16vector-ref v1 i) (s16vector-ref v2 i)))))
+;; a pair of hashing functions for rsounds
+(define HASH-CONSTANT-3 669668284)
+(define (rsound-hash-1 rs recursive-equal-hash)
+  (+ HASH-CONSTANT-3 
+     (s16vector-hash-1 (rsound-data rs) recursive-equal-hash)
+     (* #x1 (rsound-start rs))
+     (* #x100 (rsound-stop rs))
+     (* #x10000 (inexact->exact (round (rsound-sample-rate rs))))))
 
+(define HASH-CONSTANT-4 2143890123)
+(define (rsound-hash-2 rs recursive-equal-hash)
+  (+ HASH-CONSTANT-4 
+     (s16vector-hash-2 (rsound-data rs) recursive-equal-hash)
+     (* #x10000 (rsound-start rs))
+     (* #x100 (rsound-stop rs))
+     (* #x1 (inexact->exact (round (rsound-sample-rate rs))))))
+
+;; a pair of hashing functions for s16vectors that represent rsounds
 (define HASH-CONSTANT-1 624327903)
 (define (s16vector-hash-1 v1 recursive-equal-hash)
   (+ HASH-CONSTANT-1
@@ -113,37 +103,32 @@
                (* #x10000 (s16vector-ref v1 (floor (* 2 quarter-len))))
                (* #x10000 (s16vector-ref v1 (floor (* 3 quarter-len)))))])))
 
-(define HASH-CONSTANT-3 669668284)
-(define (rsound-hash-1 rs recursive-equal-hash)
-  (+ HASH-CONSTANT-3 
-     (s16vector-hash-1 (rsound-data rs) recursive-equal-hash)
-     (* #x1 (rsound-start rs))
-     (* #x100 (rsound-stop rs))
-     (* #x10000 (inexact->exact (round (rsound-sample-rate rs))))))
-
-(define HASH-CONSTANT-4 2143890123)
-(define (rsound-hash-2 rs recursive-equal-hash)
-  (+ HASH-CONSTANT-4 
-     (s16vector-hash-1 (rsound-data rs) recursive-equal-hash)
-     (* #x10000 (rsound-start rs))
-     (* #x100 (rsound-stop rs))
-     (* #x1 (inexact->exact (round (rsound-sample-rate rs))))))
-
-(define (rsound=? rs1 rs2 recursive-equal?)
-  (rs-equal? rs1 rs2))
-
-;; a rsound is (rsound s16vector positive-integer)
+;; a rsound is (rsound s16vector positive-integer positive-integer positive)
 (struct rsound (data start stop sample-rate) 
   #:transparent
   ;#:property prop:equal+hash
   ;(list rsound=? rsound-hash-1 rsound-hash-2)
   #:methods gen:equal+hash
-  [(define equal-proc rsound=?)
+  [(define equal-proc (lambda (rs1 rs2 _) (rs-equal? rs1 rs2)))
    (define hash-proc rsound-hash-1)
    (define hash2-proc rsound-hash-2)]
   )
 
-(define s&t-list? (listof (list/c rsound? number?)))
+;; how many frames long is the sound?
+(define/argcheck (rs-frames [rsound rsound? "rsound"])
+  (- (rsound-stop rsound) (rsound-start rsound)))
+
+;; given an s16vec and a frame rate, create a new rsound
+(define (vec->rsound s16vec sample-rate)
+  (when (= (s16vector-length s16vec) 0)
+    (raise-argument-error 'rsound/all "s16vector of length > 0" 0 s16vec sample-rate))
+  (rsound s16vec 0 (/ (s16vector-length s16vec) CHANNELS) sample-rate))
+
+;; record a sound
+(define/argcheck (record-sound [frames nonnegative-integer? "non-negative integer"])
+  (vec->rsound (rc:s16vec-record frames (default-sample-rate)) (default-sample-rate)))
+
+;; SIGNAL/BLOCKS
 
 ;; can this procedure be used as a signal/block?
 (define (signal/block? f)
@@ -162,14 +147,14 @@
   (unless (< 0 (file-size path))
     (raise-argument-error 'rs-read "file of length >= 0" 0 path))
   (match (read-sound/s16vector path 0 #f)
-    [(list data sample-rate) (rsound/all data sample-rate)]))
+    [(list data sample-rate) (vec->rsound data sample-rate)]))
 
 ;; read a portion of a sound
 (define/argcheck (rs-read/clip [path path-string? "path-string"]
                                [start-frame nonnegative-integer? "non-negative integer"]
                                [end-frame nonnegative-integer? "non-negative integer"])
   (match (read-sound/s16vector path (inexact->exact start-frame) (inexact->exact end-frame))
-    [(list data sample-rate) (rsound/all data sample-rate)]))
+    [(list data sample-rate) (vec->rsound data sample-rate)]))
 
 ;; what is the sample-rate of a file?
 (define/argcheck (rs-read-sample-rate [path path-string? "path-string"])
@@ -290,10 +275,6 @@
                   (frame->sample (+ (rsound-start rsound) frame) left?)
                   (scale-fun new-val)))
 
-;; translate a frame number and a channel into a sample number
-(define (frame->sample f left?)
-  (+ (* f rc:channels) (if left? 0 1)))
-
 ;; RSOUND OPERATIONS: subsound, append, overlay, etc...
 
 
@@ -317,7 +298,7 @@
               (* rc:channels (rsound-start sound))
               sound-samples _sint16)
       (+ offset-samples sound-samples)))
-  (rsound/all cblock (rsound-sample-rate (car los))))
+  (vec->rsound cblock (rsound-sample-rate (car los))))
 
 ;; rs-overlay* : (listof (list/c rsound nat)) -> rsound
 ;; overlay all of the sounds at the specified offsets to form one
@@ -350,7 +331,7 @@
       (define p2 (ptr-add (s16vector->cpointer s16vec)
                           (* s16-size src-offset)))
       (s16buffer-add!/c p1 p2 num-samples))
-    (rsound/all cblock (rsound-sample-rate (caar sound&times)))))
+    (vec->rsound cblock (rsound-sample-rate (caar sound&times)))))
 
 
 
@@ -388,7 +369,7 @@
       ;; I believe these could safely be unsafe.
       (s16vector-set! cblock offset       sample)
       (s16vector-set! cblock (+ offset 1) sample)))
-  (rsound/all cblock sample-rate))
+  (vec->rsound cblock sample-rate))
 
 
 ;; make a monaural sound of the given number of frames at the specified sample-rate
@@ -407,7 +388,7 @@
         ;; I believe these could safely be unsafe
         (s16vector-set! cblock offset       (real->s16 (sample-maker/left)))
         (s16vector-set! cblock (+ offset 1) (real->s16 (sample-maker/right)))))
-    (rsound/all cblock sample-rate)))
+    (vec->rsound cblock sample-rate)))
 
 ;; special-case silence (it's fast to generate):
 (define/argcheck (silence [frames positive-integer? "positive integer"])
@@ -415,7 +396,7 @@
   (define int-frames (inexact->exact frames))
   (let* ([cblock (make-s16vector (* rc:channels int-frames))])
     (memset (s16vector->cpointer cblock) #x0 (* rc:channels int-frames) _sint16)
-    (rsound/all cblock sample-rate)))
+    (vec->rsound cblock sample-rate)))
 
 
 ;; apply a filter to a sound (left and right are filtered
@@ -431,7 +412,7 @@
     (s16vector-set! output-s16vec       (* i CHANNELS)  (real->s16 (left-filter (rs-ith/left sound i))))
     (s16vector-set! output-s16vec (add1 (* i CHANNELS)) (real->s16 (right-filter (rs-ith/right sound i))))
     )
-  (rsound/all output-s16vec (rsound-sample-rate sound)))
+  (vec->rsound output-s16vec (rsound-sample-rate sound)))
 
 ;; SPEED TESTING
 ;; test the time taken per frame for a given signal.
@@ -481,8 +462,6 @@
 
 (define (real->s16 x)
   (min s16max (max -s16max (inexact->exact (round (* s16max/i x))))))
-
-
 
 
 ;; check-below-threshold : rsound threshhold -> (void)

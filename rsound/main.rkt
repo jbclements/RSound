@@ -4,9 +4,9 @@
           "rsound.rkt"
           rs-extractor
           rs-mutator
-          frame->sample
           sound-list-total-frames
           same-sample-rate-check)
+         "common.rkt"
          "network.rkt"
          "util.rkt"
          "single-cycle.rkt"
@@ -18,6 +18,7 @@
 
 
 (provide (all-from-out "rsound.rkt")
+         default-sample-rate
          (all-from-out "util.rkt")
          (all-from-out "single-cycle.rkt")
          (all-from-out "stream-play.rkt")

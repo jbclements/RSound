@@ -2,6 +2,7 @@
 
 
 (require "rsound.rkt"
+         "common.rkt"
          racket/gui
          racket/class
          math/array)

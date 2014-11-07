@@ -848,6 +848,27 @@ for re-use. In particular, rsound uses samples of c3, c4, c5, and c6, and resamp
  supersedes the host-api choice.
 }
 
+@section{Fsounds}
+
+@defmodule[rsound/fsound] {
+As part of a different project, I want a way to manipulate sounds as vectors of doubles.
+To handle this, I've copied and updated a bunch of rsound code, to make it work with
+vectors of doubles. As time passes and memory gets more common, I expect at some point
+simply to switch over to using these sounds everywhere.}
+
+@defproc[(rsound->fsound [rs rsound?]) fsound?]{
+ Turn an rsound into an fsound. The result may be much smaller than
+ the original, because of lazy clipping.
+}
+
+@defproc[(fsound->rsound [fs fsound?]) rsound?]{
+ Turn an fsound into an rsound. The result is guaranteed to be at most
+ 1/4 the size, but may be smaller, because of lazy clipping. Naturally,
+ this is an extremely lossy conversion, because doubles hold more information.
+}
+
+
+
 @section{Sample Code}
 
 An example of a signal that plays two lines, each with randomly changing 

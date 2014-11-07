@@ -1,12 +1,16 @@
-#lang typed/racket
+#lang typed/racket/base
 
 ;; the part of filter.rkt that can easily be implemented using 
 ;; typed racket
 
-(require racket/flonum)
+(require racket/flonum
+         racket/match)
 
-(require/typed "rsound.rkt"
+(require/typed "common.rkt"
                [default-sample-rate (-> Real)])
+
+(require/typed racket/math 
+               [pi Real])
 
 (provide response/raw
          response/mag

@@ -1,6 +1,7 @@
 #lang racket/base
 
 (require "rsound.rkt"
+         "common.rkt"
          "util.rkt"
          "envelope.rkt"
          "contrib/adventure-kid-waveforms.rkt"

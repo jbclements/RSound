@@ -1,7 +1,8 @@
 #lang racket/base
 
-(require "./rsound.rkt"
-         "./sequencer.rkt")
+(require "rsound.rkt"
+         "common.rkt"
+         "sequencer.rkt")
 
 ;; PSTREAMS
 
