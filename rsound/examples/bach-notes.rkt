@@ -6,7 +6,6 @@
 ;; a note is (make-note note-num frames frames)
 (define-struct note (pitch time duration))
 
-#;()
 
 (define bach-notes
 (list
@@ -486,6 +485,9 @@
 (make-note 72 2967930 136710)))
 
 (define SHUFFLE-PIECES 5)
+
+;; shuffle like cards: cut the deck in a few places,
+;; reorder the sub-lists
 (define (rough-shuffle l)
   (define cut-points 
     (append (list 0)
@@ -499,16 +501,20 @@
                      [end (rest cut-points)])
             (drop (take l end) begin)))))
 
-(rough-shuffle '(1 2 3 4 5 6 7 8 9 10 11 12 13 14))
 
-(define pd-list (rough-shuffle
- (for/list ([b bach-notes])
-  (list (note-pitch b) (note-duration b)))))
+;; a list of pitches and durations
+(define pd-list
+  (rough-shuffle
+   (for/list ([b bach-notes])
+     (list (note-pitch b) (note-duration b)))))
 
+;; the times from the original piece
 (define t-list 
   (for/list ([b bach-notes])
     (list (note-time b))))
 
+;; combine the times from t-list with the pitches
+;; and durations from pd-list
 (define shuffled-notes
   (sort
    (for/list ([pd pd-list] [t t-list])

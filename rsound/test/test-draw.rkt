@@ -4,7 +4,8 @@
          "../util.rkt"
          "../draw.rkt"
          ffi/vector
-         rackunit)
+         rackunit
+         math/array)
 
 
 
@@ -90,12 +91,12 @@
 #;(let ([v (build-vector 16 (lambda (i) (* s16max i)))])
   (ffts-draw (list v) (list v) 16))
 
-(let ([v1 (build-vector 16 (lambda (i) (* s16max i)))]
-      [v2 (build-vector 16 (lambda (i) 0))])
+(let ([v1 (build-array (vector 16) (lambda (idxes) (* s16max (vector-ref idxes 0))))]
+      [v2 (build-array (vector 16) (lambda (idxes) 0))])
   (ffts-draw (list v1 v2) (list v2 v1) 2 10))
 
-(let ([v1 (build-vector 16 (lambda (i) (* s16max i)))]
-      [v2 (build-vector 16 (lambda (i) 0))])
+(let ([v1 (build-array (vector 16) (lambda (idxes) (* s16max (vector-ref idxes 0))))]
+      [v2 (build-array (vector 16) (lambda (idxes) 0))])
   (ffts-draw (list v1 v2) (list v2 v1) 2 4))
 
 
@@ -116,16 +117,20 @@
               (list 0.5 1.0))
 
 
-#;(let ([s (signal->rsound 4096 44100
-                           (lambda (i)
-                             (* 0.5 (+ (sin (* i 4/128 twopi))
-                                       (sin (* i (/ 35.99 128) twopi))))))])
-  ;; should show two spikes
+(let ([s (signal->rsound 4096
+                         (indexed-signal
+                          (lambda (i)
+                            (* 0.5 (+ (sin (* i 4/128 twopi))
+                                      (sin (* i (/ 35.99 128) twopi)))))))])
+  ;; should show four spikes 
+  (vector-draw/real/imag (rsound-fft/left s))
+  ;; should show four spikes
   (vector-draw/mag/phase (rsound-fft/left s))
   ;; one of the spikes is so crisp it disappears when the window isn't tall:
   ;; window should be tall:
   (rsound-fft-draw s #:height 800)
   (rsound-fft-draw s #:zoom-freq 22050))
+
 
 
 ;; try something too short:

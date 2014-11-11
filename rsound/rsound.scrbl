@@ -571,7 +571,7 @@ Plays a signal/block/unsafe.
  as a single fft frame, so it must be of a length that is a power of 2, and
  using a sound of more than 16384 frames could be slow.}
                                                                       
-@defproc[(vector-pair-draw/magnitude [left (vectorof complex?)] [right (vectorof complex?)]
+@defproc[(vector-pair-draw/magnitude [left (fcarrayof complex?)] [right (vectorof complex?)]
                                      [#:title title string?]
                                      [#:width width nonnegative-integer? 800]
                                      [#:height height nonnegative-integer? 200]) 
@@ -580,7 +580,7 @@ Plays a signal/block/unsafe.
  as a waveform. The lines connecting the dots are really somewhat inappropriate in the 
  frequency domain, but they aid visibility....}
                
-@defproc[(vector-draw/real/imag [vec (vectorof complex?)]
+@defproc[(vector-draw/real/imag [vec (fcarrayof complex?)]
                                 [#:title title string?]
                                 [#:width width nonnegative-integer? 800]
                                 [#:height height nonnegative-integer? 200]) 

@@ -10,7 +10,6 @@
 (provide rs-draw
          vector-display-frame
          vector-draw/mag/phase ;; undocumented
-         array-draw/mag/phase ;; undocumented
          vector-draw/log-mag/phase ;; undocumented
          vector-pair-draw/magnitude
          vector-draw/real/imag
@@ -311,18 +310,54 @@
                 (vector-length left-vec)
                 #f))
 
-(define (vector-draw/real/imag vec #:title [title "real and imaginary parts"]
+;; draw a complex vector, breaking it up into real and imaginary parts
+(define (vector-draw/real/imag arr #:title [title "real and imaginary parts"]
                                #:width [width 800] #:height [height 230])
+  (unless (= 1 (array-dims arr))
+    (raise-argument-error 'vector-draw/real-imag "array of one dimension"
+                          0 arr))
   (vector-display-frame title
-                (lambda (i) (real-part (vector-ref vec i)))
-                (lambda (i) (imag-part (vector-ref vec i)))
-                (vector-length vec)
+                        (lambda (i) (real-part (array-ref arr (vector i))))
+                        (lambda (i) (imag-part (array-ref arr (vector i))))
+                        (array-size arr)
+                        width
+                        height
+                        0
+                        (array-size arr)
+                        #f))
+
+;; draw a complex vector, breaking it up into magnitude and phase
+(define (vector-draw/mag/phase arr #:title [title "magnitude and phase"] #:width [width 800] #:height [height 200])
+  (unless (= 1 (array-dims arr))
+    (raise-argument-error 'vector-draw/mag/phase "array of one dimension"
+                          0 arr))
+  (vector-display-frame title
+                        (lambda (i) (magnitude (array-ref arr (vector i))))
+                        (lambda (i) (phase (array-ref arr (vector i))))
+                        (array-size arr)
+                        width
+                        height
+                        0
+                        (array-size arr)
+                        #f))
+
+;; draw a complex vector as a set of log-magnitudes and phases
+(define (vector-draw/log-mag/phase arr #:title [title "log magnitude and phase"] #:width [width 800] #:height [height 200])
+  (unless (= 1 (array-dims arr))
+    (raise-argument-error 'vector-draw/log-mag/phase "array of one dimension"
+                          0 arr))
+  (vector-display-frame title
+                (lambda (i) (log (magnitude (array-ref arr (vector i)))))
+                (lambda (i) (phase (array-ref arr (vector i))))
+                (array-size arr)
                 width
                 height
                 0
-                (vector-length vec)
+                (array-size arr)
                 #f))
 
+
+;; draw a sound
 (define (rs-draw sound #:title [title "picture of sound"] 
                      #:width [width 800] #:height [height 230])
   (vector-display-frame title
@@ -335,72 +370,53 @@
                 (rs-frames sound)
                 #t))
 
-(define (vector-draw/mag/phase vec #:title [title "magnitude and phase"] #:width [width 800] #:height [height 200])
-  (vector-display-frame title
-                (lambda (i) (magnitude (vector-ref vec i)))
-                (lambda (i) (phase (vector-ref vec i)))
-                (vector-length vec)
-                width
-                height
-                0
-                (vector-length vec)
-                #f))
-
-(define (array-draw/mag/phase arr #:title [title "magnitude and phase"] #:width [width 800] #:height [height 200])
-  (unless (= (array-dims arr) 1)
-    (raise-argument-error array-draw/mag/phase "array of dimension 1" 0 arr))
-  (vector-display-frame title
-                (lambda (i) (magnitude (array-ref arr (vector i))))
-                (lambda (i) (phase (array-ref arr (vector i))))
-                (array-size arr)
-                width
-                height
-                0
-                (array-size arr)
-                #f))
-
-(define (vector-draw/log-mag/phase vec #:title [title "log magnitude and phase"] #:width [width 800] #:height [height 200])
-  (vector-display-frame title
-                (lambda (i) (log (magnitude (vector-ref vec i))))
-                (lambda (i) (phase (vector-ref vec i)))
-                (vector-length vec)
-                width
-                height
-                0
-                (vector-length vec)
-                #f))
-
 ;; FFTS
 
 
 ;; make-fft-drawing-callback : draw an FFT picture. Assumes 0db = s16max * fft-points / 2
-;; (listof (vectorof complex?)) (listof (vectorof complex?)) -> canvas dc -> void
+;; (listof (fcarrayof complex?)) (listof (fcarrayof complex?)) -> canvas dc -> void
 (define (make-fft-drawing-callback left-ffts right-ffts fft-show-points)
   (unless (= (length left-ffts) (length right-ffts))
-    (error 'make-fft-drawing-callback 
-           unequal-lengths-msg 
-           (length left-ffts) (length right-ffts)))
+    (raise-argument-error
+     'make-fft-drawing-callback 
+     "lists of equal length" 1 left-ffts right-ffts fft-show-points))
+  (unless (andmap (lambda (a) (= (array-dims a) 1)) left-ffts)
+    (raise-argument-error
+     'make-fft-drawing-callback
+     "list of arrays of one dimension"
+     0 left-ffts right-ffts fft-show-points))
+  (unless (andmap (lambda (a) (= (array-dims a) 1)) right-ffts)
+    (raise-argument-error
+     'make-fft-drawing-callback
+     "list of arrays of one dimension"
+     1 left-ffts right-ffts fft-show-points))
   (when (empty? left-ffts)
-    (error 'make-fft-drawing-callback "called with empty lists of ffts"))
-  (unless (apply = (map vector-length (append left-ffts right-ffts)))
-    (error 'make-fft-drawing-callback 
-           "transforms must all have the same number of points, given ~e"
-           (map vector-length (append left-ffts right-ffts))))
-  (unless (= (modulo (vector-length (first left-ffts)) 2) 0)
-    (error 'make-fft-drawing-callback 
-           uneven-vec-lengths-msg))
+    (raise-argument-error
+     'make-fft-drawing-callback
+     "nonempty list"
+     0 left-ffts right-ffts fft-show-points))
+  (unless (all-equal? (map array-shape (append left-ffts right-ffts)))
+    (raise-argument-error
+     'make-fft-drawing-callback
+     "transforms with same numbers of points"
+     0 left-ffts right-ffts fft-show-points))
+  (unless (= (modulo (array-size (first left-ffts)) 2) 0)
+    (raise-argument-error
+     'make-fft-drawing-callback
+     "transforms with an even number of points"
+     0 left-ffts right-ffts fft-show-points))
   (lambda (canvas dc)
     (let* ([h (send canvas get-height)]
            [half-h (/ h 2)]
            [w (send canvas get-width)]
            [windows (length left-ffts)]
-           [fft-max-points (add1 (/ (vector-length (first left-ffts)) 2))]
+           [fft-max-points (add1 (/ (array-size (first left-ffts)) 2))]
            [fft-points (if fft-show-points
                            (min fft-show-points fft-max-points)
                            fft-max-points)]
            [h-scale (/ windows w)]
            [v-scale (/ fft-points half-h)]
-           [fft-max (* s16max (vector-length (first left-ffts)) 1/2)])
+           [fft-max (* s16max (array-size (first left-ffts)) 1/2)])
       (for ([i (in-range 0 windows)]
             [left-fft (in-list left-ffts)]
             [right-fft (in-list right-ffts)])
@@ -423,9 +439,9 @@
                   (send dc draw-rectangle win-left top (- win-right win-left)
                         (- bottom top))))
               (draw-fft-rect (- half-h win-top) (- half-h win-bottom)
-                             (magnitude (vector-ref left-fft j)))
+                             (magnitude (array-ref left-fft (vector j))))
               (draw-fft-rect (- h win-top) (- h win-bottom)
-                             (magnitude (vector-ref right-fft j))))))))))
+                             (magnitude (array-ref right-fft (vector j)))))))))))
 
 (define unequal-lengths-msg
   "left and right channels must have the same number of fft windows, given ~s and ~s")
@@ -494,7 +510,7 @@
     (for/list ([i (in-range windows)])
       (let* ([s (* window-size i)]
              [e (* window-size (add1 i))]
-             [v (build-array (- e s) 
+             [v (build-array (vector (- e s)) 
                              (lambda (i) (getter rsound (+ s (vector-ref i 0)))))])
         (array-fft v))))
   
@@ -517,7 +533,7 @@
   (define window-size (rs-frames rsound))
   (define vec-as-array (build-array (vector window-size) (lambda (i) (rs-ith/left/s16 rsound (vector-ref i 0)))))
   (define the-fft (array-fft vec-as-array))
-  (array-draw/mag/phase the-fft
+  (vector-draw/mag/phase the-fft
                          #:title title
                          #:width width
                          #:height height))
@@ -526,6 +542,11 @@
   (string-append "this sound has ~s frames, fewer than the ~s needed for "
                  "one fft window. Use a longer sound or shorten the window."))
 
+(define (all-equal? l)
+  (cond [(empty? l) #t]
+        [(empty? (rest l)) #t]
+        [else (and (equal? (first l) (first (rest l)))
+                   (all-equal? (rest l)))]))
 
 ;; return the phase of a complex number.  For 0+0i, return 0.
 (define (phase cplx)
