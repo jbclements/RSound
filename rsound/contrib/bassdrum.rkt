@@ -2,7 +2,10 @@
 
 (require plot
          (except-in "../main.rkt" bassdrum)
+         racket/runtime-path
          "../draw.rkt")
+
+(define-runtime-path here ".")
 
 ;; YAY! finally got the right frequency equation.
 #|
@@ -125,11 +128,12 @@
                    (exp (+ (* t2 m) b)))))))))
 
 
-(define bd (signal->rsound 15727 44100 bassdrum))
+(define bd (signal->rsound 15727 (indexed-signal bassdrum)))
 (rs-draw bd)
-(define bd2 (rs-read "/Users/clements/RSound/contrib/drum-samples/bassdrum.wav"))
+(define bd2 (rs-read 
+             (build-path here "drum-samples" "bassdrum.wav")))
 (rs-write bd "/tmp/bassdrum-synth.wav")
 (define bd3 
-  (rs-append* (list bd (silence 22050 44100) bd2 (silence 22050 44100))))
+  (rs-append* (list bd (silence 22050) bd2 (silence 22050))))
 
 

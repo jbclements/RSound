@@ -17,6 +17,7 @@
                                                any)]))
 
 (define i (sqrt -1))
+(define e (exp 1.0))
 (define twopi (* 2 pi))
 
 ;; draw a plot of the frequency response from min-freq to max-freq:
@@ -54,3 +55,17 @@
 (define cutoff-theta (* pi (/ 3600 22050)))
 
 (lpf-response-plot cutoff-theta 0 22050 #:db #t)
+
+;; compensate for gain at 0 Hz by adding a multiplier
+(define (zero-normalize fun)
+  (define gain (fun 1.0))
+  (lambda (z) (/ (fun z) gain)))
+
+
+(response-plot (zero-normalize (lambda (z) (/ 1 (- z 0.9)))) 0 22050)
+(response-plot (zero-normalize (lambda (z) (/ (+ z 1) (- z 0.9)))) 0 22050)
+(define r1 (* 0.90 (exp (* i 6/16 pi))))
+(define r2 (* 0.90 (exp (* -1 i 6/16 pi))))
+(define r3 (exp (* i 9/16 pi)))
+(define r4 (exp (* -1 i 9/16 pi)))
+(response-plot (zero-normalize (lambda (z) (/ (* (+ z 1)) (* (- z 0.95))))) 0 22050)

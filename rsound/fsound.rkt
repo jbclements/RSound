@@ -24,6 +24,7 @@
          set-fs-ith/left! set-fs-ith/right!
          rsound->fsound
          fsound->rsound
+         fs-equal?
          )
 
 ;; will we actually enforce clipping at this value?
@@ -47,48 +48,49 @@
              (and (= (fs-ith/left r1 i) (fs-ith/left r2 i))
                   (= (fs-ith/right r1 i) (fs-ith/right r2 i)))))))
 
+;; should these hash functions use a mask to guarantee fixnum-ness?
 
 ;; a pair of hashing functions for fsounds
-(define HASH-CONSTANT-3 669668284)
+(define HASH-CONSTANT-3 106184275)
 (define (fsound-hash-1 fs recursive-equal-hash)
   (+ HASH-CONSTANT-3 
-     (s16vector-hash-1 (fsound-data fs) recursive-equal-hash)
+     (f64vector-hash-1 (fsound-data fs) recursive-equal-hash)
      (* #x1 (fsound-start fs))
      (* #x100 (fsound-stop fs))
      (* #x10000 (inexact->exact (round (fsound-sample-rate fs))))))
 
-(define HASH-CONSTANT-4 2143890123)
+(define HASH-CONSTANT-4 1535131902)
 (define (fsound-hash-2 fs recursive-equal-hash)
   (+ HASH-CONSTANT-4 
-     (s16vector-hash-2 (fsound-data fs) recursive-equal-hash)
+     (f64vector-hash-2 (fsound-data fs) recursive-equal-hash)
      (* #x10000 (fsound-start fs))
      (* #x100 (fsound-stop fs))
      (* #x1 (inexact->exact (round (fsound-sample-rate fs))))))
 
-;; a pair of hashing functions for s16vectors that represent fsounds
-(define HASH-CONSTANT-1 624327903)
-(define (s16vector-hash-1 v1 recursive-equal-hash)
+;; a pair of hashing functions for f64vectors that represent fsounds
+(define HASH-CONSTANT-1 1102259063)
+(define (f64vector-hash-1 v1 recursive-equal-hash)
   (+ HASH-CONSTANT-1
-     (cond [(= (s16vector-length v1) 0) 0]
+     (cond [(= (f64vector-length v1) 0) 0]
            [else
-            (define quarter-len (/ (s16vector-length v1) 4))
-            (+ (* #x80 (s16vector-length v1))
-               (s16vector-ref v1 0)
-               (* #x10000 (s16vector-ref v1 (floor quarter-len)))
-               (s16vector-ref v1 (floor (* 2 quarter-len)))
-               (* #x10000 (s16vector-ref v1 (floor (* 3 quarter-len)))))])))
+            (define quarter-len (/ (f64vector-length v1) 4))
+            (+ (* #x80 (f64vector-length v1))
+               (f64vector-ref v1 0)
+               (* #x10000 (f64vector-ref v1 (floor quarter-len)))
+               (f64vector-ref v1 (floor (* 2 quarter-len)))
+               (* #x10000 (f64vector-ref v1 (floor (* 3 quarter-len)))))])))
 
-(define HASH-CONSTANT-2 79438529)
-(define (s16vector-hash-2 v1 recursive-equal-hash)
+(define HASH-CONSTANT-2 1073452368)
+(define (f64vector-hash-2 v1 recursive-equal-hash)
   (+ HASH-CONSTANT-2
-     (cond [(= (s16vector-length v1) 0) 0]
+     (cond [(= (f64vector-length v1) 0) 0]
            [else
-            (define quarter-len (/ (s16vector-length v1) 4))
-            (+ (* #x100 (s16vector-length v1))
-               (s16vector-ref v1 0)
-               (s16vector-ref v1 (floor quarter-len))
-               (* #x10000 (s16vector-ref v1 (floor (* 2 quarter-len))))
-               (* #x10000 (s16vector-ref v1 (floor (* 3 quarter-len)))))])))
+            (define quarter-len (/ (f64vector-length v1) 4))
+            (+ (* #x100 (f64vector-length v1))
+               (f64vector-ref v1 0)
+               (f64vector-ref v1 (floor quarter-len))
+               (* #x10000 (f64vector-ref v1 (floor (* 2 quarter-len))))
+               (* #x10000 (f64vector-ref v1 (floor (* 3 quarter-len)))))])))
 
 ;; a fsound is (fsound f64vector positive-integer positive-integer positive)
 (struct fsound (data start stop sample-rate) 
@@ -149,7 +151,7 @@
 ;; turn an rsound into an fsound (only from start to stop)
 (define (rsound->fsound rs)
   (define len (rs-frames rs))
-  (define new-vec (make-f64vector len))
+  (define new-vec (make-f64vector (* channels len)))
   (for ([i len])
     (f64vector-set! new-vec (frame->sample i #t) (rs-ith/left rs i))
     (f64vector-set! new-vec (frame->sample i #f) (rs-ith/right rs i)))
@@ -158,7 +160,7 @@
 ;; turn an fsound into an rsound (only from start to stop)
 (define (fsound->rsound fs)
   (define len (fs-frames fs))
-  (define new-vec (make-s16vector len))
+  (define new-vec (make-s16vector (* channels len)))
   (for ([i len])
     (s16vector-set! new-vec (frame->sample i #t)
                     (real->s16 (fs-ith/left fs i)))

@@ -5,7 +5,6 @@
          "../network.rkt"
          "../util.rkt"
          rackunit
-         rackunit/text-ui
          racket/runtime-path
          ffi/vector)
 
@@ -294,4 +293,5 @@
 
 ;;; TEST CASES
 (module+ test
+  (require rackunit/text-ui)
   (run-tests the-test-suite))
