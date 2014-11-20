@@ -15,8 +15,6 @@
   (test-suite
    "fsound tests"
    (let ()
-     (check-equal? 3 4)
-     
      (define v (list->s16vector '(24 978 -322 16000)))
      
      (define r (vec->rsound v 44100))
