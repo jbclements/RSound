@@ -27,11 +27,13 @@ rsound-max-volume
          (only-in racket/match match-define match)
          (for-syntax racket/base syntax/parse)
          racket/unsafe/ops
-         "define-argcheck.rkt")
+         "define-argcheck.rkt"
+         lang/prim)
 
-(provide rs-map
-         rs-map/idx
-         rs-scale
+(provide-higher-order-primitive rs-map (mapping-fn _))
+(provide-higher-order-primitive rs-map/idx (mapping-fn _))
+(provide-higher-order-primitive rearrange (_ mapping-fn _))
+(provide rs-scale
          resample
          resample/interp
          resample-to-rate
@@ -46,7 +48,6 @@ rsound-max-volume
          pulse-wave
          wavetable-osc/l
          noise
-         rearrange
          ;; functions on numbers
          thresh
          ;; envelope-funs
@@ -110,6 +111,16 @@ rsound-max-volume
                  (fun (rs-ith/right sound i)))
                (rsound-sample-rate sound)))
 
+;; given (a function from sample and index to sample) and an rsound,
+;; produce a new rsound where every sample is modified 
+;; by applying the given function
+(define (rs-map/idx fun sound)
+  (define samp (silence (rs-frames sound)))
+  (for ([i (rs-frames sound)])
+    (set-rs-ith/left! samp i (fun (rs-ith/left sound i) i))
+    (set-rs-ith/right! samp i (fun (rs-ith/right sound i) i)))
+  samp)
+
 ;; given a number of frames and a left and right generator and a sample
 ;; rate, produce a sound.
 (define/argcheck (rs-generate [frames nonnegative-integer?
@@ -122,16 +133,6 @@ rsound-max-volume
     (unsafe-s16vector-set! vec (* CHANNELS i) (real->s16 (left-fun i)))
     (unsafe-s16vector-set! vec (add1 (* CHANNELS i)) (real->s16 (right-fun i))))
   (vec->rsound vec sample-rate))
-
-;; given (a function from sample and index to sample) and an rsound,
-;; produce a new rsound where every sample is modified 
-;; by applying the given function
-(define (rs-map/idx fun sound)
-  (define samp (silence (rs-frames sound)))
-  (for ([i (rs-frames sound)])
-    (set-rs-ith/left! samp i (fun (rs-ith/left sound i) i))
-    (set-rs-ith/right! samp i (fun (rs-ith/right sound i) i)))
-  samp)
 
 ;; rsound-scale : number rsound -> rsound
 ;; this uses C subroutines. It will behave badly when
