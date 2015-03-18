@@ -34,6 +34,7 @@ rsound-max-volume
 (provide-higher-order-primitive rs-map/idx (mapping-fn _))
 (provide-higher-order-primitive rearrange (_ mapping-fn _))
 (provide-higher-order-primitive indexed-signal (mapping-fn))
+(provide-higher-order-primitive build-sound (_ mapping-fn))
 (provide rs-scale
          resample
          resample/interp
@@ -62,7 +63,7 @@ rsound-max-volume
          signal-*
          signal-+
          thresh/signal
-         mono
+         
          
          signal-scale
          clip&volume
@@ -70,6 +71,7 @@ rsound-max-volume
          rsound->signal/right
          rs-largest-sample
          ;; rsound makers
+         mono
          make-tone
          make-pulse-tone
          wavefun->tone-maker
@@ -90,8 +92,12 @@ rsound-max-volume
          pitch->midi-note-num
          
          andplay
+         
+         FRAME-RATE
          )
 
+;; for use in ONLY IN BEGINNER, where parameters are verboten:
+(define FRAME-RATE (default-sample-rate))
 
 ;; don't allow resampling to higher than this sample-rate:
 (define MAX-FRAME-RATE 100000)
@@ -103,7 +109,8 @@ rsound-max-volume
 ;; given a function from numbers to numbers and an rsound, 
 ;; produce a new rsound where every sample is modified 
 ;; by applying the given function.
-(define (rs-map fun sound)
+(define/argcheck (rs-map [fun procedure? "procedure"]
+                         [sound rsound? "rsound"])
   (rs-generate (rs-frames sound)
                (lambda (i) 
                  (fun (rs-ith/left sound i)))
@@ -114,12 +121,20 @@ rsound-max-volume
 ;; given (a function from sample and index to sample) and an rsound,
 ;; produce a new rsound where every sample is modified 
 ;; by applying the given function
-(define (rs-map/idx fun sound)
+(define/argcheck (rs-map/idx [fun procedure? "procedure"]
+                             [sound rsound? "rsound"])
   (define samp (silence (rs-frames sound)))
   (for ([i (rs-frames sound)])
     (set-rs-ith/left! samp i (fun (rs-ith/left sound i) i))
     (set-rs-ith/right! samp i (fun (rs-ith/right sound i) i)))
   samp)
+
+;; given a number of frames and a single generator, generate a sound.
+;; suggested by James Vanderhyde. Thanks!
+(define/argcheck (build-sound [frames nonnegative-integer?
+                                      "non-negative integer"]
+                              [generator procedure? "procedure"])
+  (rs-generate frames generator generator (default-sample-rate)))
 
 ;; given a number of frames and a left and right generator and a sample
 ;; rate, produce a sound.

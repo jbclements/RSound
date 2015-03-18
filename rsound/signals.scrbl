@@ -1,5 +1,7 @@
 #lang scribble/manual
 
+@(require (for-label "main.rkt"))
+
 @title{Signals and Networks}
 
 For signal processing, RSound adopts a dataflow-like paradigm, where elements
@@ -43,9 +45,10 @@ A node that takes one input is called a @deftech{filter}.
  that uses @racket[<=] evaluates the input expressions, and uses them as 
  inputs to the given network.
  
- The special @(deftech #:key "prev" @racket[(prev node-label init-val)]) form may be used to refer
+ The special @racket[(prev node-label init-val)] form may be used to refer
  to the previous value of the corresponding node. It's fine to have ``forward''
- references to clauses that haven't been evaluated yet. 
+ references to clauses that haven't been evaluated yet. The @racket[init-val]
+ value is used as the previous value the first time the network is used.
  
  The final clause's node
  is used as the output of the network.
@@ -110,6 +113,11 @@ a procedure-like way in network clauses. Otherwise, they will behave
 as opaque values; you can pass them to various signal functions, etc.
 
 Also note that all of these assume a fixed sample rate of 44.1 KHz.
+
+@defform[(prev bar baz)]{
+ Recognized specially in the @racket[network] form, as documented
+ above. It is an error to use 
+ @racket[prev] outside of a @racket[network] clause}
 
 @defproc[#:kind "signal" 
                 (frame-ctr) signal?]{

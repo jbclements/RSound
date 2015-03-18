@@ -234,6 +234,13 @@
             12
             1e-4)
    
+   ;; build-sound
+   (let ()
+     (define (generator f) (/ f 1000))
+     (define sound (build-sound 100 generator))
+     (check-= (rs-ith/left sound 3) 3/1000 1e-4)
+     (check-= (rs-ith/right sound 19) 19/1000 1e-4 ))
+   
    ;; RSOUND->SIGNAL
    (check-= (signal-nth (rsound->signal/left 
                          (mono 100 x (/ x 1000))) 23)
