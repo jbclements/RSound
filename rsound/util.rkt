@@ -33,6 +33,7 @@ rsound-max-volume
 (provide-higher-order-primitive rs-map (mapping-fn _))
 (provide-higher-order-primitive rs-map/idx (mapping-fn _))
 (provide-higher-order-primitive rearrange (_ mapping-fn _))
+(provide-higher-order-primitive indexed-signal (mapping-fn))
 (provide rs-scale
          resample
          resample/interp
@@ -62,7 +63,6 @@ rsound-max-volume
          signal-+
          thresh/signal
          mono
-         indexed-signal
          
          signal-scale
          clip&volume
