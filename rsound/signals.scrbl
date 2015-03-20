@@ -114,7 +114,10 @@ as opaque values; you can pass them to various signal functions, etc.
 
 Also note that all of these assume a fixed sample rate of 44.1 KHz.
 
-@defform[(prev bar baz)]{
+@defform[(prev node-label init-val)
+         #:grammar
+         ([node-label identifier]
+          [init-val expression])]{
  Recognized specially in the @racket[network] form, as documented
  above. It is an error to use 
  @racket[prev] outside of a @racket[network] clause}
