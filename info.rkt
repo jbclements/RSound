@@ -8,10 +8,11 @@
                    "gui-lib"
                    "htdp-lib"
                    "math-lib"
+                   "plot-lib"
                    "plot-gui-lib"
                    "rackunit-lib"
                    "typed-racket-lib"
-                   "memoize" ))
+                   "memoize"))
 (define build-deps (list "scribble-lib"
                          "racket-doc"
                          "wxme-lib"))
