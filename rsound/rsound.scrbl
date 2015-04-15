@@ -236,6 +236,9 @@ These procedures allow the creation, analysis, and manipulation of rsounds.
 @defproc[(rs-scale (scalar real?) (rsound rsound?)) rsound?]{
  Scale the given sound by multiplying all of its samples by the given scalar.}
 
+@defproc[(rs-mult (a rsound?) (b rsound?)) rsound?]{
+ Produce a new sound by pointwise multiplication of sounds @racket[a] and @racket[b].}
+
 @defproc[(rearrange (length frames?) (mapping-fun procedure?) (rsound rsound?)) rsound?]{
  Returns a new sound with samples drawn from the original according to the @racket[mapping-fun].
  Specifically, a sound of length @racket[length] is constructed by calling @racket[mapping-fun]
