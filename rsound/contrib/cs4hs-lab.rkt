@@ -3,24 +3,16 @@
 (require (except-in "../main.rkt" kick resample)
          rackunit)
 
-#;(rsound-play 
- (rsound-append
+#;(play 
+ (rs-append
   ding
   ding))
 
 (define sample-path "/Users/clements/Renoise2 Sample Library/Samples")
 
-(define (rsound-scale scale sound)
-  (define (left i) (* scale (rs-ith/left sound i)))
-  (define (right i) (* scale (rs-ith/right sound i)))
-  (signals->rsound/stereo (rs-frames sound)
-                       (rsound-sample-rate sound)
-                       left
-                       right))
-
 ;; read the wav file, scale it down to avoid clipping
 (define (sample-load path)
-  (rsound-scale 0.05 (rsound-read path)))
+  (rs-scale 0.05 (rs-read path)))
 
 (define kick (sample-load (build-path sample-path "Kicks/Kick 13.wav")))
 (define misc08 (sample-load (build-path sample-path "Misc/Misc 08.wav")))
@@ -33,14 +25,14 @@
 
 
 
-(define (rsound-overlay sound1 sound2)
+#;(define (rsound-overlay sound1 sound2)
   (rsound-overlay* (list (list sound1 0) (list sound2 0))))
 
 
 (define (resample factor sound)
-  (define (left i) (rs-ith sound (round (* factor i))))
+  (define (left i) (rs-ith/left sound (round (* factor i))))
   (define (right i) (rs-ith/right sound (round (* factor i))))
-  (signals->rsound/stereo (round (/ (rs-frames sound) factor))
+  (signals->rsound (round (/ (rs-frames sound) factor))
                        (rsound-sample-rate sound)
                        left
                        right))
@@ -54,15 +46,15 @@
     (define num-frames (round (* (rsound-sample-rate rsound) dur)))
     (define num-whole-copies (quotient num-frames (rs-frames rsound)))
     (define leftover-frames (remainder num-frames (rs-frames rsound)))
-    (rsound-append* (append 
+    (rs-append* (append 
                      (for/list ([i (in-range num-whole-copies)])
                        rsound)
-                     (list (rsound-clip rsound 0 leftover-frames))))))
+                     (list (clip rsound 0 leftover-frames))))))
 
 (let* ([saw3 (signal->rsound 4 44100 (lambda (x) (/ x 4)))]
        [extended-saw (single-cycle->tone saw3 0.01)])
   (check-equal? (rs-frames extended-saw) 441)
-  (check-= (rsound-ith/left extended-saw 402) 0.5 0.001))
+  (check-= (rs-ith/left extended-saw 402) 0.5 0.001))
 
 (define (single-cycle->note rsound native-pitch note-num dur)
   (let ()
@@ -78,11 +70,11 @@
   (single-cycle->tone anasquareemu03 1.0))
 
 (require "../draw.rkt")
-(rsound-draw anasquareemu03)
-#;(vector-draw/real/imag (rsound-fft/left anasquareemu03))
+(rs-draw anasquareemu03)
+#;(vector-draw/real/imag (rs-fft/left anasquareemu03))
 (rs-frames anasquareemu03/1sec)
-#;(rsound-play anasquareemu03/1sec)
-#;(rsound-play (single-cycle->tone asqhi 1.0))
+#;(play anasquareemu03/1sec)
+#;(play (single-cycle->tone asqhi 1.0))
 
 (define tempo 200)
 (define measures 36)
@@ -97,11 +89,11 @@
 
 (define (note-num-sequence beats lon)
   (define dur (* beat-dur beats))
-  (rsound-append*
+  (rs-append*
    (map (lambda (note-num)
           (if note-num
               (single-cycle->note anasquareemu03 f note-num dur)
-              (make-silence 
+              (silence 
                (round (* (rsound-sample-rate anasquareemu03) dur))
                (rsound-sample-rate anasquareemu03))))
         lon)))
@@ -126,7 +118,7 @@
 (define melody1
   (note-num-8ths (n-times 20 (append mintriad minarpeg))))
 (define melody2
-  (rsound-append 
+  (rs-append 
    (note-num-8ths (n-times 4 '(75 #f 75 #f 74 #f 74 #f)))
    (note-num-8ths (n-times 4 '(79 75 79 75 77 74 77 74)))))
 
@@ -187,10 +179,10 @@
 (define on-offbeats (on-beats '(1.5 2.5 3.5 4.5)))
 
 (define (pl scripts)
-  (rsound-overlay* (apply append scripts)))
+  (rs-overlay* (apply append scripts)))
 
 (define song
- (rsound-overlay*
+ (rs-overlay*
   (list (list (pl (list
                    #;(on-offbeats misc08)
                    #;       "1   2   3   4   "
@@ -210,11 +202,11 @@
         (list melody1 (* measure-frames 4))
         (list melody2 (* measure-frames 8)))))
 
-#;(rsound-write song "/tmp/slowing-down-song.wav")
+#;(rs-write song "/tmp/slowing-down-song.wav")
 
-(rsound-play song)
+(play song)
 
-#;(rsound-play
+#;(play
  (pl (list ((on-str "| | | | | | | ||") hi-hat04)
            ((on-str "| |     |       ") kick)
            ((on-str "    |       |   ") clap06)

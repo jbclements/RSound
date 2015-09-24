@@ -3,6 +3,11 @@
 (require rsound
          rackunit)
 
+;; this compiles but probably still won't run, I see lots of unnecessary sample rate args
+
+;; no testing required...
+(module* test racket/base)
+
 (provide (all-defined-out))
 
 (define volume (make-parameter 0.5))
@@ -28,7 +33,7 @@
 
 ;; read the wav file, scale it down to avoid clipping
 (define (sample-load path)
-  (rsound-scale 0.05 (rsound-read path)))
+  (rs-scale 0.05 (rs-read path)))
 
 (define misc08 (sample-load (build-path sample-path "Misc/Misc 08.wav")))
 (define clap06 (sample-load (build-path sample-path "Clap/Clap 06.wav")))
@@ -44,8 +49,8 @@
 
 (define instrument (make-parameter square1))
 
-(define (rsound-overlay sound1 sound2)
-  (rsound-overlay* (list (list sound1 0) (list sound2 0))))
+(define (rs-overlay sound1 sound2)
+  (rs-overlay* (list (list sound1 0) (list sound2 0))))
 
 
 ;; given an rsound and a duration in seconds, make enough copies of the rsound
@@ -55,16 +60,17 @@
     (define num-frames (round (* (rsound-sample-rate rsound) dur)))
     (define num-whole-copies (quotient num-frames (rs-frames rsound)))
     (define leftover-frames (remainder num-frames (rs-frames rsound)))
-    (rsound-append* (append 
+    (rs-append* (append 
                      (for/list ([i (in-range num-whole-copies)])
                        rsound)
-                     (list (rsound-clip rsound 0 leftover-frames))))))
+                     (list (clip rsound 0 leftover-frames))))))
 
 ;; quick test case:
-(let* ([saw3 (mono-signal->rsound 4 44100 (lambda (x) (/ x 4)))]
+;; old-style-signal will fail...
+(let* ([saw3 (signal->rsound 4 44100 (indexed-signal (lambda (x) (/ x 4))))]
        [extended-saw (single-cycle->dur saw3 0.01)])
   (check-equal? (rs-frames extended-saw) 441)
-  (check-= (rsound-ith/left extended-saw 402) 0.5 0.001))
+  (check-= (rs-ith/left extended-saw 402) 0.5 0.001))
 
 (define (single-cycle->tone rsound native-pitch desired-pitch dur)
   (define resample-rate (/ desired-pitch native-pitch))
@@ -73,7 +79,7 @@
 
 (define (single-cycle->note rsound native-pitch note-num dur)
   (define desired-pitch (midi-note-num->pitch note-num))
-  (rsound-overlay 
+  (rs-overlay 
    (single-cycle->tone rsound native-pitch (* 1.01 desired-pitch) dur)
    (single-cycle->tone rsound native-pitch desired-pitch dur)))
 
@@ -86,11 +92,11 @@
   (define frames-per-beat (* frames-per-second beat-dur))  
   (define dur (* beat-dur beats))
   (define instr (instrument))
-  (rsound-append*
+  (rs-append*
    (map (lambda (note-num)
           (if note-num
               (single-cycle->note instr f note-num dur)
-              (make-silence 
+              (silence 
                (round (* (rsound-sample-rate instr) dur))
                (rsound-sample-rate instr))))
         lon)))
@@ -114,7 +120,7 @@
 (define melody1
   (note-num-8ths (n-times 20 (append mintriad minarpeg))))
 (define melody2
-  (rsound-append 
+  (rs-append 
    (note-num-8ths (n-times 4 '(75 #f 75 #f 74 #f 74 #f)))
    (note-num-8ths (n-times 4 '(79 75 79 75 77 74 77 74)))))
 
@@ -159,7 +165,7 @@
 
 (define (((on-beat frames-per-beat) beat) sound)
   (for/list ([measure (in-range (measures))])
-    (list (rsound-scale (volume) sound)
+    (list (rs-scale (volume) sound)
           (measure/beat->frame measure beat frames-per-beat))))
 
 
@@ -194,10 +200,10 @@
 (define on-offbeats (on-beats '(1.5 2.5 3.5 4.5)))
 
 (define (pl scripts)
-  (rsound-overlay* (apply append scripts)))
+  (rs-overlay* (apply append scripts)))
 
 #;(define song
- (rsound-overlay*
+ (rs-overlay*
   (list (list (pl (list
                    #;(on-offbeats misc08)
                    #;       "1   2   3   4   "
@@ -218,9 +224,9 @@
         (list melody2 (* measure-frames 8))
         (list melody2 (* measure-frames 16)))))
 
-#;(rsound-write song "/tmp/minor-key-beeps.wav")
+#;(rs-write song "/tmp/minor-key-beeps.wav")
 
-#;(rsound-play song)
+#;(play song)
 
 
 #;(pl #;(on-offbeats misc08)

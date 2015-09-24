@@ -18,7 +18,10 @@
   (rs-ith/left rsound (* ratio (quotient t ratio))))
 
 (define (crunch rsound ratio)
-  (signal->rsound (rs-frames rsound) 44100 (signal crush-helper rsound ratio)))
+  (signal->rsound (rs-frames rsound) 44100
+                  (network ()
+                    [i <= simple-ctr 0 1]
+                    [out = (crush-helper i rsound ratio)])))
 
 
 #;(play (time (crunch (rsound-read "/tmp/horizon2.wav") 50)))
@@ -32,19 +35,19 @@
                     (let ([factor (/ (- r2 r1) (* nseconds (rsound-sample-rate rsound)))])
                       (lambda (t)
                         (let ([ratio (+ (* t factor) r1)])
-                          (rsound-ith/left 
+                          (rs-ith/left 
                            rsound
                            (floor (* ratio (floor (/ t ratio))))))))))
 
-(define input (rsound-read "/tmp/horizon2.wav"))
+(define input (rs-read "/tmp/horizon2.wav"))
 
 
 (define (quantize rsound q1)
   (signal->rsound (rs-frames rsound) 44100
                     (lambda (t)
-                      (* (/ 1 q1) (floor (* q1 (rsound-ith/left rsound t)))))))
+                      (* (/ 1 q1) (floor (* q1 (rs-ith/left rsound t)))))))
 
 ; decrease apparent sample rate from 44100/10 to 44100/50 over 4 seconds
-(rsound-play (rsound-append* (list (time (crush-slide input 10 50 4))
+(play (rs-append* (list (time (crush-slide input 10 50 4))
                                    (time (quantize input 4)))))
 
