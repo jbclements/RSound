@@ -15,5 +15,4 @@
                    "memoize"))
 (define build-deps (list "scribble-lib"
                          "racket-doc"
-                         "wxme-lib"
-                         "scheme-lib"))
+                         "wxme-lib"))
