@@ -1,5 +1,7 @@
 #lang racket
 
+
+(module+ main
 (require "../rsound.rkt")
 
 (printf "starting to record ...\n")
@@ -8,4 +10,4 @@
 
 (sleep 4)
 
-(play s)
+(play s))

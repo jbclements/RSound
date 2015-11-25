@@ -7,6 +7,7 @@
          #;"../util.rkt"
          rackunit
          racket/runtime-path
+         racket/block
          ffi/vector)
 
 (provide the-test-suite)
@@ -47,7 +48,15 @@
      (check-true (equal? r (fsound->rsound fs)))
      
      (set-fs-ith/left! fs2 1 0.879)
-     (check-false (equal? fs fs2)))))
+     (check-false (equal? fs fs2))
+
+     (block
+      (define v (vector 9.0 728.0 -2.3 4.0))
+      (define fs (vector->fsound v 44100))
+      (check-equal? (for/vector ([idx 4]) (fs-ith/left fs idx))
+                    v)
+      (check-equal? (for/vector ([idx 4]) (fs-ith/right fs idx))
+                    v)))))
 
 
 (module+ test

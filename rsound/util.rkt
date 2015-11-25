@@ -85,9 +85,9 @@ rsound-max-volume
          tile-to-len
          fader-snd
          
-         rsound-fft/left
-         rsound-fft/right
-         rsound-maximize-volume
+         rs-fft/left
+         rs-fft/right
+         rs-maximize-volume
          midi-note-num->pitch
          pitch->midi-note-num
          
@@ -622,11 +622,11 @@ rsound-max-volume
 ;; FFTs
 
 ;; return the (complex) fft of the left channel
-(define (rsound-fft/left rsound)
+(define (rs-fft/left rsound)
   (channel-fft (lambda (i) (rs-ith/left/s16 rsound i)) (rs-frames rsound)))
 
 ;; return the (complex) fft of the right channel
-(define (rsound-fft/right rsound)
+(define (rs-fft/right rsound)
   (channel-fft (lambda (i) (rs-ith/right/s16 rsound i)) (rs-frames rsound)))
 
 ;; the common left-right abstraction
@@ -640,7 +640,7 @@ rsound-max-volume
     (array-fft v)))
 
 ;; make the sound as lound as possible without distortion
-(define (rsound-maximize-volume rsound)
+(define (rs-maximize-volume rsound)
   (let* ([scalar (fl/ 1.0 (exact->inexact (rs-largest-sample rsound)))])
     (signals->rsound 
      (rs-frames rsound)

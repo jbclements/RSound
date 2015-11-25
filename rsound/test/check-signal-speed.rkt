@@ -13,7 +13,6 @@
 (define tgt (make-s16vector (* CHANNELS buffer-frames)))
 
 (define msec-per-frame-available (/ 1000 frame-rate))
-(printf "msec available per frame: ~s\n" (exact->inexact msec-per-frame-available))
 
 (define (report msec)
   (define msec-per-frame (/ msec buffer-frames))
@@ -29,7 +28,11 @@
      (list (s16vector->cpointer tgt) buffer-frames)))
   (report real-msec))
 
-(let ()
+(module+ main
+
+  (printf "msec available per frame: ~s\n" (exact->inexact msec-per-frame-available))
+
+  (let ()
   (define (simplest-signal) 16000)
   (printf "trivial signal using signal/16:\n")
   (check-signal simplest-signal))
@@ -107,4 +110,4 @@
      (list (s16vector->cpointer tgt) buffer-frames)))
   (display (s16vector-ref tgt 5243110))
   (newline)
-  (report cpu-msec))
+  (report cpu-msec)))

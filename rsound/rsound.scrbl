@@ -360,19 +360,21 @@ These procedures allow the creation, analysis, and manipulation of rsounds.
  given a pitch in Hz, a volume between 0.0 and 1.0, and a duration in frames, return the
  rsound consisting of a pure sine wave tone using the specified parameters.}
 
-@defproc[(rsound-fft/left [rsound rsound?]) (fcarrayof complex?)]{
+@defproc[(rs-fft/left [rsound rsound?]) (fcarrayof complex?)]{
  Produces the complex-valued vector that represents the fourier transform of the rsound's left channel.
  The sound's length must be a power of two. 
  
  The FFT takes time N*log(N) in the size of the input, so runtimes will be super-linear, but on a modern
- machine even FFTs of 32K points take on the order of 100msec.}
+ machine even FFTs of 32K points take on the order of 100msec.
+@(history #:changed "20151120.0" @elem{Was named @racket[rsound-fft/left].})}
 
-@defproc[(rsound-fft/right [rsound rsound?]) (fcarrayof complex?)]{
+@defproc[(rs-fft/right [rsound rsound?]) (fcarrayof complex?)]{
  Produces the complex-valued vector that represents the fourier transform of the rsound's right channel.
  The sound's length must be a power of two. 
  
  The FFT takes time N*log(N) in the size of the input, so runtimes will be super-linear, but on a modern
- machine even FFTs of 32K points take on the order of 100msec. }
+ machine even FFTs of 32K points take on the order of 100msec.
+@(history #:changed "20151120.0" @elem{Was named @racket[rsound-fft/right].})}
 
 @defproc[(midi-note-num->pitch [note-num nonnegative-integer?]) number?]{
  Returns the frequency (in Hz) that corresponds to a given midi note number. Here's the top-secret formula: 
@@ -608,7 +610,7 @@ for re-use. In particular, rsound uses samples of c3, c4, c5, and c6, and resamp
 
 @section{Fsounds}
 
-@defmodule[rsound/fsound] {
+@defmodule[rsound/fsound]{
 As part of a different project, I want a way to manipulate sounds as vectors of doubles.
 To handle this, I've copied and updated a bunch of rsound code, to make it work with
 vectors of doubles. As time passes and memory gets more common, I expect at some point
@@ -623,6 +625,12 @@ simply to switch over to using these sounds everywhere.}
  Turn an fsound into an rsound. The result is guaranteed to be at most
  1/4 the size, but may be smaller, because of lazy clipping. Naturally,
  this is an extremely lossy conversion, because doubles hold more information.
+}
+
+@defproc[(vector->fsound [fs (vectorof real?)] [sample-rate exact-positive-integer?]) fsound?]{
+Given a vector of real numbers and a sample rate, produce an fsound where the samples
+in the left and right channels are identical and given by the elements of the vector @racket[fs],
+using the given sample rate.
 }
 
 

@@ -13,9 +13,9 @@
          (only-in "rsound-commander.rkt" channels)
          ;; TODO : C code for adding doubles
          #;"private/double-add.rkt"
-         ;racket/contract
          ;racket/match
-         #;racket/list)
+         #;racket/list
+         racket/contract)
 
 (provide (struct-out fsound)
          fs-frames
@@ -25,7 +25,10 @@
          rsound->fsound
          fsound->rsound
          fs-equal?
-         )
+         (contract-out
+          [vector->fsound (-> vector? sample-rate? fsound?)]))
+
+(define sample-rate? exact-positive-integer?)
 
 ;; will we actually enforce clipping at this value?
 (define SOUNDMAX 1.0)
@@ -113,6 +116,18 @@
   (when (= (f64vector-length f64vec) 0)
     (raise-argument-error 'fsound/all "f64vector of length > 0" 0 f64vec sample-rate))
   (fsound f64vec 0 (/ (f64vector-length f64vec) channels) sample-rate))
+
+;; turn a vector of real numbers into an fsound with l & r channels identical
+(define (vector->fsound vec sample-rate)
+  (define v (make-f64vector (* 2 (vector-length vec)) 0))
+  (for ([i (in-range (vector-length vec))])
+    (define samp (vector-ref vec i))
+    (unless (real? samp)
+      (raise-argument-error 'vector->fsound "real-valued vector"
+                            0 vec sample-rate))
+    (f64vector-set! v (* 2 i) samp)
+    (f64vector-set! v (add1 (* 2 i)) samp))
+  (vec->fsound v sample-rate))
 
 
 ;; return the nth sample of an fsound's left channel as a real number

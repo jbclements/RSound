@@ -42,7 +42,7 @@
 (define data1-points-forward (for/list ((j (in-array data1))
                                         (i (in-naturals)))
                                (vector i (magnitude j))))
-(printf "8th dot should be higher\n")
+(printf "Dot 8 (9th dot) should be higher\n")
 (display
  (plot (points data1-points-forward #:sym 'dot #:color 'blue)
       #:title "Radix 2 Complex FFT (Forward)"
@@ -90,6 +90,6 @@
 ))
 
 
-(module+ test
+(module+ main
   (require rackunit/text-ui)
   (run-tests the-test-suite))

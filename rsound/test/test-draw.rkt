@@ -123,9 +123,9 @@
                             (* 0.5 (+ (sin (* i 4/128 twopi))
                                       (sin (* i (/ 35.99 128) twopi)))))))])
   ;; should show four spikes 
-  (vector-draw/real/imag (rsound-fft/left s))
+  (vector-draw/real/imag (rs-fft/left s))
   ;; should show four spikes
-  (vector-draw/mag/phase (rsound-fft/left s))
+  (vector-draw/mag/phase (rs-fft/left s))
   ;; one of the spikes is so crisp it disappears when the window isn't tall:
   ;; window should be tall:
   (rsound-fft-draw s #:height 800)

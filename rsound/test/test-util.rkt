@@ -204,7 +204,13 @@
    ;; FFT
    
    (let* ([tone (make-tone 172.265625 1.0 4096)]
-          [fft (rsound-fft/left tone)])
+          [fft (rs-fft/left tone)])
+     (check-= (magnitude (array-ref fft #(15))) 0.0 1e-2)
+     (check-= (magnitude (array-ref fft #(16))) 2048.0 1e-2)
+     (check-= (magnitude (array-ref fft #(17))) 0.0 1e-2))
+
+   (let* ([tone (make-tone 172.265625 1.0 4096)]
+          [fft (rs-fft/right tone)])
      (check-= (magnitude (array-ref fft #(15))) 0.0 1e-2)
      (check-= (magnitude (array-ref fft #(16))) 2048.0 1e-2)
      (check-= (magnitude (array-ref fft #(17))) 0.0 1e-2))
