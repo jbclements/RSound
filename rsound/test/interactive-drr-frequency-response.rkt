@@ -12,7 +12,10 @@
 (define (poly1 z)
   (/ 1 (- 1 (* 0.95 (expt z -100)))))
 
-(printf "100-pole comb filter, 0 up to Nyquist:\n")
+
+
+(module+ main
+  (printf "100-pole comb filter, 0 up to Nyquist:\n")
 ;; show the whole range:
 (response-plot poly1
                0.0      ; min-freq
@@ -240,4 +243,4 @@
       #:x-min (- pi)
       #:x-max pi
       #:y-max 50
-      #:y-min -50)
+      #:y-min -50))

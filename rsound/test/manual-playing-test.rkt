@@ -4,6 +4,7 @@
          "../network.rkt"
          "../util.rkt")
 
+(module+ main
 (printf "\nshort ding\n")
 (play ding)
 (sleep 2)
@@ -52,7 +53,7 @@
 (signal-play (fixed-inputs sine-wave 440))
 (sleep 1)
 (stop)
-(sleep 1)
+(sleep 1))
 
 
 

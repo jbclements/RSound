@@ -23,19 +23,3 @@
        (for/list ([i max-idx])
          (vector i (sigfun))))))
   (plot (apply mix datas)))
-
-#|
-(plot-signals (list (raw-sine-wave 882 44100)
-                    (sine-wave 882)))
-
-
-(plot-signal (raw-sine-wave 882 44100))
-(plot-signal (sine-wave 882))
-
-(plot-signal 
-   (network ()
-            [a ((simple-ctr 1/20 0))]
-            [control ((dc-signal 0.1))]
-            [out (lpf/dynamic control a)])
-   #:max 400)
-|#

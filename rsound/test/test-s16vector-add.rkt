@@ -42,7 +42,6 @@
   (s16buffer-mult-add!/c (ptr-add tgt-cpointer (* 2 48)) src-cpointer 20 0.34)
   
   (for/and ([i (in-range 8)])
-    (printf "i: ~s\n" i)
     (check-equal? (s16vector-ref tgt-buf (+ 48 i))
                   (inexact->exact
                    (+ (s16vector-ref src-buf (+ i 2))

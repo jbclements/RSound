@@ -316,9 +316,11 @@
   (unless (= 1 (array-dims arr))
     (raise-argument-error 'vector-draw/real-imag "array of one dimension"
                           0 arr))
+  (define real-parts (array->vector (inline-array-map real-part arr)))
+  (define imag-parts (array->vector (inline-array-map imag-part arr)))
   (vector-display-frame title
-                        (lambda (i) (real-part (array-ref arr (vector i))))
-                        (lambda (i) (imag-part (array-ref arr (vector i))))
+                        (lambda (i) (vector-ref real-parts i))
+                        (lambda (i) (vector-ref imag-parts i))
                         (array-size arr)
                         width
                         height
@@ -331,9 +333,11 @@
   (unless (= 1 (array-dims arr))
     (raise-argument-error 'vector-draw/mag/phase "array of one dimension"
                           0 arr))
+  (define magnitude-parts (array->vector (inline-array-map magnitude arr)))
+  (define phase-parts (array->vector (inline-array-map phase arr)))
   (vector-display-frame title
-                        (lambda (i) (magnitude (array-ref arr (vector i))))
-                        (lambda (i) (phase (array-ref arr (vector i))))
+                        (lambda (i) (vector-ref magnitude-parts i))
+                        (lambda (i) (vector-ref phase-parts i))
                         (array-size arr)
                         width
                         height
@@ -346,9 +350,11 @@
   (unless (= 1 (array-dims arr))
     (raise-argument-error 'vector-draw/log-mag/phase "array of one dimension"
                           0 arr))
+  (define magnitude-parts (array->vector (inline-array-map magnitude arr)))
+  (define phase-parts (array->vector (inline-array-map phase arr)))
   (vector-display-frame title
-                (lambda (i) (log (magnitude (array-ref arr (vector i)))))
-                (lambda (i) (phase (array-ref arr (vector i))))
+                (lambda (i) (log (vector-ref magnitude-parts i)))
+                (lambda (i) (vector-ref phase-parts i))
                 (array-size arr)
                 width
                 height
@@ -420,6 +426,8 @@
       (for ([i (in-range 0 windows)]
             [left-fft (in-list left-ffts)]
             [right-fft (in-list right-ffts)])
+        (define left-fft-vec (array->vector left-fft))
+        (define right-fft-vec (array->vector right-fft))
         (let* ([win-left (round (/ i h-scale))]
                [win-right (round (/ (+ i 1) h-scale))])
           (send dc set-pen "black" 0 'transparent)
@@ -439,9 +447,9 @@
                   (send dc draw-rectangle win-left top (- win-right win-left)
                         (- bottom top))))
               (draw-fft-rect (- half-h win-top) (- half-h win-bottom)
-                             (magnitude (array-ref left-fft (vector j))))
+                             (magnitude (vector-ref left-fft-vec j)))
               (draw-fft-rect (- h win-top) (- h win-bottom)
-                             (magnitude (array-ref right-fft (vector j)))))))))))
+                             (magnitude (vector-ref right-fft-vec j))))))))))
 
 (define unequal-lengths-msg
   "left and right channels must have the same number of fft windows, given ~s and ~s")

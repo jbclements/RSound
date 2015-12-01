@@ -186,8 +186,8 @@
    
    (let ([s1 (signal->rsound 200 (signal-*s (list (dc-signal 0.5) 
                                                   (fixed-inputs sine-wave 100))))]
-         [s2 (time (make-tone 100 0.5 441000))]
-         [s3 (time (make-tone 100 0.5 441000))])
+         [s2 (make-tone 100 0.5 441000)]
+         [s3 (make-tone 100 0.5 441000)])
      (check-= (rs-ith/right/s16 s1 73)
               (rs-ith/right/s16 s2 73)
               1e-2)

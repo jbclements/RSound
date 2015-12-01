@@ -6,6 +6,7 @@
          (only-in "../util.rkt" indexed-signal)
          rackunit)
 
+(module+ main
 (define sr 44100)
 
 ;; 1 second of noise:
@@ -94,7 +95,7 @@
   (define s16ptr2 (s16vector->cpointer s16vec2))
   (rtavg
    (for ([i (in-range 100)])
-     (s16buffer-add!/c s16ptr1 s16ptr2 1000))))
+     (s16buffer-add!/c s16ptr1 s16ptr2 1000)))))
 
 
 

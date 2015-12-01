@@ -17,7 +17,10 @@
 (check-= (rs-ith/left simple-tone 4410) 0.0 0.01)
 (check-= (rs-ith/right simple-tone 4410) 0.0 0.01)
 
-(define ts empty)
+
+(module+ main
+
+  (define ts empty)
 (define lens empty)
 
 (define t 0)
@@ -37,7 +40,6 @@
   (set! t (+ t frames)))
 
 
-
 (printf "playing signal for 3 seconds\n")
 (signal/block-play/unsafe simple-signal/block/s16 44100)
 (sleep 3)
@@ -47,4 +49,4 @@
 (set! t 0)
 (signal/block-play/unsafe simple-signal/block/s16 44100 #:buffer-time 0.1)
 (sleep 3)
-(stop)
+(stop))

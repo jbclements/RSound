@@ -4,25 +4,52 @@
          "../util.rkt"
          "../draw.rkt"
          ffi/vector
-         rackunit
          math/array)
 
+(module+ test
+  (require rackunit
+           rackunit/text-ui)
+  (run-tests
+   (test-suite
+   "draw automatic tests"
+  (check-equal? (abs-max-from (lambda (x) (- 5 (* x x))) 4) 5)
+  (check-equal? (abs-max-from (lambda (x) (- 5 (* x x))) 5) 11)
+  
+  
+  (check-equal? (interpolate (lambda (x) x) 0.7) 0.7)
+  (check-equal? (interpolate (lambda (x) (+ 2/3 (- (* x x)))) 10) (- 2/3 100))
+  
+  (check-equal? (call-with-values (lambda () (rasterize-column (lambda (x) (+ 2/3 (- (* x x)))) -3 10)) list)
+                (list (- 2/3 100) 2/3))
+  
+  (check-equal? (call-with-values (lambda () (rasterize-column (lambda (x) (+ 2/3 (- (* x x)))) -3.5 1)) list)
+                (list (- 2/3 12.5) (exact->inexact 2/3)))
+  
+  ;; try something too short:
+  (check-exn 
+   (lambda (exn) (regexp-match #rx"fewer than" (exn-message exn)))
+   (lambda () (rsound-fft-draw (silence 500))))
+  
+  ;; phase:
+  
+  (check-= (phase 1+i) (* 1/4 pi) 1e-4)
+  (check-= (phase -1+i) (* 3/4 pi) 1e-4)
+  (check-= (phase -1-i) (* -3/4 pi) 1e-4)
+  (check-= (phase 1-i) (* -1/4 pi) 1e-4)
+  
+  
+  
+  ;; oops, found a bug in rasterize-column.
+  (check-equal? (call-with-values
+                 (lambda ()
+                   (rasterize-column (lambda (i) (cond [(= i 34) 1.0] 
+                                                       [else 0.0]))
+                                     33.5
+                                     34.5))
+                 list)
+                (list 0.5 1.0)))))
 
-
-
-(check-equal? (abs-max-from (lambda (x) (- 5 (* x x))) 4) 5)
-(check-equal? (abs-max-from (lambda (x) (- 5 (* x x))) 5) 11)
-
-
-(check-equal? (interpolate (lambda (x) x) 0.7) 0.7)
-(check-equal? (interpolate (lambda (x) (+ 2/3 (- (* x x)))) 10) (- 2/3 100))
-
-(check-equal? (call-with-values (lambda () (rasterize-column (lambda (x) (+ 2/3 (- (* x x)))) -3 10)) list)
-              (list (- 2/3 100) 2/3))
-
-(check-equal? (call-with-values (lambda () (rasterize-column (lambda (x) (+ 2/3 (- (* x x)))) -3.5 1)) list)
-              (list (- 2/3 12.5) (exact->inexact 2/3)))
-
+(module+ main
 
 ;; these don't really lend themselves to testing; I suppose if I separated
 ;; the rendering from the drawing...
@@ -47,18 +74,12 @@
 
 (rs-draw rsound-800samp #:width 20 #:title "800 samples at width 20")
 
-#;(define rsound-longer (read-rsound/clip "/tmp/gmafh.wav" (* 44100 60) (* 44100 70)))
-
-#;(play-rsound rsound-longer)
-
-#;(rs-draw rsound-longer #:width 800)
 
 ;; there should be no gap in the waveform:
 (rs-draw (signal->rsound 300
                          (indexed-signal
                           (lambda (i) (* 1.5 (sin (* twopi 147/44100 i))))))
                #:title "no gap in waveform")
-
 
 ;; drawing non-sounds
 
@@ -75,16 +96,12 @@
    19
    #f))
 
-;; phase:
 
-(check-= (phase 1+i) (* 1/4 pi) 1e-4)
-(check-= (phase -1+i) (* 3/4 pi) 1e-4)
-(check-= (phase -1-i) (* -3/4 pi) 1e-4)
-(check-= (phase 1-i) (* -1/4 pi) 1e-4)
 
 (let ([lvec (vector 10 0 5 +5i -5 -5i)]
       [rvec (vector 3+4i 3-4i -3-4i -4+3i 10 0)])
   (vector-pair-draw/magnitude lvec rvec #:title "vector-pair-draw/magnitude"))
+
 
 ;; draw-ffts
 
@@ -106,15 +123,7 @@
   (ffts-draw (list v) (list v) 128 128))
 
 
-;; oops, found a bug in rasterize-column.
-(check-equal? (call-with-values
-               (lambda ()
-                 (rasterize-column (lambda (i) (cond [(= i 34) 1.0] 
-                                                     [else 0.0]))
-                                   33.5
-                                   34.5))
-               list)
-              (list 0.5 1.0))
+
 
 
 (let ([s (signal->rsound 4096
@@ -122,20 +131,19 @@
                           (lambda (i)
                             (* 0.5 (+ (sin (* i 4/128 twopi))
                                       (sin (* i (/ 35.99 128) twopi)))))))])
-  ;; should show four spikes 
+  ;; should show four spikes
   (vector-draw/real/imag (rs-fft/left s))
+  ;; commenting out for speed testing
   ;; should show four spikes
   (vector-draw/mag/phase (rs-fft/left s))
   ;; one of the spikes is so crisp it disappears when the window isn't tall:
   ;; window should be tall:
   (rsound-fft-draw s #:height 800)
-  (rsound-fft-draw s #:zoom-freq 22050))
+  (rsound-fft-draw s #:zoom-freq 22050)))
 
 
 
-;; try something too short:
-(check-exn 
- (lambda (exn) (regexp-match #rx"fewer than" (exn-message exn)))
- (lambda () (rsound-fft-draw (silence 500))))
+
+
 
 

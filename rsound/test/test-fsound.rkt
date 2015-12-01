@@ -1,18 +1,15 @@
 #lang racket
 
+(module+ test
 (require "../rsound.rkt"
          "../fsound.rkt"
-         #;"../common.rkt"
-         #;"../network.rkt"
-         #;"../util.rkt"
          rackunit
-         racket/runtime-path
+         rackunit/text-ui
          racket/block
          ffi/vector)
 
-(provide the-test-suite)
 
-(define the-test-suite
+(run-tests
   (test-suite
    "fsound tests"
    (let ()
@@ -58,7 +55,4 @@
       (check-equal? (for/vector ([idx 4]) (fs-ith/right fs idx))
                     v)))))
 
-
-(module+ test
-  (require rackunit/text-ui)
-  (run-tests the-test-suite))
+)

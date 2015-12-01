@@ -1,16 +1,15 @@
 #lang racket
 
-
-(require "../rsound.rkt"
-         "../util.rkt"
-         "../filter.rkt"
-         "../network.rkt"
-         "../filter-typed.rkt"
-         "../reverb.rkt"
-         rackunit
-         racket/flonum)
-
-(provide the-test-suite)
+(module+ test
+  (require "../rsound.rkt"
+           "../util.rkt"
+           "../filter.rkt"
+           "../network.rkt"
+           "../filter-typed.rkt"
+           "../reverb.rkt"
+           rackunit
+           rackunit/text-ui
+           racket/flonum)
 
 (define i (sqrt -1))
 
@@ -18,7 +17,7 @@
 (define test-sig (simple-ctr 0 0.002))
 ;; there could be a *lot* of good tests here...
 
-(define the-test-suite
+(run-tests
 (test-suite 
  "filter tests"
  (let ()
@@ -241,9 +240,6 @@
     (check-true (filter? (lambda (x) x)))
     (check-false (filter? (lambda () 3))))
    
-)))
+))))
 
 
-(module+ test
-  (require rackunit/text-ui)
-  (run-tests the-test-suite))

@@ -4,31 +4,30 @@
          rackunit
          rackunit/text-ui)
 
-(run-tests
-(test-suite 
- "stream-play"
- 
-(let ()
- (define ps (make-pstream))
- (define t (make-tone 441 0.2 22000))
- (sleep 0.5)
- (define now_0 (pstream-current-frame ps))
- (check-true (< 0 now_0))
+(module+ main
+  (let ()
+    (define ps (make-pstream))
+    (define t (make-tone 441 0.2 22000))
+    (sleep 0.5)
+    (define now_0 (pstream-current-frame ps))
+    (check-true (< 0 now_0))
+    
+    (printf "one ding.\n")
+    (pstream-play ps ding)
+    (sleep 1)
+    
+    (define now_1 (pstream-current-frame ps))
+    (check-true (< (+ 22050 now_0) now_1))
+    
+    (printf "tone should be uninterrupted, 2 seconds long.\n")
+    (pstream-queue ps t now_1)
+    (pstream-queue ps t (+ now_1 22000))
+    (pstream-queue ps t (+ now_1 44000))
+    (pstream-queue ps t (+ now_1 66000))
+    
+    (sleep 4.0))
 
- (printf "one ding.\n")
- (pstream-play ps ding)
- (sleep 1)
-
- (define now_1 (pstream-current-frame ps))
- (check-true (< (+ 22050 now_0) now_1))
- 
- (printf "tone should be uninterrupted, 2 seconds long.\n")
- (pstream-queue ps t now_1)
- (pstream-queue ps t (+ now_1 22000))
- (pstream-queue ps t (+ now_1 44000))
- (pstream-queue ps t (+ now_1 66000))
-
- (sleep 4.0))
+  
 
 (let ()
   (printf "tone should last for 2 seconds then rise from 440 to 500 Hz\n")
@@ -47,6 +46,8 @@
   (sleep 2.0)
   (stop))
 
+  
+
 (let ()
   (printf "tone should last for 2 seconds then get quieter then louder again\n")
   (define ps (make-pstream))
@@ -62,9 +63,13 @@
                           (* 3 44100))
   (sleep 4.0)
   (stop))
+  )
 
-
-
+(module+ test
+(run-tests
+(test-suite 
+ "stream-play"
+ 
 (let ()
   (define 22ksound (resample-to-rate 22050 (make-tone 440 0.2 22050)))
   (check-equal? (rsound-sample-rate 22ksound) 22050)
@@ -73,6 +78,7 @@
                (regexp-match #px"rsound matching pstream's frame rate"
                              (exn-message exn)))
              (lambda () (pstream-queue ps 22ksound 0))))
+
 
 (let ()
   (define sub-cust (make-custodian))
@@ -94,4 +100,6 @@
   ;; this should not crash... 
   (custodian-shutdown-all sub-cust) 
 )
-))
+
+)))
+
