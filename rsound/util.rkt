@@ -644,9 +644,8 @@ rsound-max-volume
   (let* ([scalar (fl/ 1.0 (exact->inexact (rs-largest-sample rsound)))])
     (signals->rsound 
      (rs-frames rsound)
-     (rsound-sample-rate rsound)
-     (lambda (i) (fl* scalar (exact->inexact (rs-ith/left/s16 rsound i))))
-     (lambda (i) (fl* scalar (exact->inexact (rs-ith/right/s16 rsound i)))))))
+     (indexed-signal (lambda (i) (fl* scalar (exact->inexact (rs-ith/left/s16 rsound i)))))
+     (indexed-signal (lambda (i) (fl* scalar (exact->inexact (rs-ith/right/s16 rsound i))))))))
 
 
 ;; midi-note-num->pitch : number -> number

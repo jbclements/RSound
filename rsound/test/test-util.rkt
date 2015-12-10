@@ -5,6 +5,7 @@
          "../network.rkt"
          "plot-signal.rkt"
          math/array
+         racket/block
          rackunit
          rackunit/text-ui
          (for-syntax syntax/parse))
@@ -301,20 +302,44 @@
    (define (within a b tol)
      (< (abs (- a b)) tol))
    
-   (let ()
-     (define s (noise 50))
-     (define t (rs-map/idx (lambda (s i)
-                             (* s (/ i 50)))
-                           s))
-     (check-true
-      (for/and ([i (in-range 50)])
-        (and (within (* (/ i 50) (rs-ith/left s i)) 
-                     (rs-ith/left t i)
-                     1e-2)
-             (within (* (/ i 50) (rs-ith/right s i))
-                     (rs-ith/right t i)
-                     1e-2)))))
-   
+   (block
+    (define s (noise 50))
+    
+    (define u (rs-map (lambda (s) (* s 0.4)) s))
+    (for ([i (in-range 50)])
+      (check-equal? (inexact->exact
+                     (round (* (rs-ith/left/s16 s i) 0.4)))
+                    (rs-ith/left/s16 u i))
+      (check-equal? (inexact->exact
+                     (round (* (rs-ith/right/s16 s i) 0.4)))
+                    (rs-ith/right/s16 u i)))
+    
+    (define t (rs-map/idx (lambda (s i)
+                            (* s (/ i 50)))
+                          s))
+    
+    (for ([i (in-range 50)])
+      (check-equal? (inexact->exact
+                     (round
+                      (* (/ i 50) (rs-ith/left/s16 s i))))
+                    (rs-ith/left/s16 t i))
+      (check-equal? (inexact->exact
+                     (round (* (/ i 50) (rs-ith/right/s16 s i))))
+                    (rs-ith/right/s16 t i)))
+
+    ;; add a 1.0 to make sure that rs-maximize volume restores original:
+    (define s2 (rs-append s (vectors->rsound (vector 1.0) (vector 1.0))))
+    (define u2 (rs-map (λ (s) (* s 0.743)) s2))
+    (define v2 (rs-maximize-volume u2))
+    (for ([i (in-range 51)])
+      (check-= (rs-ith/left/s16 s2 i)
+                    (rs-ith/left/s16 v2 i)
+                    2.0)
+      (check-= (rs-ith/right/s16 s2 i)
+                    (rs-ith/right/s16 v2 i)
+                    2.0)))
+
+ 
    (let ()
      (define s (noise 50))
      (define t (noise 50))
