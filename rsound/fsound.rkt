@@ -111,6 +111,7 @@
 (define/argcheck (fs-frames [fsound fsound? "fsound"])
   (- (fsound-stop fsound) (fsound-start fsound)))
 
+;; given an *already interleaved* f64vec,
 ;; fill in 0 and max-frames for a newly created fsound
 (define (vec->fsound f64vec sample-rate)
   (when (= (f64vector-length f64vec) 0)

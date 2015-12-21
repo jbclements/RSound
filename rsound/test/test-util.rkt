@@ -1,6 +1,7 @@
 #lang racket 
 
 (require "../rsound.rkt"
+         "../fsound.rkt"
          "../util.rkt"
          "../network.rkt"
          "plot-signal.rkt"
@@ -427,8 +428,10 @@
    
    
    ;; tests of rsound-largest-sample
-   (let ([sample-sound (make-tone 2000 0.15 10)])
-     (check-= (/ (rs-largest-sample sample-sound) s16max) 0.15 1))
+   (test-case
+    "rs-largest-sample"
+    (let ([sample-sound (make-tone 2000 0.15 10)])
+     (check-= (/ (rs-largest-sample sample-sound) s16max) 0.15 1)))
    
    
    ;; clip
@@ -479,7 +482,16 @@
       (signal-nth
        (network ()
          [out <= sine-wave #f])
-       1))))))
+       1)))
+
+
+   (test-case
+    "fsound->array"
+    (define fs (vectors->fsound #(0.1 0.34 0.97)
+                                #(0.2 0.427 0.21)))
+    (check-equal? (fsound->array/left fs) (array #[0.1 0.34 0.97]))
+    (check-equal? (fsound->array/right fs) (array #[0.2 0.427 0.21])))
+    )))
 
 (module+ test
   (require rackunit/text-ui)

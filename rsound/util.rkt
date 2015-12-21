@@ -14,6 +14,7 @@ rsound-max-volume
 |#
 
 (require "rsound.rkt"
+         "fsound.rkt"
          "common.rkt"
          math/base
          math/array
@@ -28,7 +29,8 @@ rsound-max-volume
          (for-syntax racket/base syntax/parse)
          racket/unsafe/ops
          "define-argcheck.rkt"
-         lang/prim)
+         lang/prim
+         racket/contract)
 
 (provide-higher-order-primitive rs-map (mapping-fn _))
 (provide-higher-order-primitive rs-map/idx (mapping-fn _))
@@ -84,6 +86,13 @@ rsound-max-volume
          vectors->rsound
          tile-to-len
          fader-snd
+
+         ;; these won't be used in teaching languages so it's okay
+         ;; to put contracts on them. Good contracts would be
+         ;; slow, though.
+         (contract-out [vectors->fsound (-> vector? vector? fsound?)]
+                       [fsound->array/left (-> fsound? array?)]
+                       [fsound->array/right (-> fsound? array?)])
          
          rs-fft/left
          rs-fft/right
@@ -582,28 +591,31 @@ rsound-max-volume
     (apply values (for/list ([i (in-range 4)])
                     (clip s (* i len) (* (+ 1 i) len))))))
 
-;; play a sound 'n' times
+;; make a new sound by joining together 'n' copies of an existing one.
 (define (times n s)
   (rs-append* (build-list n (lambda (x) s))))
 
+;; maximum absolute value from a vector of reals
+(define (vec-absmax v)
+  (for/fold ([max-abs 0.0])
+            ([x (in-vector v)])
+    (unless (real? x)
+      (raise-argument-error 'vec-absmax
+                            "vector of reals" 0 v))
+    (max (abs x) max-abs)))
 
 
-
-;; put vectors together into an rsound at the default sample-rate. Ignores
-;; the complex component entirely.
+;; put vectors of reals together into an rsound at the default sample-rate.
+;; auto-normalizes amplitude
 (define (vectors->rsound leftvec rightvec)
   (define sample-rate (default-sample-rate))
   (unless (equal? (vector-length leftvec) (vector-length rightvec))
-    (error 'vectors->rsound 
+    (error 'vectors->fsound 
            "expected vectors of equal length, given vectors of lengths ~v and ~v." 
            (vector-length leftvec) (vector-length rightvec)))
   (let* ([len (vector-length leftvec)]
-         [datamax (for/fold ((max-abs 0.0))
-                    ((x (in-vector leftvec))
-                     [y (in-vector rightvec)])
-                    (max (abs (real-part x)) 
-                         (abs (real-part y))
-                         max-abs))]
+         [datamax (max (vec-absmax leftvec)
+                       (vec-absmax rightvec))]
          [newvec (make-s16vector (* 2 len))]
          [scaling (/ s16max datamax)])
     (for ([i (in-range len)])
@@ -617,7 +629,32 @@ rsound-max-volume
                                  (real-part (vector-ref rightvec i)))))))
     (rsound newvec 0 len sample-rate)))
 
+;; put vectors together into an fsound at the default sample-rate. Ignores
+;; the complex component entirely.
+(define (vectors->fsound leftvec rightvec)
+  (define sample-rate (default-sample-rate))
+  (unless (equal? (vector-length leftvec) (vector-length rightvec))
+    (error 'vectors->rsound 
+           "expected vectors of equal length, given vectors of lengths ~v and ~v." 
+           (vector-length leftvec) (vector-length rightvec)))
+  (let* ([len (vector-length leftvec)]
+         [newvec (make-f64vector (* 2 len))])
+    (for ([i (in-range len)])
+      (f64vector-set! newvec (* 2 i)
+                      (vector-ref leftvec i))
+      (f64vector-set! newvec (add1 (* 2 i))
+                      (vector-ref rightvec i)))
+    (fsound newvec 0 len sample-rate)))
 
+;; fsound <-> array of inexacts
+
+(define/argcheck (fsound->array/left [f fsound? "fsound"])
+  (for/array ([i (in-range (fs-frames f))])
+    (fs-ith/left f i)))
+
+(define/argcheck (fsound->array/right [f fsound? "fsound"])
+  (for/array ([i (in-range (fs-frames f))])
+    (fs-ith/right f i)))
 
 ;; FFTs
 
