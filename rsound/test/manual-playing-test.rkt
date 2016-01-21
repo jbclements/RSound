@@ -50,7 +50,7 @@
 (sleep 1)
 
 (printf "\nplaying a signal\n")
-(signal-play (fixed-inputs sine-wave 440))
+(signal-play (const-network sine-wave 440))
 (sleep 1)
 (stop)
 (sleep 1))

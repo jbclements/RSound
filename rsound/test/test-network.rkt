@@ -178,11 +178,11 @@
                                  4)
                  (vector 0 7.5 0 2.5))
    
-   ;; fixed-inputs
+   ;; const-network
    (let ()
      
      (define net (network (a b c) [out = (+ a b)]))
-     (define sig (fixed-inputs net 3 14 "hello"))
+     (define sig (const-network net 3 14 "hello"))
      (check-equal? (signal-samples sig 4)
                    (vector 17 17 17 17)))
    

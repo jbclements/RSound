@@ -13,7 +13,7 @@
 (define (g p)
   (pstream-play ps 
                 (signal->rsound 44100 
-                                (signal-scale 0.2 (fixed-inputs harm3-wave p)))))
+                                (signal-scale 0.2 (const-network harm3-wave p)))))
 (define kbd-frame
   (new frame% [label "foo"]
        [width 200]

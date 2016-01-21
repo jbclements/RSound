@@ -13,7 +13,7 @@
          signal-+s
          (struct-out network/s)
          (contract-out [network-init (-> network/c procedure?)])
-         fixed-inputs
+         const-network
          loop-ctr
          loop-ctr/variable
          simple-ctr
@@ -211,7 +211,7 @@
 
 ;; take a network with inputs and a set of fixed 
 ;; inputs and return a new signal closed over those inputs
-(define-syntax (fixed-inputs stx)
+(define-syntax (const-network stx)
   (syntax-parse stx
     [(_ net arg ...)
      #'(network () [out <= net arg ...])]))

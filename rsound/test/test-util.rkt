@@ -25,13 +25,13 @@
  (let ()
    ;; non-table-based-sine-wave and square wave
    
-   (check-= (signal-nth (fixed-inputs sine-wave 4) 0)
+   (check-= (signal-nth (const-network sine-wave 4) 0)
             0.0 #;(sin (* 2 pi 1/44100 4))
             1e-4)
-   (check-= (signal-nth (fixed-inputs sine-wave 4) 13)
+   (check-= (signal-nth (const-network sine-wave 4) 13)
             (sin (* 2 pi 13/44100 4)) 1e-4)
    
-   (define sw (fixed-inputs square-wave 2))
+   (define sw (const-network square-wave 2))
    (check-= (signal-nth sw 0) 1.0 1e-4)
    (check-= (signal-nth sw 10) 1.0 1e-4)
    (check-= (signal-nth sw 11024) 1.0 1e-4)
@@ -43,7 +43,7 @@
    ;; these don't work, because our signals now assume 
    ;; a fixed sample rate of 44.1KHz.
    #;(parameterize ([default-sample-rate 500])
-     (define sw (fixed-inputs square-wave 2))
+     (define sw (const-network square-wave 2))
      (check-= (signal-nth sw 0) 1.0 1e-4)
      (check-= (signal-nth sw 10) 1.0 1e-4)
      (check-= (signal-nth sw 124) 1.0 1e-4)
@@ -163,7 +163,7 @@
       (for ([i (in-range 100)])
         (signal->rsound 44100 (sawtooth-wave 440))))
    
-   (let ([tr (fixed-inputs sawtooth-wave 100)])
+   (let ([tr (const-network sawtooth-wave 100)])
      (check-= (signal-nth tr 0) 0.0 1e-5)
      (check-= (signal-nth tr 1) 2/441 1e-5)
      (check-= (signal-nth tr 221) (+ -1.0 1/441) 1e-5))
@@ -187,7 +187,7 @@
    ;; memoizing
    
    (let ([s1 (signal->rsound 200 (signal-*s (list (dc-signal 0.5) 
-                                                  (fixed-inputs sine-wave 100))))]
+                                                  (const-network sine-wave 100))))]
          [s2 (make-tone 100 0.5 441000)]
          [s3 (make-tone 100 0.5 441000)])
      (check-= (rs-ith/right/s16 s1 73)
@@ -412,7 +412,7 @@
    (define sound
      (signal->rsound
       10
-      (fixed-inputs (wavetable-osc/l sine-wt)
+      (const-network (wavetable-osc/l sine-wt)
                     0.3
                     440)))
    

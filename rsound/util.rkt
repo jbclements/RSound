@@ -546,7 +546,7 @@ rsound-max-volume
 (define make-tone
   (wavefun->tone-maker/periodic
    (lambda (pitch volume)
-     (sig-scale volume (fixed-inputs sine-wave pitch)))))
+     (sig-scale volume (const-network sine-wave pitch)))))
 
 (define make-harm3tone/unfaded
   (wavefun->tone-maker/periodic
@@ -579,7 +579,7 @@ rsound-max-volume
 (define (make-ding pitch)
   (parameterize ([default-sample-rate SR])
     (signal->rsound SR
-                    (signal-*s (list (fixed-inputs sine-wave pitch)
+                    (signal-*s (list (const-network sine-wave pitch)
                                      (dc-signal 0.35)
                                      (fader SR))))))
 
