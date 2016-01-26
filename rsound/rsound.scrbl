@@ -643,7 +643,6 @@ square-wave tones. This one runs in the Intermediate student language:
 @#reader scribble/comment-reader
 (racketblock
 (require rsound)
-(require rsound/filter)
 
 ;; scrobble: number number number -> signal
 ;; return a signal that generates square-wave tones, changing
