@@ -12,7 +12,8 @@
 
 (define song-chunk
   (rs-read/clip
-   "/Users/clements/clements/teaching/video-game-music/earworm-2011.wav"
+   "/tmp/earworm-2011.wav"
+   #;"/Users/clements/clements/teaching/video-game-music/earworm-2011.wav"
    0 (* 44100 30)))
 
 (go song-chunk)

@@ -1,4 +1,4 @@
-#lang racket
+ #lang racket
 
 ;; hastily assembled demo for Foaad Khosmood's class
 
@@ -57,6 +57,7 @@
 (define time-quantize-vec '#(1 4 16 64 128 256 512 1024))
 
 
+;; performs time and value quantization.
 
 (define (copier buf len frame)
   (define snd-vec (rsound-data stored-snd))

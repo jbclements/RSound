@@ -1,11 +1,14 @@
 #lang racket
 
+(module* test racket/base)
+
 (require plot
          (except-in "../main.rkt" bassdrum)
          racket/runtime-path
          "../draw.rkt")
 
 (define-runtime-path here ".")
+
 
 ;; YAY! finally got the right frequency equation.
 #|
