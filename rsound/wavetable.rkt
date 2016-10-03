@@ -4,6 +4,7 @@
 
 (require racket/flonum
          racket/contract
+         "common.rkt"
          "network.rkt")
 
 (provide 
@@ -38,9 +39,11 @@
            (idx <= index-net)
            (out = (flvector-ref vec idx))))
 
-;; this is independent, but it should be nice and high to get 
-;; good wavetables
-(define wavetable-build-sample-rate 44100)
+;; if this is different from the generated samples, resampling
+;; will occur. You can set it high, to get good resolution,
+;; or you can just guess at the right resolution and it'll sound
+;; bad if you miss.
+(define wavetable-build-sample-rate (default-sample-rate))
 
 (module+ test
   (require rackunit)

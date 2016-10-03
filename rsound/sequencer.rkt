@@ -9,9 +9,11 @@
          racket/contract
          racket/match)
 
-;; a simple rsound sequencer
+;; a simple rsound sequencer.
 
+;; this is (now) the basis for the 'pstream' abstraction
 
+;; FIXME check for same sample rate!
 
 (provide/contract
  [make-unplayed-heap (-> heap?)]
@@ -225,7 +227,7 @@
   (queue-for-playing! h (clip ding 0 10000) 20000)
   (queue-for-playing! h ding 18000)
   (check-equal? (heap-count h) 2)
-  (check-equal? (heap-min h) (entry ding 18000 (+ 18000 44100)))
+  (check-equal? (heap-min h) (entry ding 18000 (+ 18000 (rs-frames ding))))
   (heap-remove-min! h)
   (check rs-equal?
          (entry-sound (heap-min h))
@@ -312,7 +314,7 @@
 
 
 (let ()
-  (define src1 (rsound (make-s16vector (* CHANNELS 200) 1) 0 200 44100))
+  (define src1 (rsound (make-s16vector (* CHANNELS 200) 1) 0 200 44123))
   (define entry1 (entry src1 50 250))
   (define entry2 (entry src1 65 265))
   (define dst1 (make-s16vector (* CHANNELS 10) 0))
@@ -329,7 +331,7 @@
                                              2 2 2 2 2 2 2 2 2 2))
   
   (define dst3 (make-s16vector 20 0))
-  (define src3 (rsound (make-s16vector 10 2) 1 5 44100))
+  (define src3 (rsound (make-s16vector 10 2) 1 5 44123))
   (define entry3 (entry src3 70 74))
   (add-from-buf! (s16vector->cpointer dst3) 68 10 entry1 1.0)
   (add-from-buf! (s16vector->cpointer dst3) 68 10 entry3 1.0)
@@ -341,7 +343,7 @@
   )
 
 (let ()
-  (define s1 (rsound (make-s16vector 20 2442) 0 10 44100))
+  (define s1 (rsound (make-s16vector 20 2442) 0 10 44123))
   (define unplayed-heap (make-unplayed-heap))
   (define uncallbacked-heap (make-uncallbacked-heap))
   (queue-for-playing! unplayed-heap s1 5)
@@ -358,9 +360,9 @@
   (check-equal? (s16vector-ref tgt 30) 0)
   )
 (let ()
-  (define s1 (rsound (make-s16vector 20 2) 0 10 44100))
-  (define s2 (rsound (make-s16vector 4 3) 0 2 44100))
-  (define s3 (rsound (make-s16vector 30 4) 0 15 44100))
+  (define s1 (rsound (make-s16vector 20 2) 0 10 44123))
+  (define s2 (rsound (make-s16vector 4 3) 0 2 44123))
+  (define s3 (rsound (make-s16vector 30 4) 0 15 44123))
   (define unplayed-heap (make-unplayed-heap))
   (define uncallbacked-heap (make-uncallbacked-heap))
   (queue-for-playing! unplayed-heap s1 15)

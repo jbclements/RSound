@@ -17,9 +17,14 @@
 
 (define data-ptr (s16vector->cpointer (rsound-data simple-tone)))
 ;; it comes out even on this many samples:
-(define sine-wave-len 8820)
-(check-= (rs-ith/left simple-tone 4410) 0.0 0.01)
-(check-= (rs-ith/right simple-tone 4410) 0.0 0.01)
+;; not sure how to compute this automatically yet with sample-rate changing,
+;; want smallest multiple of sr/440 that's an integer, but still bigger
+;; than 5000 or so.
+(define sine-wave-len 9600 #;8820)
+(define half-wave-len (/ sine-wave-len 2))
+;; tests won't work unless 
+(check-= (rs-ith/left simple-tone half-wave-len) 0.0 0.01)
+(check-= (rs-ith/right simple-tone half-wave-len) 0.0 0.01)
 
 
 (module+ main

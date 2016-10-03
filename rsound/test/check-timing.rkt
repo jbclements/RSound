@@ -1,13 +1,14 @@
 #lang racket
 
 (require ffi/vector
-         "../rsound.rkt"
-         "../private/s16vector-add.rkt"
-         (only-in "../util.rkt" indexed-signal)
+         rsound/rsound
+         rsound/private/s16vector-add
+         (only-in rsound/util indexed-signal)
+         (only-in rsound/common default-sample-rate)
          rackunit)
 
 (module+ main
-(define sr 44100)
+(define sr (default-sample-rate))
 
 ;; 1 second of noise:
 (define test-rsound

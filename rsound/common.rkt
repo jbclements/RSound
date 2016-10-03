@@ -1,6 +1,7 @@
 #lang racket/base
 
 (require racket/contract
+         "prefs.rkt"
          (only-in "rsound-commander.rkt" channels))
 
 ;; no contract check, keep it fast:
@@ -16,10 +17,11 @@
 (define (nonnegative-integer? n)
   (and (integer? n) (<= 0 n)))
 
+
 ;; used for creating sounds; specifying the 
 ;; sample rate every time is too much of a pain
 ;; for students.
-(define default-sample-rate (make-parameter 44100))
+(define default-sample-rate (make-parameter (get-fr-pref)))
 
 ;; translate a frame number and a channel into a sample number
 (define (frame->sample f left?)

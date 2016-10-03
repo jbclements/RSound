@@ -2,10 +2,10 @@
 
 
 (module+ main
-(require "../rsound.rkt")
+(require rsound)
 
 (printf "starting to record ...\n")
-(define s (record-sound (* 44100 4)))
+(define s (record-sound (* (default-sample-rate) 4)))
 (printf "... done\n")
 
 (sleep 4)

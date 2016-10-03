@@ -16,4 +16,7 @@
 ;; eliminated from testing.
 (define test-omit-paths '("examples/katy-sliders.rkt"
                           "examples/markov-model.rkt"))
+;; in order to add a sample-rate pref, we need to be a tool:
+(define drracket-name "RSound")
+(define drracket-tools (list (list "tool.rkt")))
 

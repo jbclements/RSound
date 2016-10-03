@@ -2,17 +2,18 @@
 
 (require ffi/vector)
 
-(require "../rsound-commander.rkt"
-         "../network.rkt"
-         "../reverb.rkt")
+(require rsound/rsound-commander
+         rsound/network
+         rsound/reverb
+         (only-in rsound/common default-sample-rate))
 
 (define buffer-frames 10000000)
-(define frame-rate 44100)
+(define FRAME-RATE (default-sample-rate))
 (define CHANNELS 2)
 
 (define tgt (make-s16vector (* CHANNELS buffer-frames)))
 
-(define msec-per-frame-available (/ 1000 frame-rate))
+(define msec-per-frame-available (/ 1000 FRAME-RATE))
 
 (define (report msec)
   (define msec-per-frame (/ msec buffer-frames))

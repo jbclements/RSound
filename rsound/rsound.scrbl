@@ -167,7 +167,7 @@ These procedures allow the creation, analysis, and manipulation of rsounds.
  the @racket[default-sample-rate] parameter isn't usable in beginning student language.
 }
 
-@defparam[default-sample-rate frame-rate positive-real? #:value 44100]{
+@defparam[default-sample-rate frame-rate positive-real? #:value 48000]{
  A parameter that defines the default frame rate for construction of new sounds.
  
  Note that the terms sample rate and frame rate are used interchangeably. The
@@ -272,9 +272,9 @@ These procedures allow the creation, analysis, and manipulation of rsounds.
  the given one.
  
  Put differently, the sounds that result from @racket[(resample/interp 2.0 ding)]
- and @racket[(resample-to-rate 22050 ding)] should contain exactly the same set
- of samples, but the first will have a frame rate of 44100, and the second a frame 
- rate of 22050.
+ and @racket[(resample-to-rate 24000 ding)] should contain exactly the same set
+ of samples, but the first will have a frame rate of 48000, and the second a frame 
+ rate of 24000.
 }
 
 @defproc[(build-sound [frames frames?] [generator procedure?]) rsound?]{
@@ -504,7 +504,7 @@ for re-use. In particular, rsound uses samples of c3, c4, c5, and c6, and resamp
 
 (play
  (signal->rsound
-  (* 44100 3)
+  (* 48000 3)
   (network ()
            [r = (random)]    ;; a random number from 0 to 1
            [r2 = (* r 0.1)]  ;; scaled to make it less noisy
@@ -672,7 +672,7 @@ square-wave tones. This one runs in the Intermediate student language:
            [b = (* c 0.1)]))
 
 ;; write 20 seconds to a file, if uncommented:
-; (rs-write (signal->rsound (* 20 44100) my-signal) "/tmp/foo.wav")
+; (rs-write (signal->rsound (* 20 48000) my-signal) "/tmp/foo.wav")
 
 ;; play the signal
 (signal-play my-signal)
@@ -691,8 +691,8 @@ racket
 
 ;; wrap i around when it goes off the end:
 (define (maybe-wrap i)
-  (cond [(< i 44100) i]
-        [else (- i 44100)]))
+  (cond [(< i 48000) i]
+        [else (- i 48000)]))
 
 ;; a signal that plays from a waveform:
 (define loop-sig

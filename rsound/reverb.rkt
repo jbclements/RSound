@@ -5,39 +5,42 @@
                [#:struct network/s ([ins : Index] 
                                    [outs : Index]
                                    [maker : (-> (Float -> Float))])])
+(require/typed "common.rkt"
+               [default-sample-rate (Parameterof Real)])
 
 ;; this file provides the "reverb" network
 (provide reverb)
 
+;; constants here from Moorer 1979:
+;; uses a base delay of 100ms
+(define base-delay 100/1000) ;; in seconds
+(define base-delay-frames (* base-delay (exact->inexact (default-sample-rate))))
+(define d1 (inexact->exact (round base-delay-frames)))
+(define d2 (inexact->exact (round (* 1.1 d1))))
+(define d3 (inexact->exact (round (* 1.2 d1))))
+(define d4 (inexact->exact (round (* 1.3 d1))))
+(define d5 (inexact->exact (round (* 1.4 d1))))
+(define d6 (inexact->exact (round (* 1.5 d1))))
+(define g11 0.46)
+(define g12 0.48)
+(define g13 0.50)
+(define g14 0.52)
+(define g15 0.53)
+(define g16 0.55)
+(define g-konst 0.7) ;; (closer to 1.0 gives more ring)
+        
+(define g21 (* (- 1.0 g11) g-konst))
+(define g22 (* (- 1.0 g12) g-konst))
+(define g23 (* (- 1.0 g13) g-konst))
+(define g24 (* (- 1.0 g14) g-konst))
+(define g25 (* (- 1.0 g15) g-konst))
+(define g26 (* (- 1.0 g16) g-konst))
+        
 
 ;; this function produces a function from floats to floats.
 (: starter (-> (Float -> Float)))
 (define starter
       (lambda ()
-        ;; constants here from Moorer 1979:
-        ;; uses a base delay of 100ms
-        (define base-delay (* 100/1000 44100.0))
-        (define d1 (inexact->exact (round base-delay)))
-        (define d2 (inexact->exact (round (* 1.1 d1))))
-        (define d3 (inexact->exact (round (* 1.2 d1))))
-        (define d4 (inexact->exact (round (* 1.3 d1))))
-        (define d5 (inexact->exact (round (* 1.4 d1))))
-        (define d6 (inexact->exact (round (* 1.5 d1))))
-        (define g11 0.46)
-        (define g12 0.48)
-        (define g13 0.50)
-        (define g14 0.52)
-        (define g15 0.53)
-        (define g16 0.55)
-        (define g-konst 0.7) ;; (closer to 1.0 gives more ring)
-        
-        (define g21 (* (- 1.0 g11) g-konst))
-        (define g22 (* (- 1.0 g12) g-konst))
-        (define g23 (* (- 1.0 g13) g-konst))
-        (define g24 (* (- 1.0 g14) g-konst))
-        (define g25 (* (- 1.0 g15) g-konst))
-        (define g26 (* (- 1.0 g16) g-konst))
-        
         (define v1 (make-flvector (inexact->exact (round d1)) 0.0))
         (define v2 (make-flvector (inexact->exact (round d2)) 0.0))
         (define v3 (make-flvector (inexact->exact (round d3)) 0.0))
