@@ -7,6 +7,10 @@
          rackunit
          )
 
+(define (print/flush str)
+  (display str)
+  (flush-output))
+
 (define src-buf-len 10000)
 (define simple-tone
   (make-tone 440 0.2 src-buf-len))
@@ -40,12 +44,17 @@
   (set! t (+ t frames)))
 
 
-(printf "playing signal for 3 seconds\n")
+(print/flush "playing signal for 3 seconds\n")
 (signal/block-play/unsafe simple-signal/block/s16 44100)
 (sleep 3)
 (stop)
 
-(printf "playing signal for 3 seconds w/ explicit buffer-time\n")
+  (print/flush "playing signal at 48K for 3 seconds\n")
+(signal/block-play/unsafe simple-signal/block/s16 48000)
+(sleep 3)
+(stop)
+
+(print/flush "playing signal for 3 seconds w/ explicit buffer-time\n")
 (set! t 0)
 (signal/block-play/unsafe simple-signal/block/s16 44100 #:buffer-time 0.1)
 (sleep 3)

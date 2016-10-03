@@ -2,36 +2,47 @@
 
 (require "../rsound.rkt"
          "../network.rkt"
-         "../util.rkt")
+         "../util.rkt"
+         (only-in "../common.rkt" default-sample-rate))
+
+
+(define (print-and-flush str)
+  (printf "~a" str)
+  (flush-output))
 
 (module+ main
-(printf "\nshort ding\n")
+(print-and-flush "\nshort ding\n")
 (play ding)
 (sleep 2)
 
-(printf "\n2-second tone @ 440\n")
+(print-and-flush "\n2-second tone @ 440\n")
 (play (make-tone 440 0.1 88200))
 (sleep 3)
 
-(printf "\n2-second-tone interrupted by stop-playing.\n")
+  (print-and-flush "\n2-second tone @ 440, 48K frame rate")
+  (parameterize ([default-sample-rate 48000])
+    (play (make-tone 440 0.1 96000)))
+  (sleep 3)
+
+(print-and-flush "\n2-second-tone interrupted by stop-playing.\n")
 (play (make-tone 550 0.1 88200))
 (sleep 1)
 (stop)
 (sleep 1)
 
-(printf "\n2-second-tone interrupted by 1-second-tone.\n")
+(print-and-flush "\n2-second-tone interrupted by 1-second-tone.\n")
 (play (make-tone 550 0.1 88200))
 (sleep 1)
 (play (make-tone 660 0.1 44100))
 (sleep 2)
 
-(printf "\nfast 5x interrupt\n")
+(print-and-flush "\nfast 5x interrupt\n")
 (for ([i (in-range 5)])
   (play (make-tone (* 440 (expt 1.25 i)) 0.05 44100))
   (sleep 0.01))
 (sleep 1)
 
-(printf "\nmany short-lived streams\n")
+(print-and-flush "\nmany short-lived streams\n")
 (define tiny-tone (make-tone 550 0.05 10))
 (for ([i (in-range 80)])
   (play tiny-tone)
@@ -41,17 +52,17 @@
 
 ;; UNIX can't handle more than 30.
 ;; on Mac OS X, 300 is definitely starting to affect performance:
-(printf "\nmany simultaneous streams\n")
+(print-and-flush "\nmany simultaneous streams\n")
 (define quiet-tone (make-tone 480 0.001 44100))
 (for ([i (in-range 30)])
   (play quiet-tone))
 (sleep 1)
-(printf "...stop\n")
+(print-and-flush "...stop\n")
 (sleep 1)
 
-(printf "\nplaying a signal\n")
+(print-and-flush "\nplaying a signal for 10 second\n")
 (signal-play (const-network sine-wave 440))
-(sleep 1)
+(sleep 10)
 (stop)
 (sleep 1))
 
