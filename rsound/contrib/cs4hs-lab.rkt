@@ -1,6 +1,9 @@
 #lang racket
 
-(require (except-in "../main.rkt" kick resample)
+;; no testing:
+(module* test racket/base)
+
+(require (except-in rsound kick)
          rackunit)
 
 #;(play 
@@ -28,15 +31,6 @@
 #;(define (rsound-overlay sound1 sound2)
   (rsound-overlay* (list (list sound1 0) (list sound2 0))))
 
-
-(define (resample factor sound)
-  (define (left i) (rs-ith/left sound (round (* factor i))))
-  (define (right i) (rs-ith/right sound (round (* factor i))))
-  (signals->rsound (round (/ (rs-frames sound) factor))
-                       (rsound-sample-rate sound)
-                       left
-                       right))
-
 (define asqhi (resample 2.0 anasquareemu03))
 
 ;; given an rsound and a duration in seconds, make enough copies of the rsound
@@ -51,7 +45,9 @@
                        rsound)
                      (list (clip rsound 0 leftover-frames))))))
 
-(let* ([saw3 (signal->rsound 4 44100 (lambda (x) (/ x 4)))]
+(let* ([saw3 (signal->rsound
+              4
+              (indexed-signal (lambda (x) (/ x 4))))]
        [extended-saw (single-cycle->tone saw3 0.01)])
   (check-equal? (rs-frames extended-saw) 441)
   (check-= (rs-ith/left extended-saw 402) 0.5 0.001))

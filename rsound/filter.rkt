@@ -190,7 +190,8 @@
                                             perceptible-interval))) 
                                        #f))
 
-;; A network that maps scale values into fir/iir vectors 
+;; A network that maps scale values into fir/iir vectors
+;; uses a hash table to prevent recomputation 
 (define lpf-sig
   (lambda (theta)
     (when (not (<= min-scale-val theta max-scale-val))
@@ -212,12 +213,13 @@
             (vector-ref results 1)
             (vector-ref results 2))))
 
+
 ;; dynamic low-pass filter: the first argument is a signal that controls
 ;; the filter cutoff, the second is the signal being filtered.
 (define lpf/dynamic  
-  (network (lpf-control audio-sig)
-           [(fir-terms iir-terms gain) <= lpf-sig lpf-control]
-           [out <= (dynamic-lti-signal 4) fir-terms iir-terms gain audio-sig]))
+  (network (theta audio-val)
+           [(fir-terms iir-terms gain) <= lpf-sig theta]
+           [out <= (dynamic-lti-signal 4) fir-terms iir-terms gain audio-val]))
 
 
 

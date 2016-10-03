@@ -12,4 +12,8 @@
 
 ;; don't compile the stuff in the contrib subdirectory.
 (define compile-omit-paths '("contrib"))
+;; things written in non-module languages can't easily be
+;; eliminated from testing.
+(define test-omit-paths '("examples/katy-sliders.rkt"
+                          "examples/markov-model.rkt"))
 

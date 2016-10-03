@@ -1,5 +1,11 @@
 #lang racket/base
 
+;; provides 'piano-tone', which dynamically resamples a library of
+;; 6 recorded piano tones to produce one of any given pitch.
+
+
+;; NOTE: will require additional work in a multi-sample-rate world.
+
 (require "rsound.rkt"
          "util.rkt"
          racket/runtime-path
@@ -41,7 +47,7 @@
 
 (module+ test
   (require rackunit)
-  (check-equal? (find-nearest-sample 66.4) (list 72 C5samp)))
+  (check-equal? (find-nearest-sample 70.4) (list 72 C5samp)))
 
 ;; produce a (resampled) note of a given frequency
 (define (resampled-piano f)
@@ -66,5 +72,7 @@
     [other
      other]))
 
+;; given a midi note number, return an rsound representing a piano
+;; note at that pitch
 (define (piano-tone nn)
   (resampled-piano/nn/memo nn))

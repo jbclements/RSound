@@ -9,15 +9,24 @@
 
 (define-runtime-path here ".")
 
-(define speaking
+
+;; terrible example. use some quiet white noise.
+#;(define speaking
   (rs-read (build-path here "speaking.wav")))
+
+(define noise
+ (network ()
+          [noise = (- (random) 0.5)]
+          [out = (* noise 0.05)]))
 
 (define cutoff (box 0.5))
 
 
 (define the-signal
-  (lpf/dynamic (lambda (x) (unbox cutoff))
-               (rsound->signal/left speaking)))
+  (network ()
+           [c = (unbox cutoff)]
+           [audio <= noise]
+           [out <= lpf/dynamic c audio]))
 
 (define (draw-world dc)
   (empty-scene 500 200))
@@ -28,15 +37,13 @@
     (set-box! cutoff new-cutoff)
     new-cutoff))
 
-(signal-play the-signal 44100.0)
+
+(module+ main
+
+(signal-play the-signal)
 
 (big-bang 0
           [to-draw draw-world]
-          [on-mouse update-mouse])
+          [on-mouse update-mouse]))
 
 
-#;signal
-#;(lpf/dynamic ...)
-#;(play speaking)
-#;(sleep 1.0)
-#;(play speaking)

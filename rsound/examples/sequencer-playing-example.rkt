@@ -95,10 +95,11 @@
        (send evt get-key-code)))
     (super-new)))
 
-(define kbd-canvas
-  (new kbd-canvas% [parent kbd-frame]
-       [min-width 200]
-       [min-height 200]))
+(module+ main
+  (define kbd-canvas
+    (new kbd-canvas% [parent kbd-frame]
+         [min-width 200]
+         [min-height 200]))
 
-(send kbd-frame show #t)
+  (send kbd-frame show #t))
 

@@ -58,11 +58,13 @@
 
 ; interprets the "switches" and overlays the rsound according to them
 (define (s sound . switches)
-  (assemble   
-   (for/list ([b (in-list switches)]
-              [i (in-naturals)]
-              #:when (= b 1))
-     (list sound (round (* i sps))))
+  (assemble
+   ;; don't call assemble on an empty list:
+   (cons (list (silence 1) 0)
+         (for/list ([b (in-list switches)]
+                    [i (in-naturals)]
+                    #:when (= b 1))
+           (list sound (round (* i sps)))))
    
    ))
 

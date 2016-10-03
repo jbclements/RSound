@@ -1,7 +1,7 @@
 #lang racket
 
-(require rsound)
-(require rsound/piano-tones)
+(require rsound
+         rsound/piano-tones)
 
 ;; a note is (make-note note-num frames frames)
 (define-struct note (pitch time duration))
@@ -522,28 +522,9 @@
    <
    #:key note-time))
 
-(define ps (make-pstream))
-
 (define (both a b) b)
 
-;; play the notes in a list
-;; list-of-notes -> pstream
-(define (play-notes lon)
-  (cond [(empty? lon) ps]
-        [else
-         (both (play-note (first lon)) 
-               (play-notes (rest lon)))]))
 
-
-;; play a single note
-;; note -> pstream
-(define (play-note n)
-  (pstream-queue
-   ps
-   (let ([snd (piano-tone (note-pitch n))])
-   (clip snd
-         0 (min (rs-frames snd) (note-duration n))))
-   (note-time n)))
 
 
 ;; change E4 into Eflat4
@@ -566,7 +547,30 @@
          (cons (drop-e (first notes))
                (drop-es (rest notes)))]))
 
-(play-notes shuffled-notes #;bach-notes)
+(module+ main
+
+  (define ps (make-pstream))
+
+  ;; play the notes in a list
+  ;; list-of-notes -> pstream
+  (define (play-notes lon)
+    (cond [(empty? lon) ps]
+          [else
+           (both (play-note (first lon)) 
+                 (play-notes (rest lon)))]))
+
+
+  ;; play a single note
+  ;; note -> pstream
+  (define (play-note n)
+    (pstream-queue
+     ps
+     (let ([snd (piano-tone (note-pitch n))])
+       (clip snd
+             0 (min (rs-frames snd) (note-duration n))))
+     (note-time n)))
+
+  (play-notes shuffled-notes #;bach-notes))
 
 
 

@@ -2,10 +2,12 @@
 
 ;; hastily assembled demo for Foaad Khosmood's class
 
+;; (don't test)
+(module* test racket/base)
+
 (require rsound
          rsound/draw
          "quantize-looper.rkt"
-         ffi/vector
          
          2htdp/universe
          2htdp/image)

@@ -63,6 +63,7 @@
   (overlay (text (number->string w) 60 "black")
            (empty-scene 100 100)))
 
+(module+ main
 (draw-world 59)
 (big-bang 60
           [on-key play-key]
@@ -71,5 +72,5 @@
 #;(big-bang 60
           [on-tick play-rand-note 0.25]
           [on-key change-center]
-          [to-draw draw-world])
+          [to-draw draw-world]))
 

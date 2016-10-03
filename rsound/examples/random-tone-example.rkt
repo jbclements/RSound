@@ -114,7 +114,8 @@
               (* PLAY-INTERVAL notes-queued))
              (go (add1 notes-queued))))]))
 
-(go 0)
+(module+ main
+  (go 0)
 
-;; when running at the command-line, don't exit right away:
-(sleep 60)
+  ;; when running at the command-line, don't exit right away:
+  (sleep 60))
