@@ -577,11 +577,10 @@ rsound-max-volume
               (out = (hi-lo idx))))))
 
 (define (make-ding pitch)
-  (parameterize ([default-sample-rate SR])
-    (signal->rsound SR
-                    (signal-*s (list (const-network sine-wave pitch)
-                                     (dc-signal 0.35)
-                                     (fader SR))))))
+  (signal->rsound (default-sample-rate)
+                  (signal-*s (list (const-network sine-wave pitch)
+                                   (dc-signal 0.35)
+                                   (fader SR)))))
 
 ;; sounds like a ding...
 (define ding (make-ding 600))
