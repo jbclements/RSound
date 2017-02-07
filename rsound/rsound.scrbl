@@ -92,8 +92,12 @@ These procedures start and stop playing sounds.
  }
 
 @defproc[(pstream-set-volume! [pstream pstream?] [volume real?]) pstream?]{
- given a nonnegative real number, sets the pstream's volume to that number. A value of 0 indicates
- silence, a value of 1.0 indicates full volume. Returns the pstream}
+ Given a nonnegative real number, sets the pstream's volume to that number. A value of 0 indicates
+ silence, a value of 1.0 indicates full volume. Returns the pstream.}
+
+@defproc[(pstream-clear! [pstream pstream?]) void?]{
+ Clear all rsounds from @racket[pstream]'s queue.  This will not stop any of @racket[pstream]'s rsounds which have already 
+ begun playing.}
 
 @section{Recording}
 
