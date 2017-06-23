@@ -16,7 +16,7 @@ rsound-max-volume
 (require "rsound.rkt"
          "fsound.rkt"
          "common.rkt"
-         math/base
+         (only-in math/base power-of-two?)
          math/array
          "integral-cycles.rkt"
          "wavetable.rkt"

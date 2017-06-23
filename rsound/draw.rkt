@@ -3,7 +3,19 @@
 
 (require "rsound.rkt"
          "common.rkt"
-         racket/gui
+         racket/match
+         (only-in racket/gui/base
+                  dimension-integer?
+                  message-box
+                  canvas%
+                  frame%
+                  text%
+                  editor-canvas%
+                  color%)
+         (only-in racket/list
+                  empty?
+                  first
+                  rest)
          racket/class
          math/array)
 
