@@ -18,7 +18,8 @@
          pstream-queue-callback
          pstream-volume
          pstream-set-volume!
-         pstream-clear!)
+         pstream-clear!
+         (struct-out pstream))
 
 ;; a pstream bundles a sound-heap that's attached
 ;; to a playing stream and a time-checker that returns
