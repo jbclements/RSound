@@ -2,12 +2,13 @@
 
 (require math/array math/statistics math/utils)
 
+(define num-timings 20)
 
 (module+ main
   (max-math-threads 1)
   
   (define timings
-    (for/list ([i 20])
+    (for/list ([i num-timings])
       ;(for/list: : (Listof Real) ([i 20])
       ;(: a (Array Number))
       (define a (build-array #[32768]
@@ -18,12 +19,21 @@
         (time-apply (lambda () (array-fft a)) null))
       cpu-msec))
   
-  (exact->inexact (mean timings))
-  (stddev timings)
+  (printf "mean time (n=~v) to perform array-fft on 32768 random samples: ~v msec\n"
+          num-timings
+          (exact->inexact (mean timings)))
+  (printf "stddev (n=~v) of array-fft times: ~v msec\n"
+          num-timings
+          (stddev timings))
   
   ;; for non-typed racket:
   ;200.15
   ;10.446410866895864
+
+  ;; on 2017-08-13, this looks faster:
+  ;; 77 ms, stddev 8 ms.
+  ;; either machine is faster (though this is home laptop), or
+  ;; racket is quite a bit faster.
   
   
   
