@@ -35,8 +35,8 @@
                    (hash-ref key-hash (string-ref k 0) #f)
                    #f)
              [#f -1]
-             [note (both (play note)
-                         (hash-ref key-hash (string-ref k 0) #f))])]
+             [note (andplay note
+                            (hash-ref key-hash (string-ref k 0) #f))])]
           [else "nothing to play"]))
   w)
 

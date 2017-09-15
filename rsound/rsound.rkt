@@ -15,7 +15,8 @@
          "private/s16vector-add.rkt"
          racket/contract
          racket/match
-         racket/list)
+         racket/list
+         (for-syntax racket/base))
 
 (provide (except-out (all-defined-out)
                      s16vector-hash-1
@@ -204,7 +205,7 @@
   (rc:signal/block-play/unsafe signal/block sample-rate buffer-time))
 
 ;; play a sound using portaudio:
-(define/argcheck (play [sound rsound? "rsound"])
+(define/argcheck (play/proc [sound rsound? "rsound"])
   (match sound
     [(struct rsound (data start finish sample-rate))
      (rc:buffer-play data start finish sample-rate)]
@@ -212,6 +213,21 @@
      ;; should be impossible...
      (error 'rs-play/helper "expected an rsound, got: ~e" sound)])
   "played sound")
+
+;; the 'play' form can't be used in an expression context
+(define-syntax (play stx)
+  (cond [(eq? (syntax-local-context) 'expression)
+         (raise-syntax-error
+          #f
+          "expects to be at the top level"
+          stx)]
+        [else
+         (syntax-case stx ()
+           [(_ arg) #'(play/proc arg)]
+           [_ (raise-syntax-error
+               #f
+               "expects exactly one argument"
+               stx)])]))
 
 ;; backup solution: play from a file:
 #;(define (play sound)

@@ -798,7 +798,7 @@ rsound-max-volume
 ;; a silly little helper to hide effectfulness
 (define/argcheck (andplay [snd rsound? "rsound"] 
                           [val any? "value"])
-  (play snd)
+  (play/proc snd)
   val)
 
 (define (any? v) #t)
