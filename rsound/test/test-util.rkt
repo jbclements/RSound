@@ -1,6 +1,7 @@
 #lang racket 
 
 (require "../rsound.rkt"
+         (only-in "../common.rkt" default-sample-rate)
          "../fsound.rkt"
          "../util.rkt"
          "../network.rkt"
@@ -16,6 +17,8 @@
    (define (int-round-trip int)
      (real->s16 (s16->real int)))
 
+(define SR (default-sample-rate))
+
 (provide the-test-suite)
 
 (define the-test-suite
@@ -26,18 +29,21 @@
    ;; non-table-based-sine-wave and square wave
    
    (check-= (signal-nth (const-network sine-wave 4) 0)
-            0.0 #;(sin (* 2 pi 1/44100 4))
+            0.0 #;(sin (* 2 pi (/ 1 SR) 4))
             1e-4)
    (check-= (signal-nth (const-network sine-wave 4) 13)
-            (sin (* 2 pi 13/44100 4)) 1e-4)
+            (sin (* 2 pi (/ 13 (default-sample-rate)) 4)) 1e-4)
    
    (define sw (const-network square-wave 2))
    (check-= (signal-nth sw 0) 1.0 1e-4)
    (check-= (signal-nth sw 10) 1.0 1e-4)
-   (check-= (signal-nth sw 11024) 1.0 1e-4)
-   (check-= (signal-nth sw 11025) 0.0 1e-4)
-   (check-= (signal-nth sw 22049) 0.0 1e-4)
-   (check-= (signal-nth sw 22050) 1.0 1e-4)
+   (check-= (signal-nth sw (sub1 (/ SR 4))) 1.0 1e-4)
+   ;; phase angle uses double arithmetic, doesn't come
+   ;; out exactly:
+   ;(check-= (signal-nth sw (/ SR 4)) 0.0 1e-4)
+   (check-= (signal-nth sw (add1 (/ SR 4))) 0.0 1e-4)
+   (check-= (signal-nth sw (sub1 (/ SR 2))) 0.0 1e-4)
+   (check-= (signal-nth sw (/ SR 2)) 1.0 1e-4)
    
    
    ;; these don't work, because our signals now assume 
@@ -54,32 +60,32 @@
      (check-= (signal-nth sw 167)  1.0 1e-4))
    
    ;; make-tone
-   (define r (make-tone 882 0.2 44100))
+   (define r (make-tone (/ SR 50) 0.2 SR))
    
    (check-= (rs-ith/left/s16 r 0) 
-            (round (* s16max (* 0.2 (sin (* twopi 882 0/44100))))) 0.0)
+            (round (* s16max (* 0.2 (sin (* twopi (/ SR 50) (/ 0 SR)))))) 0.0)
    (check-equal? (rs-ith/right/s16 r 50) 0)
    (check-= (rs-ith/left/s16 r 27) 
-            (round (* s16max (* 0.2 (sin (* twopi 882 27/44100))))) 0.0)
+            (round (* s16max (* 0.2 (sin (* twopi (/ SR 50) (/ 27 SR)))))) 0.0)
    ;; errors late:
    (check-= (rs-ith/left/s16 r 44098)
-            (round (* s16max (* 0.2 (sin (* twopi 882 44098/44100)))))
+            (round (* s16max (* 0.2 (sin (* twopi (/ SR 50) (/ 44098 SR))))))
             1e-7)
    (let ()
    ;; errors crop up only on certain frequencies:
-   (define r (make-tone 440 0.2 44100))
+   (define r (make-tone 440 0.2 SR))
    
      (check-= (rs-ith/left/s16 r 0)
-              (round (* s16max (* 0.2 (sin (* twopi 440 0/44100))))) 0.0)
+              (round (* s16max (* 0.2 (sin (* twopi 440 (/ 0 SR)))))) 0.0)
    (check-= (rs-ith/left/s16 r 27) 
-            (round (* s16max (* 0.2 (sin (* twopi 440 27/44100))))) 0.0)
+            (round (* s16max (* 0.2 (sin (* twopi 440 (/ 27 SR)))))) 0.0)
    ;; errors late:
      (define (small x) (< x 1e-7))
-     (for ([i 44100])
+     (for ([i SR])
        (unless (small 
                 (abs
                  (- (rs-ith/left/s16 r i)
-                    (round (* s16max (* 0.2 (sin (* twopi 440 (/ i 44100)))))))))
+                    (round (* s16max (* 0.2 (sin (* twopi 440 (/ i SR)))))))))
          (error 'uhoh "failure on sample # ~s" i))))
 
    ;; can't do this any more...
@@ -95,15 +101,15 @@
    (let ()
      (define r (make-tone 400 1.0 1000))
      (define s (clip r 30 60))
-     (define t (resample-to-rate 22050 s))
+     (define t (resample-to-rate (/ SR 2) s))
      (check-= (rs-ith/left t 0) (rs-ith/left s 0) 0)
      (check-= (rs-ith/left t 1) (rs-ith/left s 2) 0)
      (check-= (rs-ith/left t 2) (rs-ith/left s 4) 0)
-     (check-= (rsound-sample-rate t) 22050 0)
+     (check-= (rsound-sample-rate t) (/ SR 2) 0)
      )
    
    (define pulse-12.5 (make-pulse-tone 0.125))
-   (define short-pulse  (pulse-12.5 441 0.2 50))
+   (define short-pulse  (pulse-12.5 (/ SR 100) 0.2 50))
    (check-= (rs-ith/left short-pulse 0) 0.2 1e-4)
    (check-= (rs-ith/left short-pulse 11) 0.2 1e-4)
    (check-= (rs-ith/left short-pulse 13) -0.2 1e-4)
@@ -163,10 +169,11 @@
       (for ([i (in-range 100)])
         (signal->rsound 44100 (sawtooth-wave 440))))
    
-   (let ([tr (const-network sawtooth-wave 100)])
+   (let ([tr (const-network sawtooth-wave 50)])
      (check-= (signal-nth tr 0) 0.0 1e-5)
-     (check-= (signal-nth tr 1) 2/441 1e-5)
-     (check-= (signal-nth tr 221) (+ -1.0 1/441) 1e-5))
+     (check-= (signal-nth tr 1) (/ 1 (/ SR 100)) 1e-5)
+     (check-= (signal-nth tr (add1 (/ SR 100)))
+              (+ -1.0 (/ 1 (/ SR 100))) 1e-5))
    
    ;; signal-*
    
@@ -205,13 +212,13 @@
    
    ;; FFT
    
-   (let* ([tone (make-tone 172.265625 1.0 4096)]
+   (let* ([tone (make-tone (* 16/4096 SR) 1.0 4096)]
           [fft (rs-fft/left tone)])
      (check-= (magnitude (array-ref fft #(15))) 0.0 1e-2)
      (check-= (magnitude (array-ref fft #(16))) 2048.0 1e-2)
      (check-= (magnitude (array-ref fft #(17))) 0.0 1e-2))
 
-   (let* ([tone (make-tone 172.265625 1.0 4096)]
+   (let* ([tone (make-tone (* 16/4096 SR) 1.0 4096)]
           [fft (rs-fft/right tone)])
      (check-= (magnitude (array-ref fft #(15))) 0.0 1e-2)
      (check-= (magnitude (array-ref fft #(16))) 2048.0 1e-2)
@@ -408,7 +415,7 @@
    ;; wavetable-osc
    
    (define sine-wt
-     (make-tone 1 1.0 44100))
+     (make-tone 1 1.0 SR))
    (define sound
      (signal->rsound
       10
@@ -443,7 +450,7 @@
      (check-equal? (rsound-start shorter-test) 30)
      (check-equal? (rsound-stop shorter-test) 60)
      (check-equal? (rs-frames shorter-test) 30)
-     (check-equal? (rsound-sample-rate shorter-test) 44100)
+     (check-equal? (rsound-sample-rate shorter-test) SR)
      (check-equal? (rs-ith/left/s16 shorter-test 6)
                    (rs-ith/left/s16 test-rsound 36)))
               

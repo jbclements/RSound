@@ -277,6 +277,10 @@
 
 ;; determine the nth sample, by discarding the first n-1:
 (define (signal-nth signal n)
+  (unless (exact-nonnegative-integer? n)
+    (raise-argument-error 'signal-nth
+                          "natural number"
+                          1 signal n))
   (define sigfun (network-init signal))
   (for ([i n]) (sigfun))
   (sigfun))
