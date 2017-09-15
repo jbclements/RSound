@@ -40,7 +40,9 @@ These procedures start and stop playing sounds.
 
 @defproc[(play (rsound rsound?)) void?]{
  Plays an rsound. Plays concurrently with an already-playing sound, if there is one. Returns 
- immediately (before the sound is played).}
+ immediately (before the sound is played).
+
+ Play can only be used at the top level.}
 
 @defproc[(stop) void]{
  Stop all of the the currently playing sounds.}
@@ -389,7 +391,8 @@ These procedures allow the creation, analysis, and manipulation of rsounds.
 }
 
 @defproc[(andplay [snd rsound?] [val any/c]) any/c]{
- plays the given sound and returns the value.}
+ plays the given sound and evaluates to the value. Unlike @racket[play], @racket[andplay]
+ can be used in an expression context.}
 
 
 @section{Piano Tones}
