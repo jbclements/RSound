@@ -136,7 +136,7 @@
 #;(rsound-loop (loop-at (overlay-patterns pat4 pat4 pat4)
                       (floor (* sps num-steps 3))))
 
-#;(play pat4)
+(play pat4)
 
 
 

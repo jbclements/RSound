@@ -103,6 +103,8 @@ rsound-max-volume
          andplay
          
          FRAME-RATE
+
+         rs-for
          )
 
 ;; for use in ONLY IN BEGINNER, where parameters are verboten:
@@ -223,10 +225,12 @@ rsound-max-volume
 ;; octave higher and half as long.
 (define/argcheck (resample/interp [factor positive-real? "positive real number"]
                                   [sound rsound? "rsound"])
+  (unless (< 0 (rs-frames sound))
+    (raise-argument-error 'resample/interp "sound longer than 0 frames"))
   (define new-sound-len
     (inexact->exact (floor (/ (rs-frames sound) factor))))
   (unless (< 0 new-sound-len)
-    (raise-argument-error 'resample "sound long enough to be shortened by the given factor"
+    (raise-argument-error 'resample/interp "sound long enough to be shortened by the given factor"
                           1 factor sound))
   (define (the-sig extractor)
     (lambda (i)
@@ -872,3 +876,10 @@ rsound-max-volume
   (and (real? fr)
        (< 0 fr)
        (<= fr MAX-FRAME-RATE)))
+
+;; make a limited form of 'for' available...
+(define-syntax (rs-for stx)
+  (syntax-case stx ()
+    [(_ ([i iter]) body ...)
+     (identifier? #'i)
+     #'(for/list ([i iter]) body ...)]))

@@ -295,9 +295,17 @@
 
 
 ;; rs-append : rsound rsound -> rsound
-(define/argcheck (rs-append [sound-a rsound? "rsound"]
+#;(define/argcheck (rs-append [sound-a rsound? "rsound"]
                             [sound-b rsound? "rsound"])
   (rs-append* (list sound-a sound-b)))
+
+(define (rs-append . rsounds)
+  (for ([s (in-list rsounds)]
+        #:when (not (rsound? s)))
+    (error 'rs-append
+           "found an argument that is not an rsound: ~e"
+           s))
+  (rs-append* rsounds))
 
 ;; rs-append* : (listof rsound) -> rsound
 (define (rs-append* los)

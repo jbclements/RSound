@@ -28,4 +28,5 @@
          ;; I'm not going to... it could maybe be useful.
          (all-from-out "network.rkt")
          (all-from-out "stream-play.rkt")
-         (all-from-out "filter.rkt"))
+         (all-from-out "filter.rkt")
+         build-list)
