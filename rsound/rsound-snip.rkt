@@ -1,74 +1,74 @@
 #lang racket/base
 
-;; ooh... looks like I was starting to put together a snip for rsounds.... I should finish this!
-
-
-(require racket/gui)
-
-(define red-arrow-bitmap
-  (make-object bitmap% (build-path (collection-path "icons") "red-arrow.bmp") 'bmp))
-
-(unless (send red-arrow-bitmap ok?)
-  (error 'red-arrow-bitmap "unable to load red-arrow bitmap"))
-
-(define rsound-snip-class%
-  (class snip-class%
-    (override read)
-    
-    (define (read s)
-      (let ([size-box (box 0)])
-        (send s get size-box)
-        (make-object rsound-snip% 100)))
-    
-    (super-instantiate ())))
-
-(define rsound-snipclass
-  (make-object rsound-snip-class%))
-
-
-(send* rsound-snipclass
-  (set-version 1)
-  (set-classname (format "~s" `(lib "vertical-separator-snip.ss" "stepper" "private"))))
-
-(send (get-the-snip-class-list) add rsound-snipclass)
-
+(require racket/class
+         racket/snip
+         racket/format
+         "rsound.rkt"
+         (only-in "util.rkt" ding))
+   
+(provide rsound-snip%
+         (rename-out [rsound-snip-class snip-class]))
+   
 (define rsound-snip%
   (class snip%
-    (inherit get-style set-snipclass set-flags get-flags get-admin)
-    (public set-height!)
-    (override write copy get-extent draw)
-    
-    (init-field height)
-    
-    
-    (define bitmap-width 15.0)
-    (define left-white 0.0)
-    (define right-white 3.0)
-    (define bitmap-height 10.0)
-    
-    (define (set-height! x) 
-      (set! height (max x bitmap-height)))
-    
-    (define (write s) 
-      (send s put (char->integer #\r)))        ; this can't be right...?
-    
-    (define (copy)
-      (let ([s (make-object rsound-snip% height)])
-        (send s set-style (get-style))
-        s))
-    
-    (define (get-extent dc x y w-box h-box descent-box space-box lspace-box rspace-box)
-      (for-each (lambda (box) (unless (not box) (set-box! box 0)))
-                (list descent-box space-box lspace-box rspace-box))
-      (unless (not w-box)
-        (set-box! w-box (+ left-white right-white bitmap-width)))
-      (unless (not h-box)
-        (set-box! h-box height)))
-    
-    (define (draw dc x y left top right bottom dx dy draw-caret)
-      (let ([y-offset (round (/ (- height bitmap-height) 2))]
-            [x-offset left-white])
-        (send dc draw-bitmap red-arrow-bitmap (+ x x-offset) (+ y y-offset))))
-    
-    (super-instantiate ())
-    (set-snipclass rsound-snipclass)))
+    (inherit set-snipclass
+             get-flags set-flags
+             get-admin)
+    (init-field [size 20.0])
+
+    (define width 30)
+    (define height 20)
+    (super-new)
+    (set-snipclass rsound-snip-class)
+    (send (get-the-snip-class-list) add rsound-snip-class)
+    (set-flags (cons 'handles-events (get-flags)))
+      
+    (define/override (get-extent dc x y	 	 	 	 
+                                 [w #f]
+                                 [h #f]
+                                 [descent #f]
+                                 [space #f]
+                                 [lspace #f]
+                                 [rspace #f])
+      (define (maybe-set-box! b v) (when b (set-box! b v)))
+      (maybe-set-box! w (+ 2.0 width))
+      (maybe-set-box! h (+ 2.0 height))
+      (maybe-set-box! descent 1.0)
+      (maybe-set-box! space 1.0)
+      (maybe-set-box! lspace 1.0)
+      (maybe-set-box! rspace 1.0))
+      
+    (define/override (draw dc x y left top right bottom dx dy draw-caret)
+      (send dc draw-rectangle (+ x 1.0) (+ y 1.0) width height))
+      
+    (define/override (copy)
+      (new rsound-snip%))
+      
+    (define/override (write f)
+      (send f put size))
+      
+    (define/override (on-event dc x y editorx editory e)
+      (when (send e button-down?)
+        (play ding)
+        #;((set! size (+ 1.0 size))
+           (define admin (get-admin))
+           (when admin
+             (send admin resized this #t)))))))
+   
+  (define circle-snip-class%
+    (class snip-class%
+      (inherit set-classname)
+      
+      (super-new)
+      (set-classname (~s '((lib "rsound-snip.rkt" "rsound")
+                           (lib "wxme-rsound-snip.rkt" "rsound"))))
+      
+      (define/override (read f)
+        (define size-b (box 0.0))
+        (send f get size-b)
+        (new rsound-snip% [size (unbox size-b)]))))
+   
+  (define rsound-snip-class (new circle-snip-class%))
+
+(new rsound-snip%)
+   
