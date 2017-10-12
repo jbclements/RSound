@@ -13,7 +13,10 @@
                    "rackunit-lib"
                    "typed-racket-lib"
                    "drracket-plugin-lib"
-                   "memoize"))
+                   "memoize"
+                   "pict-lib"
+                   "wxme-lib"
+                   "snip-lib"))
 (define build-deps (list "scribble-lib"
                          "racket-doc"
                          "wxme-lib"))
