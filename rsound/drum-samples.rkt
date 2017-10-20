@@ -9,22 +9,26 @@
 
 (define-runtime-path sample-dir "./contrib/drum-samples/")
 
-(define (rs s)
-  (resample-to-rate (default-sample-rate) s))
+(define (load-sample s)
+  (resample-to-rate (default-sample-rate)
+                    (rs-read (build-path sample-dir (string-append s ".wav")))))
 
-(define kick (rs (rs-read (build-path sample-dir "kick.wav"))))
-(define bassdrum (rs (rs-read (build-path sample-dir "bassdrum.wav"))))
-(define bassdrum-synth (rs (rs-read (build-path sample-dir "bassdrum-synth.wav"))))
+(define kick           (load-sample "kick"))
+(define bassdrum       (load-sample "bassdrum"))
+(define bassdrum-synth (load-sample "bassdrum-synth"))
 
-(define o-hi-hat (rs (rs-read (build-path sample-dir "o-hi-hat.wav"))))
-(define c-hi-hat-1 (rs (rs-read (build-path sample-dir "c-hi-hat-1.wav"))))
-(define c-hi-hat-2 (rs(rs-read (build-path sample-dir "c-hi-hat-2.wav"))))
+(define o-hi-hat     (load-sample "o-hi-hat"))
+(define c-hi-hat-1   (load-sample "c-hi-hat-1"))
+(define c-hi-hat-2   (load-sample"c-hi-hat-2"))
 
-(define clap-1 (rs (rs-read (build-path sample-dir "clap-1.wav"))))
-(define clap-2 (rs (rs-read (build-path sample-dir "clap-2.wav"))))
-(define crash-cymbal (rs (rs-read (build-path sample-dir "crash-cymbal.wav"))))
+(define clap-1       (load-sample "clap-1"))
+(define clap-2       (load-sample "clap-2"))
+(define crash-cymbal (load-sample "crash-cymbal"))
 
-(define snare (rs (rs-read (build-path sample-dir "snare.wav"))))
+(define snare        (load-sample "snare"))
+
+(define click-1      (load-sample "click1"))
+(define click-2      (load-sample "click2"))
 
 
 

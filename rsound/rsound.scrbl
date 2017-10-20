@@ -710,6 +710,24 @@ racket
    [out = (* s 0.1)]))
 )
 
+@section{Drum Samples}
+
+RSound comes with a few simple drum samples.
+
+@defthing[kick rsound?]{}
+@defthing[bassdrum rsound]{}
+@defthing[kick rsound?]{}
+@defthing[bassdrum rsound?]{}
+@defthing[bassdrum-synth rsound?]{}
+@defthing[o-hi-hat rsound?]{}
+@defthing[c-hi-hat-1 rsound?]{}
+@defthing[c-hi-hat-2 rsound?]{}
+@defthing[clap-1 rsound?]{}
+@defthing[clap-2 rsound?]{}
+@defthing[crash-cymbal rsound?]{}
+@defthing[snare rsound?]{}
+@defthing[click-1 rsound?]{}
+@defthing[click-2 rsound?]{}
 
 @section{Reporting Bugs}
 
