@@ -13,6 +13,7 @@
 
 (provide make-pstream
          pstream-queue
+         andqueue
          pstream-play
          pstream-current-frame
          pstream-queue-callback
@@ -52,23 +53,36 @@
 
 ;; queue 'snd' for playing on 'pstream' at 'frame'
 (define (pstream-queue pstream snd frame)
+  (begin
+    (queue-with-check 'pstream-queue pstream snd frame)
+    "sound is queued"))
+
+
+;; queue 'snd' for playing on 'pstream' at 'frame', return value
+(define (andqueue pstream snd frame val)
+  (begin
+    (queue-with-check 'andqueue pstream snd frame)
+    val))
+
+;; given a function name and a pstream and a sound and a frame,
+;; check the arguments and queue the sound
+(define (queue-with-check fun-name pstream snd frame)
   (unless (pstream? pstream)
-    (raise-argument-error 'pstream-queue "pstream" 0 pstream snd frame))
+    (raise-argument-error fun-name "pstream" 0 pstream snd frame))
   (unless (rsound? snd)
-    (raise-argument-error 'pstream-queue "rsound" 1 pstream snd frame))
+    (raise-argument-error fun-name "rsound" 1 pstream snd frame))
   (unless (= (pstream-frame-rate pstream) (rsound-sample-rate snd))
     (raise-argument-error 
-     'pstream-queue 
+     fun-name
      (format "rsound matching pstream's frame rate (~a)"
              (pstream-frame-rate pstream))
      1 pstream snd frame))
   (unless (nonnegative-integer? frame)
-    (raise-argument-error 'pstream-queue "exact nonnegative integer" 2 pstream snd frame))
+    (raise-argument-error fun-name "exact nonnegative integer" 2 pstream snd frame))
   (define exact-frame (inexact->exact frame))
   (queue-for-playing! (pstream-sound-heap pstream) 
                       snd 
-                      exact-frame)
-  "sound is queued")
+                      exact-frame))
 
 ;; queue a callback to run at a particular frame
 (define (pstream-queue-callback pstream callback frame)

@@ -70,10 +70,16 @@ These procedures start and stop playing sounds.
  responsiveness (background music, etc).
 }
 
-@defproc[(pstream-queue [pstream pstream?] [rsound rsound?] [frames natural?]) pstream?]{
+@defproc[(andqueue [pstream pstream?] [rsound rsound?] [frames natural?] [val any]) any]{
  Queue the given sound to be played at the time specified by @racket[frames]. If that frame
  is in the past, it will still play the appropriate remainder of the sound. Returns
- the pstream.
+ the given value.
+}
+
+@defproc[(pstream-queue [pstream pstream?] [rsound rsound?] [frames natural?]) string?]{
+ Queue the given sound to be played at the time specified by @racket[frames]. If that frame
+ is in the past, it will still play the appropriate remainder of the sound. Returns
+ the string "sound is queued".
 }
 
 @defproc[(pstream-current-frame [pstream pstream?]) natural?]{
@@ -714,8 +720,6 @@ racket
 
 RSound comes with a few simple drum samples.
 
-@defthing[kick rsound?]{}
-@defthing[bassdrum rsound]{}
 @defthing[kick rsound?]{}
 @defthing[bassdrum rsound?]{}
 @defthing[bassdrum-synth rsound?]{}
