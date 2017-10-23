@@ -53,7 +53,7 @@ These procedures start and stop playing sounds.
 @section{Stream-based Playing}
 
  RSound provides a "pstream" abstraction which falls conceptually in between
- @racket[play] and @racket[signal-play]. In particular, a @racket[pstream] encapsulates
+ @racket[play] and @racket[signal-play]. In particular, a @deftech["pstream"] encapsulates
  an ongoing signal, with primitives available to queue sounds for playback, to check
  the signal's "current time" (in frames), and to queue a callback to occur at a 
  particular time.
@@ -69,6 +69,10 @@ These procedures start and stop playing sounds.
  buffer time of about 50 ms. Use a long buffer-time when continuity is more important than 
  responsiveness (background music, etc).
 }
+
+@defproc[(pstream? (val any)) boolean?]{
+ Returns @racket[#true] if the given @racket[val] is a @tech{pstream}, constructed with
+ @racket[make-pstream].}
 
 @defproc[(andqueue [pstream pstream?] [rsound rsound?] [frames natural?] [val any]) any]{
  Queue the given sound to be played at the time specified by @racket[frames]. If that frame
