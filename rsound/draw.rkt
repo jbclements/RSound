@@ -265,9 +265,11 @@
 
 ;; given ... a bunch of stuff, create a new window for displaying vector data
 ;; and show it.
-(define (vector-display-frame title left-getter right-getter len width height data-left
+(define (vector-display-frame frame title left-getter right-getter len width height data-left
                       data-right common-scale?)
-  (let* ([f (new frame% [label title] [width width] [height height])]
+  (let* ([f (if (equal? frame #f)
+                (new frame% [label title] [width width] [height height])
+                frame)]
          [tx (new text%)]
          [ty (new text%)]
          [c (new sound-canvas%
@@ -376,9 +378,10 @@
 
 
 ;; draw a sound
-(define (rs-draw sound #:title [title "picture of sound"] 
-                     #:width [width 800] #:height [height 230])
-  (vector-display-frame title
+(define (rs-draw sound #:title [title "picture of sound"]
+                 #:parent [parent #f]
+                 #:width [width 800] #:height [height 230])
+  (vector-display-frame parent title
                 (lambda (i) (/ (rs-ith/left/s16 sound i) s16max))
                 (lambda (i) (/ (rs-ith/right/s16 sound i) s16max))
                 (rs-frames sound)
