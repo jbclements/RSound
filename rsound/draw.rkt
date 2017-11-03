@@ -314,7 +314,7 @@
            "expected two vectors of the same length, got ~s and ~s" 
            (vector-length left-vec)
            (vector-length right-vec)))
-  (vector-display-frame title 
+  (vector-display-frame #f title 
                 (lambda (i) (magnitude (vector-ref left-vec i)))
                 (lambda (i) (magnitude (vector-ref right-vec i)))
                 (vector-length left-vec)
@@ -332,7 +332,7 @@
                           0 arr))
   (define real-parts (array->vector (inline-array-map real-part arr)))
   (define imag-parts (array->vector (inline-array-map imag-part arr)))
-  (vector-display-frame title
+  (vector-display-frame #f title
                         (lambda (i) (vector-ref real-parts i))
                         (lambda (i) (vector-ref imag-parts i))
                         (array-size arr)
@@ -349,7 +349,7 @@
                           0 arr))
   (define magnitude-parts (array->vector (inline-array-map magnitude arr)))
   (define phase-parts (array->vector (inline-array-map phase arr)))
-  (vector-display-frame title
+  (vector-display-frame #f title
                         (lambda (i) (vector-ref magnitude-parts i))
                         (lambda (i) (vector-ref phase-parts i))
                         (array-size arr)
@@ -366,7 +366,7 @@
                           0 arr))
   (define magnitude-parts (array->vector (inline-array-map magnitude arr)))
   (define phase-parts (array->vector (inline-array-map phase arr)))
-  (vector-display-frame title
+  (vector-display-frame #f title
                 (lambda (i) (log (vector-ref magnitude-parts i)))
                 (lambda (i) (vector-ref phase-parts i))
                 (array-size arr)
