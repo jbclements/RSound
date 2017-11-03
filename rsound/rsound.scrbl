@@ -322,6 +322,10 @@ These procedures allow the creation, analysis, and manipulation of rsounds.
 
 @defproc[(rs-draw [rsound rsound?]
                       [#:title title string?]
+                      [#:parent parent (or/c (is-a?/c frame%)
+                                             (is-a?/c dialog%) 
+                                             (is-a?/c panel%)
+                                             (is-a?/c pane%))]
                       [#:width width nonnegative-integer? 800]
                       [#:height height nonnegative-integer? 200])
          void?]{

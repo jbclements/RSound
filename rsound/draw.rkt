@@ -265,9 +265,11 @@
 
 ;; given ... a bunch of stuff, create a new window for displaying vector data
 ;; and show it.
-(define (vector-display-frame title left-getter right-getter len width height data-left
+(define (vector-display-frame frame title left-getter right-getter len width height data-left
                       data-right common-scale?)
-  (let* ([f (new frame% [label title] [width width] [height height])]
+  (let* ([f (if (equal? frame #f)
+                (new frame% [label title] [width width] [height height])
+                frame)]
          [tx (new text%)]
          [ty (new text%)]
          [c (new sound-canvas%
@@ -312,7 +314,7 @@
            "expected two vectors of the same length, got ~s and ~s" 
            (vector-length left-vec)
            (vector-length right-vec)))
-  (vector-display-frame title 
+  (vector-display-frame #f title 
                 (lambda (i) (magnitude (vector-ref left-vec i)))
                 (lambda (i) (magnitude (vector-ref right-vec i)))
                 (vector-length left-vec)
@@ -330,7 +332,7 @@
                           0 arr))
   (define real-parts (array->vector (inline-array-map real-part arr)))
   (define imag-parts (array->vector (inline-array-map imag-part arr)))
-  (vector-display-frame title
+  (vector-display-frame #f title
                         (lambda (i) (vector-ref real-parts i))
                         (lambda (i) (vector-ref imag-parts i))
                         (array-size arr)
@@ -347,7 +349,7 @@
                           0 arr))
   (define magnitude-parts (array->vector (inline-array-map magnitude arr)))
   (define phase-parts (array->vector (inline-array-map phase arr)))
-  (vector-display-frame title
+  (vector-display-frame #f title
                         (lambda (i) (vector-ref magnitude-parts i))
                         (lambda (i) (vector-ref phase-parts i))
                         (array-size arr)
@@ -364,7 +366,7 @@
                           0 arr))
   (define magnitude-parts (array->vector (inline-array-map magnitude arr)))
   (define phase-parts (array->vector (inline-array-map phase arr)))
-  (vector-display-frame title
+  (vector-display-frame #f title
                 (lambda (i) (log (vector-ref magnitude-parts i)))
                 (lambda (i) (vector-ref phase-parts i))
                 (array-size arr)
@@ -376,9 +378,10 @@
 
 
 ;; draw a sound
-(define (rs-draw sound #:title [title "picture of sound"] 
-                     #:width [width 800] #:height [height 230])
-  (vector-display-frame title
+(define (rs-draw sound #:title [title "picture of sound"]
+                 #:parent [parent #f]
+                 #:width [width 800] #:height [height 230])
+  (vector-display-frame parent title
                 (lambda (i) (/ (rs-ith/left/s16 sound i) s16max))
                 (lambda (i) (/ (rs-ith/right/s16 sound i) s16max))
                 (rs-frames sound)
