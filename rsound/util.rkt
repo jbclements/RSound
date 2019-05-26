@@ -45,6 +45,7 @@ rsound-max-volume
          rs-mult
          twopi
          sine-wave
+	 triangle-wave
          sawtooth-wave
          approx-sawtooth-wave
          square-wave
@@ -348,6 +349,25 @@ rsound-max-volume
               (* 0.5 (sin (* twopi 2.0 pitch ctr)))
               (* 0.25 (sin (* twopi 3.0 pitch ctr)))))))
 
+;; SYNTHESIS OF TRIANGLE WAVES:
+
+(define triangle-wave
+  (let ([direction 'up])
+    (define (increment p freq)
+      (define next (if (equal? direction 'up)
+                       (+ p (* 2.0 freq SRINV))
+                       (- p (* 2.0 freq SRINV))))        
+      (cond [(and (>= next 1.0) (equal? direction 'up))
+             (set! direction 'down)]
+            [(and (<= next -1.0) (equal? direction 'down))
+             (set! direction 'up)])
+      next)
+    (network (freq)
+      [_ = (unless (number? freq)
+             (raise-argument-error 'triangle-wave "number" 0 freq))]
+      [b   = (prev a -1.0)]
+      [a   = (increment b freq)]
+      [out = b])))
 
 ;; SYNTHESIS OF SAWTOOTH WAVES:
 

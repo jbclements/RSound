@@ -134,6 +134,12 @@ Also note that all of these assume a fixed sample rate of 44.1 KHz.
  frequency, at the default sample rate, of amplitude 1.0.}
 
 @defproc[#:kind "signal"
+                (triangle-wave [frequency nonnegative-number?]) real?]{
+ A signal representing a naive triangle wave of the given
+ frequency, of amplitude 1.0. Note that since this is a simple -1.0 up to 1.0 triangle wave, it's got horrible 
+ aliasing all over the spectrum.}
+
+@defproc[#:kind "signal"
                 (sawtooth-wave [frequency nonnegative-number?]) real?]{
  A signal representing a naive sawtooth wave of the given
  frequency, of amplitude 1.0. Note that since this is a simple -1.0 up to 1.0 sawtooth wave, it's got horrible 
