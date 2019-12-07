@@ -179,7 +179,7 @@ These procedures allow the creation, analysis, and manipulation of rsounds.
  the @racket[default-sample-rate] parameter isn't usable in beginning student language.
 }
 
-@defparam[default-sample-rate frame-rate positive-real? #:value 48000]{
+@defparam[default-sample-rate frame-rate positive-real?]{
  A parameter that defines the default frame rate for construction of new sounds.
  
  Note that the terms sample rate and frame rate are used interchangeably. The
