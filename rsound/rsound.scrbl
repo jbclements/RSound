@@ -184,8 +184,8 @@ These procedures allow the creation, analysis, and manipulation of rsounds.
  
  Note that the terms sample rate and frame rate are used interchangeably. The
  term "frame rate" is arguably more correct, because one second of stereo
- sound at a frame rate of 44100 actually has 88200 samples---44100 for the left
- channel, and 44100 for the right channel.  Despite this, the term "sample rate"
+ sound at a frame rate of 48000 actually has 96000 samples---48000 for the left
+ channel, and 48000 for the right channel.  Despite this, the term "sample rate"
  is generally used to refer to the frame rate in audio applications.
 }
 
