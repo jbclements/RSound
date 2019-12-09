@@ -119,6 +119,10 @@
 (define/argcheck (rs-frames [rsound rsound? "rsound"])
   (- (rsound-stop rsound) (rsound-start rsound)))
 
+;; what is the sound's frame rate?
+(define/argcheck (rs-frame-rate [rsound rsound? "rsound"])
+  (rsound-sample-rate rsound))
+
 ;; given an s16vec and a frame rate, create a new rsound
 (define (vec->rsound s16vec sample-rate)
   (when (= (s16vector-length s16vec) 0)

@@ -192,6 +192,10 @@ These procedures allow the creation, analysis, and manipulation of rsounds.
 @defproc[(rs-frames [sound rsound?]) nonnegative-integer?]{
  Returns the length of a sound, in frames.}
 
+@defproc[(rs-frame-rate [sound rsound?]) positive-real?]{
+ Returns the frame rate of a sound, in frames per second.
+}
+
 @defproc[(rs-equal? [sound1 rsound?] [sound2 rsound?]) boolean?]{
  Returns @racket[#true] when the two sounds are (extensionally) equal.
          
