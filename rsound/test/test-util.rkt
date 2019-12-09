@@ -255,6 +255,14 @@
      (define sound (build-sound 100 generator))
      (check-= (rs-ith/left sound 3) 3/1000 1e-4)
      (check-= (rs-ith/right sound 19) 19/1000 1e-4 ))
+
+   ;; check that the generator is called exactly once
+   ;; for each value of i
+   (let ()
+     (define ctr 0)
+     (build-sound 10 (λ (n) (set! ctr (+ ctr 1)) 1.0))
+     (check-equal? ctr 10))
+
    
    ;; RSOUND->SIGNAL
    (check-= (signal-nth (rsound->signal/left 

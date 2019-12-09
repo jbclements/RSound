@@ -145,7 +145,20 @@ rsound-max-volume
 (define/argcheck (build-sound [frames nonnegative-integer?
                                       "non-negative integer"]
                               [generator procedure? "procedure"])
-  (rs-generate frames generator generator (default-sample-rate)))
+  (rs-generate/mono frames generator (default-sample-rate)))
+
+;; given a number of frames and a left and right generator and a sample
+;; rate, produce a sound.
+(define/argcheck (rs-generate/mono [frames nonnegative-integer?
+                                           "non-negative integer"]
+                                   [mono-fun procedure? "procedure"]
+                                   [sample-rate frame-rate? FRAME-RATE-DESCRIPTION])
+  (define vec (make-s16vector (* CHANNELS frames)))
+  (for ([i frames])
+    (define sample (real->s16 (mono-fun i)))
+    (unsafe-s16vector-set! vec (* CHANNELS i) sample)
+    (unsafe-s16vector-set! vec (add1 (* CHANNELS i)) sample))
+  (vec->rsound vec sample-rate))
 
 ;; given a number of frames and a left and right generator and a sample
 ;; rate, produce a sound.
