@@ -11,6 +11,7 @@
 
 ; sample rate
 (define sr 44100)
+(default-sample-rate sr)
 
 ; beats per minute
 (define bpm 130)
