@@ -1,18 +1,27 @@
-all : i386 x86_64
-
-i386 : i386-macosx/3m/buffer-add.dylib
-
-i386-macosx/3m/buffer-add.dylib : i386-macosx/3m/buffer-add.o
-	raco ctool -d i386-macosx/3m --ld buffer-add.dylib ++ldf -arch ++ldf i386 ++ldf -mmacosx-version-min=10.5 i386-macosx/3m/buffer-add.o
-
-i386-macosx/3m/buffer-add.o : buffer-add.c
-	raco ctool -d i386-macosx/3m --cc ++ccf -arch ++ccf i386 ++ccf -mmacosx-version-min=10.5 buffer-add.c
-
-x86_64 : x86_64-macosx/3m/buffer-add.dylib
+## this makefile generated automatically by makefile-generate.rkt
+all : x86_64-macosx/3m/buffer-add.dylib x86_64-macosx/cs/buffer-add.dylib i386-macosx/3m/buffer-add.dylib i386-macosx/cs/buffer-add.dylib
 
 x86_64-macosx/3m/buffer-add.dylib : x86_64-macosx/3m/buffer-add.o
-	raco ctool -d x86_64-macosx/3m --ld buffer-add.dylib ++ldf -arch ++ldf x86_64 ++ldf -mmacosx-version-min=10.5 x86_64-macosx/3m/buffer-add.o
+	gcc -o x86_64-macosx/3m/buffer-add.dylib -dynamiclib -arch x86_64 -mmacosx-version-min=10.5 x86_64-macosx/3m/buffer-add.o
 
 x86_64-macosx/3m/buffer-add.o : buffer-add.c
-	raco ctool -d x86_64-macosx/3m --cc ++ccf -arch ++ccf x86_64 ++ccf -mmacosx-version-min=10.5 buffer-add.c
+	gcc -c -o x86_64-macosx/3m/buffer-add.o -arch x86_64 -mmacosx-version-min=10.5 buffer-add.c
+
+x86_64-macosx/cs/buffer-add.dylib : x86_64-macosx/cs/buffer-add.o
+	gcc -o x86_64-macosx/cs/buffer-add.dylib -dynamiclib -arch x86_64 -mmacosx-version-min=10.5 x86_64-macosx/cs/buffer-add.o
+
+x86_64-macosx/cs/buffer-add.o : buffer-add.c
+	gcc -c -o x86_64-macosx/cs/buffer-add.o -arch x86_64 -mmacosx-version-min=10.5 buffer-add.c
+
+i386-macosx/3m/buffer-add.dylib : i386-macosx/3m/buffer-add.o
+	gcc -o i386-macosx/3m/buffer-add.dylib -dynamiclib -arch i386 -mmacosx-version-min=10.5 i386-macosx/3m/buffer-add.o
+
+i386-macosx/3m/buffer-add.o : buffer-add.c
+	gcc -c -o i386-macosx/3m/buffer-add.o -arch i386 -mmacosx-version-min=10.5 buffer-add.c
+
+i386-macosx/cs/buffer-add.dylib : i386-macosx/cs/buffer-add.o
+	gcc -o i386-macosx/cs/buffer-add.dylib -dynamiclib -arch i386 -mmacosx-version-min=10.5 i386-macosx/cs/buffer-add.o
+
+i386-macosx/cs/buffer-add.o : buffer-add.c
+	gcc -c -o i386-macosx/cs/buffer-add.o -arch i386 -mmacosx-version-min=10.5 buffer-add.c
 
