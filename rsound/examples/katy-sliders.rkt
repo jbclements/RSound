@@ -122,7 +122,7 @@
      (overlay
       (text (number->string (min 99 (round (* (vslider-val vs) 100))))
             35 
-            "solid")
+            "black")
       (rectangle w VSLIDER-HANDLE-H "solid" 
                  (make-color #xE0 #xD0 #x90)))
      (/ w 2) slider-pixels
