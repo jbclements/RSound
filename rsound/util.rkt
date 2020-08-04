@@ -178,13 +178,17 @@ rsound-max-volume
 ;; clipping occurs (not crashy, but noisy)
 (define/argcheck (rs-scale [scalar real? "real number"]
                            [rsound rsound? "rsound"])
-  (define inexact-scalar (exact->inexact scalar))
-  (define samp (silence (rs-frames rsound)))
-  (rs-copy-mult-add! (s16vector->cpointer (rsound-data samp)) 0 
-                     rsound 0
-                     (rs-frames rsound) (rs-frames samp)
-                     inexact-scalar)
-  samp)
+  (cond
+    [(= (rs-frames rsound) 0)
+     rsound]
+    [else
+     (define inexact-scalar (exact->inexact scalar))
+     (define samp (silence (rs-frames rsound)))
+     (rs-copy-mult-add! (s16vector->cpointer (rsound-data samp)) 0 
+                        rsound 0
+                        (rs-frames rsound) (rs-frames samp)
+                        inexact-scalar)
+     samp]))
 
 
 ;; clip : rsound nat nat -> rsound

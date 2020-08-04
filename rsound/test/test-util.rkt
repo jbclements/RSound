@@ -126,6 +126,10 @@
    
    (define shorty3 (rs-overlay* (list shorty shorty shorty)))
    (check-= (rs-ith/left shorty3 6) 0.18 1e-4)
+
+   ;; can you scale a soud of length zero? sure.
+   (check-not-exn
+    (λ () (rs-scale 0.5 (clip (noise 500) 13 13))))
    
    ;; RS-SCALE USES A TRUNCATE (IN C CODE)
    ;; this is not ideal, but it's the current behavior.
