@@ -34,6 +34,33 @@ the @emph{loudest possible sine wave} that can be represented. So please set you
 and be careful with the headphones. Maybe there should be a parameter that controls the clipping 
 volume. Hmm.
 
+@section{Simple Examples}
+
+We need an intro here with compelling examples. Instead,
+here's something I threw together in about two minutes.
+
+
+@racketblock[
+(define dur 1/10)
+
+(define z
+  (rs-overlay
+   (rs-append*
+    (for*/list ([i (in-range 20)]
+                [j (in-list '(0 2 3 7))])
+      (synth-note "vgame" 49 (+ 60 j)
+                  (round
+                   (* (default-sample-rate) dur)))))
+   (rs-append*
+    (for*/list ([i (in-range 5)]
+                [j (in-list '(0 -5 -4 -5))])
+      (synth-note "vgame" 49 (+ 60 j)
+                  (round
+                   (* (default-sample-rate) (* 4 dur))))))))
+
+(play z)
+]
+
 @section{Sound Control}
 
 These procedures start and stop playing sounds.
