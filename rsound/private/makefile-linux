@@ -1,7 +1,15 @@
-all : buffer-add.so
+## this makefile generated automatically by makefile-generate.rkt
+all : x86_64-linux/3m/buffer-add.dylib x86_64-linux/cs/buffer-add.dylib
 
-buffer-add.so : buffer-add.o
-	raco ctool --ld buffer-add.so buffer-add.o
+x86_64-linux/3m/buffer-add.dylib : x86_64-linux/3m/buffer-add.o
+	gcc -o x86_64-linux/3m/buffer-add.so -shared -march=x86-64 x86_64-linux/3m/buffer-add.o
 
-buffer-add.o : buffer-add.c
-	raco ctool --cc buffer-add.c
+x86_64-linux/3m/buffer-add.o : buffer-add.c
+	gcc -c -o x86_64-linux/3m/buffer-add.o -march=x86-64 buffer-add.c
+
+x86_64-linux/cs/buffer-add.dylib : x86_64-linux/cs/buffer-add.o
+	gcc -o x86_64-linux/cs/buffer-add.so -shared -march=x86-64 x86_64-linux/cs/buffer-add.o
+
+x86_64-linux/cs/buffer-add.o : buffer-add.c
+	gcc -c -o x86_64-linux/cs/buffer-add.o -march=x86-64 buffer-add.c
+
