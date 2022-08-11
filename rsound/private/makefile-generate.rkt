@@ -2,7 +2,7 @@
 
 ;; abstraction is weak here...
 
-(define archs '(x86_64 i386))
+(define archs '(x86_64 i386 aarch64))
 
 
 
@@ -20,6 +20,7 @@
     ['i386 (match platform
              ['macosx "i386"]
              ['linux (error "not sure what march flag to use for i686")])]))
+
 (define bc-cs-dirs '("3m" "cs"))
 (define (flags arch platform)
   (match platform
