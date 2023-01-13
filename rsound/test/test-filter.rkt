@@ -22,7 +22,7 @@
  "filter tests"
  (let ()
    ;; fir-filter
-   (check-exn (lambda (exn) (regexp-match #px"expects argument of type <exact integer delays greater than zero>"
+   (check-exn (lambda (exn) (regexp-match #px"expected argument of type <exact integer delays greater than zero>"
                                           (exn-message exn)))
               (lambda () (fir-filter '((-1 34.0)))))
    

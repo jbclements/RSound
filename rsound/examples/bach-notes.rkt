@@ -570,7 +570,7 @@
              0 (min (rs-frames snd) (note-duration n))))
      (note-time n)))
 
-  (play-notes shuffled-notes #;bach-notes))
+  (play-notes #;shuffled-notes bach-notes))
 
 
 

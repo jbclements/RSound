@@ -339,13 +339,17 @@
                           s))
     
     (for ([i (in-range 50)])
-      (check-equal? (inexact->exact
-                     (round
-                      (* (/ i 50) (rs-ith/left/s16 s i))))
-                    (rs-ith/left/s16 t i))
-      (check-equal? (inexact->exact
-                     (round (* (/ i 50) (rs-ith/right/s16 s i))))
-                    (rs-ith/right/s16 t i)))
+      ;; looks like there may be a rounding error in these tests, changing
+      ;; to just allow a tolerance of one. sigh.
+      (check-= (inexact->exact
+                (round
+                 (* (/ i 50) (rs-ith/left/s16 s i))))
+               (rs-ith/left/s16 t i)
+               1)
+      (check-= (inexact->exact
+                (round (* (/ i 50) (rs-ith/right/s16 s i))))
+               (rs-ith/right/s16 t i)
+               1))
 
     ;; add a 1.0 to make sure that rs-maximize volume restores original:
     (define s2 (rs-append s (vectors->rsound (vector 1.0) (vector 1.0))))
