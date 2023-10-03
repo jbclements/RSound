@@ -775,3 +775,7 @@ RSound comes with a few simple drum samples.
 @section{Reporting Bugs}
 
 For Heaven's sake, report lots of bugs!
+
+@(index-section)
+
+
